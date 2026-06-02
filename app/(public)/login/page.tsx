@@ -168,99 +168,105 @@ function LoginInner() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background:
-          "linear-gradient(135deg, #1e4d28 0%, #006B54 60%, #00835A 100%)",
-      }}
+      className="relative min-h-screen flex items-center justify-center overflow-hidden p-4"
+      style={{ background: "linear-gradient(135deg, #1a3d26 0%, #006B54 65%, #00835A 100%)" }}
     >
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
-        <div className="flex flex-col items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={configs?.logo_url || "/logo-chabra.png"}
-            alt="Logo Chabra"
-            className="h-20 w-auto max-w-[200px] object-contain"
-            referrerPolicy="no-referrer"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/logo-chabra.png" }}
-          />
-          <h1 className="mt-4 text-2xl font-bold text-gray-900">Painel SST</h1>
-          <p className="text-sm text-gray-500">Chabra · Segurança e Saúde do Trabalho</p>
-        </div>
+      {/* Círculos decorativos de fundo */}
+      <div className="pointer-events-none absolute -left-32 -top-32 size-96 rounded-full bg-white/[0.04] blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 size-80 rounded-full bg-white/[0.06] blur-3xl" />
 
-        <form onSubmit={onSubmit} className="mt-8 space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700" htmlFor="email">
-              E-mail
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              autoFocus
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
-              placeholder="seuemail@chabra.com.br"
+      <div className="relative w-full max-w-md">
+        {/* Card principal */}
+        <div className="rounded-3xl bg-white px-8 py-10 shadow-[0_25px_60px_rgba(0,0,0,0.25)] ring-1 ring-black/5">
+
+          {/* Logo + título */}
+          <div className="flex flex-col items-center text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={configs?.logo_url || "/logo-chabra.png"}
+              alt="Logo Chabra"
+              className="h-20 w-auto max-w-[200px] object-contain"
+              referrerPolicy="no-referrer"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/logo-chabra.png"; }}
             />
+            <h1 className="mt-4 text-2xl font-bold tracking-tight text-gray-900">Painel SST</h1>
+            <p className="mt-1 text-sm text-gray-400">Chabra · Segurança e Saúde do Trabalho</p>
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-gray-700" htmlFor="senha">
-              Senha
-            </label>
-            <div className="relative mt-1">
+          {/* Formulário */}
+          <form onSubmit={onSubmit} className="mt-8 space-y-4">
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="email">
+                E-mail
+              </label>
               <input
-                id="senha"
-                type={showPwd ? "text" : "password"}
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                autoComplete="current-password"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm shadow-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
-                placeholder="••••••••"
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                autoFocus
+                className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm transition focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/20"
+                placeholder="seuemail@chabra.com.br"
               />
-              <button
-                type="button"
-                onClick={() => setShowPwd((v) => !v)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
-                aria-label={showPwd ? "Ocultar senha" : "Mostrar senha"}
-              >
-                {showPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
             </div>
-          </div>
 
-          {/* Só exibe "Manter conectado" dentro do app Electron */}
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="senha">
+                Senha
+              </label>
+              <div className="relative mt-1.5">
+                <input
+                  id="senha"
+                  type={showPwd ? "text" : "password"}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  autoComplete="current-password"
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 pr-10 text-sm shadow-sm transition focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/20"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
+                  aria-label={showPwd ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+            </div>
+
+            {typeof window !== "undefined" && getElectron() && (
+              <label className="flex cursor-pointer items-center gap-2 select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="size-4 accent-verde-primary"
+                />
+                <span className="text-sm text-gray-600">Manter conectado</span>
+              </label>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white shadow-md transition active:scale-[0.98] disabled:opacity-60"
+              style={{ background: "linear-gradient(135deg, #006B54 0%, #00835A 100%)" }}
+            >
+              {loading && <Loader2 className="size-4 animate-spin" />}
+              {loading ? "Entrando..." : "Entrar"}
+            </button>
+          </form>
+
+          <p className="mt-7 text-center text-xs text-gray-400">
+            © {new Date().getFullYear()} Chabra · Painel SST
+          </p>
+
           {typeof window !== "undefined" && getElectron() && (
-            <label className="flex cursor-pointer items-center gap-2 select-none">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="size-4 accent-verde-primary"
-              />
-              <span className="text-sm text-gray-600">Manter conectado</span>
-            </label>
+            <UpdateButton />
           )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-verde-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-verde-accent disabled:opacity-60"
-          >
-            {loading && <Loader2 className="size-4 animate-spin" />}
-            {loading ? "Entrando..." : "Entrar"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-xs text-gray-400">
-          © {new Date().getFullYear()} Chabra · Painel SST
-        </p>
-
-        {/* Botão de atualização manual — só aparece no Electron */}
-        {typeof window !== "undefined" && getElectron() && (
-          <UpdateButton />
-        )}
+        </div>
       </div>
     </div>
   );
