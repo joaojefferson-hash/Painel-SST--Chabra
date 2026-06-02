@@ -500,7 +500,7 @@ function PdfDirectCard() {
   return (
     <Link
       href="/pdfs-gerados"
-      className="group flex w-full flex-col gap-4 rounded-2xl bg-white p-6 text-left shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl"
+      className="group flex w-full flex-col gap-4 rounded-2xl bg-white p-6 text-left ring-1 ring-black/5 shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl"
     >
       <div className="flex items-start gap-4">
         <div
@@ -553,7 +553,7 @@ function HubCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl"
+      className="group flex flex-col gap-4 rounded-2xl bg-white p-6 ring-1 ring-black/5 shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl"
     >
       <div className="flex items-start gap-4">
         <div
@@ -642,7 +642,7 @@ function CategoryCard({
     <button
       type="button"
       onClick={onClick}
-      className="group flex w-full flex-col gap-4 rounded-2xl bg-white p-6 text-left shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl"
+      className="group flex w-full flex-col gap-4 rounded-2xl bg-white p-6 text-left ring-1 ring-black/5 shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl"
     >
       <div className="flex items-start gap-4">
         <div
