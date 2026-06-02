@@ -14,6 +14,7 @@ import {
   Upload,
   X,
   BadgeCheck,
+  Users,
 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import { detectRegistroTipo } from "@/lib/registro-profissional";
