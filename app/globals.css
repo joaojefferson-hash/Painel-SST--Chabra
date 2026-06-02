@@ -32,6 +32,32 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Inputs — estilo base unificado */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+textarea,
+select {
+  border-radius: 0.625rem; /* rounded-[10px] */
+  border: 1px solid #e5e7eb;
+  transition: border-color 100ms, box-shadow 100ms;
+}
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+textarea:focus,
+select:focus {
+  border-color: #006B54;
+  box-shadow: 0 0 0 3px rgba(0, 107, 84, 0.12);
+  outline: none;
+}
+
 /* Elevation helpers — card, modal, dropdown */
 .card {
   background: #ffffff;
