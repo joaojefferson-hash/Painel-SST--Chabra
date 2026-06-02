@@ -267,8 +267,8 @@ export default function DashboardPage() {
                     fontSize: 12,
                     padding: "6px 12px",
                   }}
-                  formatter={(v: number) => [
-                    `${v} inspeção${v !== 1 ? "ões" : ""}`,
+                  formatter={(v) => [
+                    `${v} inspeção${Number(v) !== 1 ? "ões" : ""}`,
                     "",
                   ]}
                   labelStyle={{ fontWeight: 600, color: "#111827", marginBottom: 2 }}
