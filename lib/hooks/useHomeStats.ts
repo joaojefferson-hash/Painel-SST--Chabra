@@ -273,6 +273,7 @@ export function useHomeStats(): HomeStatsData {
   });
 
   // === Questionários Psicossociais (QPS) ===
+  // Nota: qps_aplicacoes usa criado_em/atualizado_em (não created_at/updated_at)
   const qpsQ = useQuery({
     queryKey: ["home-stats-qps", empresasVinculadas],
     queryFn: async () => {
@@ -280,16 +281,21 @@ export function useHomeStats(): HomeStatsData {
       const supabase = createSupabaseBrowserClient() as any;
       let q = supabase
         .from("qps_aplicacoes")
-        .select("id_aplicacao, id_empresa, status, created_at, updated_at")
+        .select("id_aplicacao, id_empresa, status, criado_em, atualizado_em")
         .neq("status", "DELETADO")
-        .order("updated_at", { ascending: false, nullsFirst: false })
+        .order("atualizado_em", { ascending: false, nullsFirst: false })
         .limit(200);
       if (empresasVinculadas) {
         q = q.in("id_empresa", empresasVinculadas);
       }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as { status?: string; updated_at?: string | null; created_at?: string | null }[];
+      // Normaliza nomes de campo para compatibilidade com calcStats/dataRow
+      return (data ?? []).map((r: { status?: string; criado_em?: string | null; atualizado_em?: string | null }) => ({
+        status: r.status,
+        created_at: r.criado_em,
+        updated_at: r.atualizado_em,
+      }));
     },
   });
 
