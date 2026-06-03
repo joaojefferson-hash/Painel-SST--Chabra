@@ -491,6 +491,12 @@ function statsPorModulo(
       return data.inventario_maquinas;
     case "apreciacao_maquinas":
       return data.apreciacao_maquinas;
+    case "aet":
+      return data.aet;
+    case "aep":
+      return data.aep;
+    case "questionarios_psicossociais":
+      return data.questionarios_psicossociais;
     default:
       return undefined;
   }
