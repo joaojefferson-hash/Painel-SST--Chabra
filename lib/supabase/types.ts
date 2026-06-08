@@ -90,6 +90,7 @@ export interface QpsAplicacao {
   periodo_fim: string | null;
   usuario_email: string | null;
   usuario_nome: string | null;
+  observacoes_dimensoes: Record<string, string> | null;
   criado_em: string;
   atualizado_em: string | null;
 }
@@ -1172,6 +1173,8 @@ export interface AepSetor {
   jornada: string;
   qtd_expostos: number;
   descricao_atividade: string;
+  metodo_coleta: string;
+  trabalhadores_consultados: string;
   riscos: AepRisco[];
   checklist_fisica: AepChecklistFisica;
   checklist_cognitiva: AepChecklistCognitiva;

@@ -1,7 +1,8 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronUp, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, ChevronDown, ChevronUp, ExternalLink, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import {
   useAepRelatorio,
   useSalvarAep,
@@ -381,6 +382,43 @@ export default function AepSetoresPage({
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
                     />
                   </div>
+
+                  {/* Participação dos trabalhadores (NR-1 / Fundacentro) */}
+                  <div className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50/50 p-3 space-y-3">
+                    <p className="text-xs font-semibold text-emerald-800">
+                      Participação dos trabalhadores — NR-1
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-600">Método de coleta</label>
+                        <select
+                          disabled={!canEdit}
+                          value={setor.metodo_coleta}
+                          onChange={(e) => updateSetor(setor.id, { metodo_coleta: e.target.value })}
+                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
+                        >
+                          <option value="">Selecione…</option>
+                          <option value="Observação direta">Observação direta</option>
+                          <option value="Entrevista com trabalhadores">Entrevista com trabalhadores</option>
+                          <option value="Entrevista com gestores">Entrevista com gestores</option>
+                          <option value="Observação + entrevistas">Observação + entrevistas</option>
+                          <option value="Análise documental">Análise documental</option>
+                          <option value="Múltiplos métodos">Múltiplos métodos</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-600">Trabalhadores consultados</label>
+                        <input
+                          type="text"
+                          disabled={!canEdit}
+                          value={setor.trabalhadores_consultados}
+                          onChange={(e) => updateSetor(setor.id, { trabalhadores_consultados: e.target.value })}
+                          placeholder="Ex: 3 operadores, 1 supervisor"
+                          className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </section>
 
                 {/* ── Triagem Ergonômica ────────────────────────────── */}
@@ -514,7 +552,7 @@ export default function AepSetoresPage({
                       value={setor.parecer_tecnico}
                       onChange={(e) => updateSetor(setor.id, { parecer_tecnico: e.target.value })}
                       rows={4}
-                      placeholder="Descreva o parecer técnico preliminar para este setor..."
+                      placeholder="Descreva as condições de trabalho, práticas de gestão e fatores organizacionais observados que podem estar gerando risco. Foque nas condições e processos — não em características individuais dos trabalhadores."
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
                     />
                   </div>
@@ -536,6 +574,36 @@ export default function AepSetoresPage({
           </div>
         );
       })}
+
+      {/* Banner AEP → QPS: exibido quando 3+ alertas organizacionais no total */}
+      {(() => {
+        const totalAlertasOrg = setores.reduce(
+          (acc, s) =>
+            acc + Object.values(s.checklist_organizacional).filter((v) => v === "sim").length,
+          0
+        );
+        if (totalAlertasOrg < 3) return null;
+        return (
+          <div className="flex items-start gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+            <AlertTriangle className="size-5 shrink-0 text-indigo-600 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-indigo-900">
+                {totalAlertasOrg} alerta{totalAlertasOrg > 1 ? "s" : ""} de risco organizacional identificado{totalAlertasOrg > 1 ? "s" : ""}
+              </p>
+              <p className="mt-0.5 text-xs text-indigo-700 leading-relaxed">
+                A NR-1 e a Fundacentro recomendam aprofundar a avaliação de riscos psicossociais com um
+                questionário estruturado (DRPS, Copsoq ou equivalente) aplicado diretamente aos trabalhadores.
+              </p>
+            </div>
+            <Link
+              href="/questionarios-psicossociais"
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+            >
+              Abrir QPS <ExternalLink className="size-3" />
+            </Link>
+          </div>
+        );
+      })()}
 
       {setores.length > 0 && canEdit && (
         <div className="flex justify-end">

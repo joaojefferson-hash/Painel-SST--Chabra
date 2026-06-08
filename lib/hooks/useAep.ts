@@ -77,6 +77,8 @@ function normalizarSetor(s: unknown): AepSetor {
     jornada: (setor.jornada as string) ?? "",
     qtd_expostos: typeof setor.qtd_expostos === "number" ? setor.qtd_expostos : 0,
     descricao_atividade: (setor.descricao_atividade as string) ?? "",
+    metodo_coleta: (setor.metodo_coleta as string) ?? "",
+    trabalhadores_consultados: (setor.trabalhadores_consultados as string) ?? "",
     riscos: Array.isArray(setor.riscos) ? (setor.riscos as AepRisco[]) : [],
     checklist_fisica: normalizarChecklistFisica(setor.checklist_fisica),
     checklist_cognitiva: normalizarChecklistCognitiva(setor.checklist_cognitiva),
@@ -108,6 +110,8 @@ export function setorVazioAep(): AepSetor {
     jornada: "",
     qtd_expostos: 0,
     descricao_atividade: "",
+    metodo_coleta: "",
+    trabalhadores_consultados: "",
     riscos: [],
     checklist_fisica: {
       postura: "nao",
