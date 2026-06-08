@@ -5,6 +5,7 @@ import {
   FlaskConical,
   Plus,
   History,
+  HelpCircle,
   Database,
   FileEdit,
 } from "lucide-react";
@@ -31,6 +32,7 @@ export default function AnaliseQuimicosLayout({
       { href: "/analise-quimicos", label: "Visão geral", icon: FlaskConical },
       { href: "/analise-quimicos/nova", label: "Nova análise", icon: Plus },
       { href: "/analise-quimicos/historico", label: "Histórico", icon: History },
+      { href: "/analise-quimicos/ajuda", label: "Ajuda", icon: HelpCircle },
     ];
     // Base de referência: só Admin vê e edita.
     if (user?.perfil === "Admin") {

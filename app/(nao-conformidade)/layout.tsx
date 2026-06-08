@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { AlertTriangle, Plus, ListChecks, FileEdit } from "lucide-react";
+import { AlertTriangle, Plus, ListChecks, FileEdit, HelpCircle } from "lucide-react";
 import SidebarShell, { type NavSection } from "@/components/layout/SidebarShell";
 import ModuleTopbar from "@/components/layout/ModuleTopbar";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -26,6 +26,7 @@ const sections: NavSection[] = [
         label: "Histórico",
         icon: ListChecks,
       },
+      { href: "/relatorio-nao-conformidade/ajuda", label: "Ajuda", icon: HelpCircle },
     ],
   },
   {

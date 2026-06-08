@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { Cog, FileText, List } from "lucide-react";
+import { Cog, FileText, HelpCircle, List } from "lucide-react";
 import SidebarShell, { type NavSection } from "@/components/layout/SidebarShell";
 import ModuleTopbar from "@/components/layout/ModuleTopbar";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -22,6 +22,7 @@ const sections: NavSection[] = [
         label: "Texto Padrão",
         icon: FileText,
       },
+      { href: "/apreciacao-maquinas/ajuda", label: "Ajuda", icon: HelpCircle },
     ],
   },
 ];
