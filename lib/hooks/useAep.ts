@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useUserStore } from "@/lib/store";
 import type {
+  AepCargoSetor,
   AepChecklistCognitiva,
   AepChecklistFisica,
   AepChecklistOrganizacional,
@@ -87,6 +88,10 @@ function normalizarSetor(s: unknown): AepSetor {
     descricao_atividade: (setor.descricao_atividade as string) ?? "",
     metodo_coleta: (setor.metodo_coleta as string) ?? "",
     trabalhadores_consultados: (setor.trabalhadores_consultados as string) ?? "",
+    cargos: Array.isArray(setor.cargos) ? (setor.cargos as AepCargoSetor[]) : [],
+    observacoes_checklist: (typeof setor.observacoes_checklist === "object" && setor.observacoes_checklist !== null)
+      ? (setor.observacoes_checklist as Record<string, string>)
+      : {},
     riscos: Array.isArray(setor.riscos) ? (setor.riscos as AepRisco[]) : [],
     checklist_fisica: normalizarChecklistFisica(setor.checklist_fisica),
     checklist_cognitiva: normalizarChecklistCognitiva(setor.checklist_cognitiva),
@@ -120,6 +125,8 @@ export function setorVazioAep(): AepSetor {
     descricao_atividade: "",
     metodo_coleta: "",
     trabalhadores_consultados: "",
+    cargos: [],
+    observacoes_checklist: {},
     riscos: [],
     checklist_fisica: {
       postura: "nao",

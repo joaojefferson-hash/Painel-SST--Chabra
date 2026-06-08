@@ -2,7 +2,17 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ChevronDown, ChevronUp, ExternalLink, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Loader2,
+  Plus,
+  Save,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import {
   useAepRelatorio,
   useSalvarAep,
@@ -15,7 +25,10 @@ import {
 } from "@/lib/hooks/useAep";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import { cn } from "@/lib/utils";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import toast from "react-hot-toast";
 import type {
+  AepCargoSetor,
   AepSetor,
   AepRisco,
   AepChecklistFisica,
@@ -26,44 +39,60 @@ import type {
   TipoRiscoAET,
 } from "@/lib/supabase/types";
 
-// ─── Tristate ─────────────────────────────────────────────────────────────────
+// ─── Tristate com campo de observação ────────────────────────────────────────
 
 function Tristate({
   label,
   value,
+  observacao,
   onChange,
+  onObservacaoChange,
   disabled,
 }: {
   label: string;
   value: RespostaChecklist;
+  observacao?: string;
   onChange: (v: RespostaChecklist) => void;
+  onObservacaoChange?: (text: string) => void;
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-      <span className="text-xs text-gray-700">{label}</span>
-      <div className="flex gap-1 shrink-0">
-        {(["sim", "nao", "nao_aplica"] as RespostaChecklist[]).map((opt) => (
-          <button
-            key={opt}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(opt)}
-            className={cn(
-              "rounded px-2 py-0.5 text-[10px] font-semibold transition",
-              value === opt
-                ? opt === "sim"
-                  ? "bg-red-500 text-white"
-                  : opt === "nao"
-                  ? "bg-green-500 text-white"
-                  : "bg-gray-400 text-white"
-                : "bg-white border border-gray-200 text-gray-500 hover:bg-gray-100"
-            )}
-          >
-            {opt === "sim" ? "Sim" : opt === "nao" ? "Não" : "N/A"}
-          </button>
-        ))}
+    <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-gray-700">{label}</span>
+        <div className="flex gap-1 shrink-0">
+          {(["sim", "nao", "nao_aplica"] as RespostaChecklist[]).map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(opt)}
+              className={cn(
+                "rounded px-2 py-0.5 text-[10px] font-semibold transition",
+                value === opt
+                  ? opt === "sim"
+                    ? "bg-red-500 text-white"
+                    : opt === "nao"
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-400 text-white"
+                  : "bg-white border border-gray-200 text-gray-500 hover:bg-gray-100"
+              )}
+            >
+              {opt === "sim" ? "Sim" : opt === "nao" ? "Não" : "N/A"}
+            </button>
+          ))}
+        </div>
       </div>
+      {value === "sim" && (
+        <textarea
+          disabled={disabled}
+          value={observacao ?? ""}
+          onChange={(e) => onObservacaoChange?.(e.target.value)}
+          rows={1}
+          placeholder="Observação de campo..."
+          className="w-full resize-none rounded border border-red-100 bg-white px-2 py-1 text-[11px] text-gray-700 placeholder:text-gray-400 focus:border-red-300 focus:outline-none focus:ring-1 focus:ring-red-200 disabled:bg-gray-50"
+        />
+      )}
     </div>
   );
 }
@@ -75,14 +104,18 @@ function ChecklistBloco({
   cor,
   itens,
   valores,
+  observacoes,
   onChange,
+  onObservacaoChange,
   disabled,
 }: {
   titulo: string;
   cor: string;
   itens: { key: string; label: string }[];
   valores: Record<string, RespostaChecklist>;
+  observacoes: Record<string, string>;
   onChange: (patch: Record<string, RespostaChecklist>) => void;
+  onObservacaoChange: (key: string, text: string) => void;
   disabled?: boolean;
 }) {
   const positivos = itens.filter((i) => valores[i.key] === "sim").length;
@@ -102,7 +135,9 @@ function ChecklistBloco({
             key={key}
             label={label}
             value={valores[key]}
+            observacao={observacoes[key]}
             onChange={(v) => onChange({ [key]: v })}
+            onObservacaoChange={(text) => onObservacaoChange(key, text)}
             disabled={disabled}
           />
         ))}
@@ -166,6 +201,7 @@ export default function AepSetoresPage({
   const [setores, setSetores] = useState<AepSetor[]>([]);
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
   const [salvando, setSalvando] = useState(false);
+  const [gerandoIA, setGerandoIA] = useState<string | null>(null);
 
   useEffect(() => {
     if (rel) {
@@ -222,6 +258,65 @@ export default function AepSetoresPage({
     const setor = setores.find((s) => s.id === setorId);
     if (!setor) return;
     updateSetor(setorId, { riscos: setor.riscos.filter((r) => r.id !== riscoId) });
+  }
+
+  function addCargo(setorId: string) {
+    const setor = setores.find((s) => s.id === setorId);
+    if (!setor) return;
+    const novo: AepCargoSetor = { id: crypto.randomUUID(), cargo: "", descricao: "" };
+    updateSetor(setorId, { cargos: [...(setor.cargos ?? []), novo] });
+  }
+
+  function updateCargo(setorId: string, cargoId: string, patch: Partial<AepCargoSetor>) {
+    const setor = setores.find((s) => s.id === setorId);
+    if (!setor) return;
+    updateSetor(setorId, {
+      cargos: (setor.cargos ?? []).map((c) => (c.id === cargoId ? { ...c, ...patch } : c)),
+    });
+  }
+
+  function removeCargo(setorId: string, cargoId: string) {
+    const setor = setores.find((s) => s.id === setorId);
+    if (!setor) return;
+    updateSetor(setorId, { cargos: (setor.cargos ?? []).filter((c) => c.id !== cargoId) });
+  }
+
+  async function gerarTextoIA(setorId: string, campo: "parecer_tecnico" | "recomendacoes") {
+    const setor = setores.find((s) => s.id === setorId);
+    if (!setor) return;
+    const key = `${setorId}:${campo}`;
+    setGerandoIA(key);
+    try {
+      const empresa = rel?.empresas as { nome_empresa?: string } | null;
+      const res = await fetch("/api/gerar-parecer-aep-ia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campo,
+          empresa_nome: empresa?.nome_empresa ?? null,
+          setor_nome: setor.nome_setor || "Setor",
+          cargos: (setor.cargos ?? []).filter((c) => c.cargo),
+          jornada: setor.jornada || null,
+          qtd_expostos: setor.qtd_expostos || null,
+          checklist_fisica: setor.checklist_fisica as unknown as Record<string, string>,
+          checklist_cognitiva: setor.checklist_cognitiva as unknown as Record<string, string>,
+          checklist_organizacional: setor.checklist_organizacional as unknown as Record<string, string>,
+          observacoes: setor.observacoes_checklist ?? {},
+          textoAtual: (setor[campo] as string) || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        toast.error(json.error ?? "Erro ao gerar texto");
+        return;
+      }
+      updateSetor(setorId, { [campo]: json.data.texto });
+      toast.success("Texto gerado com sucesso");
+    } catch {
+      toast.error("Falha na conexão com a IA");
+    } finally {
+      setGerandoIA(null);
+    }
   }
 
   async function handleSalvar() {
@@ -294,6 +389,7 @@ export default function AepSetoresPage({
         const alertaCog = Object.values(setor.checklist_cognitiva).filter((v) => v === "sim").length;
         const alertaOrg = Object.values(setor.checklist_organizacional).filter((v) => v === "sim").length;
         const totalAlertas = aletaFisica + alertaCog + alertaOrg;
+        const displayCargo = setor.cargos?.[0]?.cargo || setor.cargo;
 
         return (
           <div key={setor.id} className="rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -310,7 +406,7 @@ export default function AepSetoresPage({
                   <p className="font-semibold text-gray-900 truncate">
                     {setor.nome_setor || "Setor sem nome"}
                   </p>
-                  {setor.cargo && <p className="text-xs text-gray-500 truncate">{setor.cargo}</p>}
+                  {displayCargo && <p className="text-xs text-gray-500 truncate">{displayCargo}</p>}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -347,12 +443,10 @@ export default function AepSetoresPage({
                   </h3>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {[
-                      { key: "nome_setor",   label: "Setor *",              placeholder: "Nome do setor" },
-                      { key: "unidade",      label: "Unidade",              placeholder: "Unidade / filial" },
-                      { key: "ghe",          label: "GHE",                  placeholder: "Grupo Homogêneo de Exposição" },
-                      { key: "cargo",        label: "Cargo",                placeholder: "Cargo principal" },
-                      { key: "funcao",       label: "Função",               placeholder: "Função exercida" },
-                      { key: "jornada",      label: "Jornada",              placeholder: "Ex: 8h/dia, 44h/semana" },
+                      { key: "nome_setor", label: "Setor *",  placeholder: "Nome do setor" },
+                      { key: "unidade",    label: "Unidade",  placeholder: "Unidade / filial" },
+                      { key: "ghe",        label: "GHE",      placeholder: "Grupo Homogêneo de Exposição" },
+                      { key: "jornada",    label: "Jornada",  placeholder: "Ex: 8h/dia, 44h/semana" },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <label className="mb-1 block text-xs font-medium text-gray-600">{label}</label>
@@ -379,16 +473,56 @@ export default function AepSetoresPage({
                       />
                     </div>
                   </div>
-                  <div className="mt-3">
-                    <label className="mb-1 block text-xs font-medium text-gray-600">Descrição das atividades</label>
-                    <textarea
-                      disabled={!canEdit}
-                      value={setor.descricao_atividade}
-                      onChange={(e) => updateSetor(setor.id, { descricao_atividade: e.target.value })}
-                      rows={2}
-                      placeholder="Descreva as principais atividades realizadas..."
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
-                    />
+
+                  {/* ── Cargos do setor ──────────────────────────── */}
+                  <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50/50 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-semibold text-gray-700">Cargos do setor</label>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => addCargo(setor.id)}
+                          className="inline-flex items-center gap-1 rounded border border-emerald-300 bg-white px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                        >
+                          <Plus className="size-3" /> Cargo
+                        </button>
+                      )}
+                    </div>
+                    {(setor.cargos ?? []).length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">Nenhum cargo adicionado.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {(setor.cargos ?? []).map((c) => (
+                          <div key={c.id} className="grid grid-cols-[1fr_2fr_auto] gap-2 items-center">
+                            <input
+                              type="text"
+                              disabled={!canEdit}
+                              value={c.cargo}
+                              onChange={(e) => updateCargo(setor.id, c.id, { cargo: e.target.value })}
+                              placeholder="Cargo"
+                              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
+                            />
+                            <input
+                              type="text"
+                              disabled={!canEdit}
+                              value={c.descricao}
+                              onChange={(e) => updateCargo(setor.id, c.id, { descricao: e.target.value })}
+                              placeholder="Descrição da atividade do cargo"
+                              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
+                            />
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={() => removeCargo(setor.id, c.id)}
+                                className="rounded p-1.5 text-gray-400 hover:text-red-500"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Participação dos trabalhadores (NR-1 / Fundacentro) */}
@@ -434,13 +568,20 @@ export default function AepSetoresPage({
                   <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-emerald-700">
                     Triagem Ergonômica
                   </h3>
+                  <p className="mb-2 text-[11px] text-gray-500">
+                    Ao marcar <strong>Sim</strong>, um campo de observação aparece para registrar o que foi observado.
+                  </p>
                   <div className="grid gap-3 lg:grid-cols-3">
                     <ChecklistBloco
                       titulo="Ergonomia Física"
                       cor="bg-blue-50 text-blue-800"
                       itens={ITENS_FISICA}
                       valores={setor.checklist_fisica as unknown as Record<string, RespostaChecklist>}
+                      observacoes={setor.observacoes_checklist ?? {}}
                       onChange={(p) => updateSetor(setor.id, { checklist_fisica: { ...setor.checklist_fisica, ...p } as AepChecklistFisica })}
+                      onObservacaoChange={(key, text) =>
+                        updateSetor(setor.id, { observacoes_checklist: { ...setor.observacoes_checklist, [key]: text } })
+                      }
                       disabled={!canEdit}
                     />
                     <ChecklistBloco
@@ -448,7 +589,11 @@ export default function AepSetoresPage({
                       cor="bg-purple-50 text-purple-800"
                       itens={ITENS_COGNITIVA}
                       valores={setor.checklist_cognitiva as unknown as Record<string, RespostaChecklist>}
+                      observacoes={setor.observacoes_checklist ?? {}}
                       onChange={(p) => updateSetor(setor.id, { checklist_cognitiva: { ...setor.checklist_cognitiva, ...p } as AepChecklistCognitiva })}
+                      onObservacaoChange={(key, text) =>
+                        updateSetor(setor.id, { observacoes_checklist: { ...setor.observacoes_checklist, [key]: text } })
+                      }
                       disabled={!canEdit}
                     />
                     <ChecklistBloco
@@ -456,7 +601,11 @@ export default function AepSetoresPage({
                       cor="bg-amber-50 text-amber-800"
                       itens={ITENS_ORGANIZACIONAL}
                       valores={setor.checklist_organizacional as unknown as Record<string, RespostaChecklist>}
+                      observacoes={setor.observacoes_checklist ?? {}}
                       onChange={(p) => updateSetor(setor.id, { checklist_organizacional: { ...setor.checklist_organizacional, ...p } as AepChecklistOrganizacional })}
+                      onObservacaoChange={(key, text) =>
+                        updateSetor(setor.id, { observacoes_checklist: { ...setor.observacoes_checklist, [key]: text } })
+                      }
                       disabled={!canEdit}
                     />
                   </div>
@@ -553,28 +702,41 @@ export default function AepSetoresPage({
 
                 {/* ── Parecer e Recomendações ───────────────────────── */}
                 <section className="grid gap-3 lg:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-gray-700">Parecer Técnico Preliminar</label>
-                    <textarea
-                      disabled={!canEdit}
-                      value={setor.parecer_tecnico}
-                      onChange={(e) => updateSetor(setor.id, { parecer_tecnico: e.target.value })}
-                      rows={4}
-                      placeholder="Descreva as condições de trabalho, práticas de gestão e fatores organizacionais observados que podem estar gerando risco. Foque nas condições e processos — não em características individuais dos trabalhadores."
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-gray-700">Recomendações</label>
-                    <textarea
-                      disabled={!canEdit}
-                      value={setor.recomendacoes}
-                      onChange={(e) => updateSetor(setor.id, { recomendacoes: e.target.value })}
-                      rows={4}
-                      placeholder="Liste as recomendações ergonômicas preliminares..."
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
-                    />
-                  </div>
+                  {(["parecer_tecnico", "recomendacoes"] as const).map((campo) => {
+                    const isGerandoEste = gerandoIA === `${setor.id}:${campo}`;
+                    const label = campo === "parecer_tecnico" ? "Parecer Técnico Preliminar" : "Recomendações";
+                    const placeholder = campo === "parecer_tecnico"
+                      ? "Descreva as condições de trabalho, práticas de gestão e fatores organizacionais observados que podem estar gerando risco. Foque nas condições e processos — não em características individuais dos trabalhadores."
+                      : "Liste as recomendações ergonômicas preliminares...";
+                    return (
+                      <div key={campo}>
+                        <div className="mb-1 flex items-center justify-between gap-2">
+                          <label className="text-xs font-semibold text-gray-700">{label}</label>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              disabled={!!gerandoIA}
+                              onClick={() => gerarTextoIA(setor.id, campo)}
+                              className="inline-flex items-center gap-1 rounded-md border border-violet-300 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-50 transition-colors"
+                            >
+                              {isGerandoEste
+                                ? <Loader2 className="size-3 animate-spin" />
+                                : <Sparkles className="size-3" />}
+                              {isGerandoEste ? "Gerando..." : "Gerar IA"}
+                            </button>
+                          )}
+                        </div>
+                        <textarea
+                          disabled={!canEdit}
+                          value={(setor[campo] as string) ?? ""}
+                          onChange={(e) => updateSetor(setor.id, { [campo]: e.target.value })}
+                          rows={4}
+                          placeholder={placeholder}
+                          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
+                        />
+                      </div>
+                    );
+                  })}
                 </section>
 
               </div>
@@ -583,7 +745,7 @@ export default function AepSetoresPage({
         );
       })}
 
-      {/* Banner AEP → QPS: exibido quando 3+ alertas organizacionais no total */}
+      {/* Banner AEP → QPS */}
       {(() => {
         const totalAlertasOrg = setores.reduce(
           (acc, s) =>

@@ -1171,6 +1171,12 @@ export interface AepChecklistOrganizacional {
   mudancas_sem_participacao: RespostaChecklist;
 }
 
+export interface AepCargoSetor {
+  id: string;
+  cargo: string;
+  descricao: string;
+}
+
 export interface AepSetor {
   id: string;
   nome_setor: string;
@@ -1183,6 +1189,8 @@ export interface AepSetor {
   descricao_atividade: string;
   metodo_coleta: string;
   trabalhadores_consultados: string;
+  cargos: AepCargoSetor[];
+  observacoes_checklist: Record<string, string>;
   riscos: AepRisco[];
   checklist_fisica: AepChecklistFisica;
   checklist_cognitiva: AepChecklistCognitiva;
