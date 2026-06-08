@@ -23,7 +23,7 @@ import {
   Wind,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -226,8 +226,9 @@ const COR_NUM: Record<string, string> = {
 
 // ─── ItemChecklist com expansão ───────────────────────────────────────────────
 
-function ItemChecklist({ label, conceito, como, atencao, marque_sim }: ItemData) {
+function ItemChecklist({ label, conceito, como, atencao, marque_sim, forceOpen }: ItemData & { forceOpen?: boolean }) {
   const [open, setOpen] = useState(false);
+  const isOpen = open || !!forceOpen;
   return (
     <div className="rounded-lg border border-gray-100 bg-white overflow-hidden">
       <button
@@ -236,14 +237,14 @@ function ItemChecklist({ label, conceito, como, atencao, marque_sim }: ItemData)
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
       >
         <span className="text-sm font-semibold text-gray-900">{label}</span>
-        {open ? (
+        {isOpen ? (
           <ChevronUp className="size-4 text-gray-400 shrink-0" />
         ) : (
           <ChevronDown className="size-4 text-gray-400 shrink-0" />
         )}
       </button>
 
-      {open && (
+      {isOpen && (
         <div className="px-4 pb-4 space-y-4 border-t border-gray-100">
           {/* Conceito */}
           <div className="pt-3 space-y-1">
@@ -295,23 +296,44 @@ function ItemChecklist({ label, conceito, como, atencao, marque_sim }: ItemData)
 // ─── Página ───────────────────────────────────────────────────────────────────
 
 export default function AetAjudaPage() {
+  const [printMode, setPrintMode] = useState(false);
+
+  const handlePrint = useCallback(() => {
+    setPrintMode(true);
+    setTimeout(() => {
+      window.print();
+      const reset = () => { setPrintMode(false); window.removeEventListener("afterprint", reset); };
+      window.addEventListener("afterprint", reset);
+    }, 200);
+  }, []);
+
   return (
     <div className="space-y-10 max-w-4xl">
 
       {/* Cabeçalho */}
-      <div className="flex items-start gap-4">
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-blue-100">
-          <HelpCircle className="size-6 text-blue-700" />
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-blue-100">
+            <HelpCircle className="size-6 text-blue-700" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">
+              Guia Técnico da AET — Análise Ergonômica do Trabalho
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Manual de instrução para técnicos e engenheiros de segurança do trabalho — metodologias instrumentais, avaliação
+              quantitativa de fatores de risco e elaboração de laudo com nexo causal. Base normativa: NR-17 + Portaria MTE 1.121/2023.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">
-            Guia Técnico da AET — Análise Ergonômica do Trabalho
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manual de instrução para técnicos e engenheiros de segurança do trabalho — metodologias instrumentais, avaliação
-            quantitativa de fatores de risco e elaboração de laudo com nexo causal. Base normativa: NR-17 + Portaria MTE 1.121/2023.
-          </p>
-        </div>
+        <button
+          type="button"
+          onClick={handlePrint}
+          className="print:hidden shrink-0 flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+        >
+          <Printer className="size-4" />
+          Exportar PDF
+        </button>
       </div>
 
       {/* O que é */}
@@ -607,7 +629,7 @@ export default function AetAjudaPage() {
             </p>
           </div>
           {FATORES_ITENS.map((item, i) => (
-            <ItemChecklist key={i} {...item} />
+            <ItemChecklist key={i} {...item} forceOpen={printMode} />
           ))}
         </div>
       </div>

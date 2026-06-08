@@ -16,9 +16,10 @@ import {
   Lightbulb,
   ListChecks,
   Plus,
+  Printer,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -167,8 +168,9 @@ const COR_NUM: Record<string, string> = {
 
 // ─── Componente de item expandível ────────────────────────────────────────────
 
-function ItemExpandivel({ label, conceito, como, atencao, marque_sim }: ItemData) {
+function ItemExpandivel({ label, conceito, como, atencao, marque_sim, forceOpen }: ItemData & { forceOpen?: boolean }) {
   const [open, setOpen] = useState(false);
+  const isOpen = open || !!forceOpen;
   return (
     <div className="rounded-lg border border-gray-100 bg-white overflow-hidden">
       <button
@@ -177,10 +179,10 @@ function ItemExpandivel({ label, conceito, como, atencao, marque_sim }: ItemData
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
       >
         <span className="text-sm font-semibold text-gray-900">{label}</span>
-        {open ? <ChevronUp className="size-4 text-gray-400 shrink-0" /> : <ChevronDown className="size-4 text-gray-400 shrink-0" />}
+        {isOpen ? <ChevronUp className="size-4 text-gray-400 shrink-0" /> : <ChevronDown className="size-4 text-gray-400 shrink-0" />}
       </button>
 
-      {open && (
+      {isOpen && (
         <div className="px-4 pb-4 space-y-4 border-t border-gray-100">
           <div className="pt-3 space-y-1">
             <p className="text-[11px] font-bold text-purple-600 uppercase tracking-wider">Por que esta dimensão importa?</p>
@@ -216,20 +218,41 @@ function ItemExpandivel({ label, conceito, como, atencao, marque_sim }: ItemData
 // ─── Página ───────────────────────────────────────────────────────────────────
 
 export default function QpsAjudaPage() {
+  const [printMode, setPrintMode] = useState(false);
+
+  const handlePrint = useCallback(() => {
+    setPrintMode(true);
+    setTimeout(() => {
+      window.print();
+      const reset = () => { setPrintMode(false); window.removeEventListener("afterprint", reset); };
+      window.addEventListener("afterprint", reset);
+    }, 200);
+  }, []);
+
   return (
     <div className="space-y-10 max-w-4xl">
 
       {/* Cabeçalho */}
-      <div className="flex items-start gap-4">
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100">
-          <HelpCircle className="size-6 text-indigo-700" />
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100">
+            <HelpCircle className="size-6 text-indigo-700" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Guia Técnico — Questionários Psicossociais</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Manual de referência para aplicar, interpretar e agir sobre os resultados dos questionários de risco psicossocial (QPS/DRPS) conforme NR-1 e Fundacentro 2026.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Guia Técnico — Questionários Psicossociais</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manual de referência para aplicar, interpretar e agir sobre os resultados dos questionários de risco psicossocial (QPS/DRPS) conforme NR-1 e Fundacentro 2026.
-          </p>
-        </div>
+        <button
+          type="button"
+          onClick={handlePrint}
+          className="print:hidden shrink-0 flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 transition-colors"
+        >
+          <Printer className="size-4" />
+          Exportar PDF
+        </button>
       </div>
 
       {/* O que é */}
@@ -365,7 +388,7 @@ export default function QpsAjudaPage() {
               e entrevistas — o número aponta onde está o problema, a análise qualitativa explica por quê.
             </p>
           </div>
-          {ITENS.map((item, i) => <ItemExpandivel key={i} {...item} />)}
+          {ITENS.map((item, i) => <ItemExpandivel key={i} {...item} forceOpen={printMode} />)}
         </div>
       </div>
 

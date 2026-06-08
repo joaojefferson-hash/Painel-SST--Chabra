@@ -23,7 +23,7 @@ import {
   User,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -484,8 +484,9 @@ const COR_NUM: Record<string, string> = {
 
 // ─── ItemChecklist com expansão ───────────────────────────────────────────────
 
-function ItemChecklist({ label, conceito, como, atencao, marque_sim }: ItemData) {
+function ItemChecklist({ label, conceito, como, atencao, marque_sim, forceOpen }: ItemData & { forceOpen?: boolean }) {
   const [open, setOpen] = useState(false);
+  const isOpen = open || !!forceOpen;
   return (
     <div className="rounded-lg border border-gray-100 bg-white overflow-hidden">
       <button
@@ -494,10 +495,10 @@ function ItemChecklist({ label, conceito, como, atencao, marque_sim }: ItemData)
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
       >
         <span className="text-sm font-semibold text-gray-900">{label}</span>
-        {open ? <ChevronUp className="size-4 text-gray-400 shrink-0" /> : <ChevronDown className="size-4 text-gray-400 shrink-0" />}
+        {isOpen ? <ChevronUp className="size-4 text-gray-400 shrink-0" /> : <ChevronDown className="size-4 text-gray-400 shrink-0" />}
       </button>
 
-      {open && (
+      {isOpen && (
         <div className="px-4 pb-4 space-y-4 border-t border-gray-100">
           {/* Conceito */}
           <div className="pt-3 space-y-1">
@@ -540,10 +541,10 @@ function ItemChecklist({ label, conceito, como, atencao, marque_sim }: ItemData)
 // ─── Seção de categoria ───────────────────────────────────────────────────────
 
 function CategoriaChecklist({
-  icon: Ic, iconCor, titulo, subtitulo, intro, itens, bg, border,
+  icon: Ic, iconCor, titulo, subtitulo, intro, itens, bg, border, forceOpen,
 }: {
   icon: React.ElementType; iconCor: string; titulo: string; subtitulo: string;
-  intro: string; itens: ItemData[]; bg: string; border: string;
+  intro: string; itens: ItemData[]; bg: string; border: string; forceOpen?: boolean;
 }) {
   return (
     <div>
@@ -560,7 +561,7 @@ function CategoriaChecklist({
         <div className={`rounded-lg border ${border} bg-white/70 px-4 py-3`}>
           <p className="text-xs text-gray-700 leading-relaxed">{intro}</p>
         </div>
-        {itens.map((item, i) => <ItemChecklist key={i} {...item} />)}
+        {itens.map((item, i) => <ItemChecklist key={i} {...item} forceOpen={forceOpen} />)}
       </div>
     </div>
   );
@@ -569,20 +570,41 @@ function CategoriaChecklist({
 // ─── Página ───────────────────────────────────────────────────────────────────
 
 export default function AepAjudaPage() {
+  const [printMode, setPrintMode] = useState(false);
+
+  const handlePrint = useCallback(() => {
+    setPrintMode(true);
+    setTimeout(() => {
+      window.print();
+      const reset = () => { setPrintMode(false); window.removeEventListener("afterprint", reset); };
+      window.addEventListener("afterprint", reset);
+    }, 200);
+  }, []);
+
   return (
     <div className="space-y-10 max-w-4xl">
 
       {/* Cabeçalho */}
-      <div className="flex items-start gap-4">
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
-          <HelpCircle className="size-6 text-emerald-700" />
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
+            <HelpCircle className="size-6 text-emerald-700" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Guia Técnico da AEP</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Material de referência para técnicos e engenheiros de segurança do trabalho — triagem ergonômica, checklists, parecer e recomendações.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Guia Técnico da AEP</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Material de referência para técnicos e engenheiros de segurança do trabalho — triagem ergonômica, checklists, parecer e recomendações.
-          </p>
-        </div>
+        <button
+          type="button"
+          onClick={handlePrint}
+          className="print:hidden shrink-0 flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+        >
+          <Printer className="size-4" />
+          Exportar PDF
+        </button>
       </div>
 
       {/* O que é */}
@@ -677,6 +699,7 @@ export default function AepAjudaPage() {
         subtitulo="Clique em cada item para ver a explicação completa, como avaliar e o critério de Sim. Referências: NR-17, NR-15, NIOSH, ISO 5349-1, ISO 2631-1, NBR ISO/CIE 8995-1."
         intro={FISICA_INTRO} itens={FISICA_ITENS}
         bg="bg-blue-50" border="border-blue-200"
+        forceOpen={printMode}
       />
 
       {/* Ergonomia Cognitiva */}
@@ -686,6 +709,7 @@ export default function AepAjudaPage() {
         subtitulo="Clique em cada item para ver a explicação completa. Referências: NR-17 7.4, NASA-TLX, modelo de Karasek, JD-R, literatura de ergonomia cognitiva."
         intro={COGNITIVA_INTRO} itens={COGNITIVA_ITENS}
         bg="bg-purple-50" border="border-purple-200"
+        forceOpen={printMode}
       />
 
       {/* Ergonomia Organizacional */}
@@ -695,6 +719,7 @@ export default function AepAjudaPage() {
         subtitulo="Clique em cada item para ver a explicação completa. Referências: NR-17, NR-01 GRO/PGR, CLT, critérios de Leymann, modelo de Karasek, JD-R."
         intro={ORGANIZACIONAL_INTRO} itens={ORGANIZACIONAL_ITENS}
         bg="bg-orange-50" border="border-orange-200"
+        forceOpen={printMode}
       />
 
       {/* Parecer */}

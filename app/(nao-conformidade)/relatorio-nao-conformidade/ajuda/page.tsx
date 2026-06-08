@@ -9,6 +9,7 @@ import {
   Clock,
   FileText,
   Lightbulb,
+  Printer,
   Search,
   ShieldAlert,
   Target,
@@ -16,7 +17,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 interface ItemData {
   label: string;
@@ -186,8 +187,9 @@ const corMap: Record<string, { bg: string; border: string; text: string; badge: 
   },
 };
 
-function ItemChecklist({ label, conceito, como, atencao, marque_sim }: ItemData) {
+function ItemChecklist({ label, conceito, como, atencao, marque_sim, forceOpen }: ItemData & { forceOpen?: boolean }) {
   const [open, setOpen] = useState(false);
+  const isOpen = open || !!forceOpen;
   return (
     <div className="rounded-lg border border-gray-100 bg-white overflow-hidden">
       <button
@@ -196,13 +198,13 @@ function ItemChecklist({ label, conceito, como, atencao, marque_sim }: ItemData)
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
       >
         <span className="text-sm font-semibold text-gray-900">{label}</span>
-        {open ? (
+        {isOpen ? (
           <ChevronUp className="size-4 text-gray-400 shrink-0" />
         ) : (
           <ChevronDown className="size-4 text-gray-400 shrink-0" />
         )}
       </button>
-      {open && (
+      {isOpen && (
         <div className="px-4 pb-4 space-y-4 border-t border-gray-100">
           <div className="pt-3 space-y-1">
             <p className="text-[11px] font-bold text-purple-600 uppercase tracking-wider">
@@ -292,24 +294,45 @@ function PassoCard({
 }
 
 export default function AjudaRNCPage() {
+  const [printMode, setPrintMode] = useState(false);
+
+  const handlePrint = useCallback(() => {
+    setPrintMode(true);
+    setTimeout(() => {
+      window.print();
+      const reset = () => { setPrintMode(false); window.removeEventListener("afterprint", reset); };
+      window.addEventListener("afterprint", reset);
+    }, 200);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto space-y-8">
 
         {/* Cabeçalho */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center size-11 rounded-xl bg-red-100">
-              <XCircle className="size-6 text-red-600" />
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center size-11 rounded-xl bg-red-100">
+                <XCircle className="size-6 text-red-600" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">
+                  Manual de Instrução
+                </p>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Relatório de Não Conformidades (RNC)
+                </h1>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">
-                Manual de Instrução
-              </p>
-              <h1 className="text-xl font-bold text-gray-900">
-                Relatório de Não Conformidades (RNC)
-              </h1>
-            </div>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="print:hidden shrink-0 flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors"
+            >
+              <Printer className="size-4" />
+              Exportar PDF
+            </button>
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">
             Este manual orienta o preenchimento correto e completo do Relatório de Não Conformidades
@@ -395,7 +418,7 @@ export default function AjudaRNCPage() {
           </p>
           <div className="space-y-2">
             {ITENS_TECNICOS.map((item) => (
-              <ItemChecklist key={item.label} {...item} />
+              <ItemChecklist key={item.label} {...item} forceOpen={printMode} />
             ))}
           </div>
         </div>

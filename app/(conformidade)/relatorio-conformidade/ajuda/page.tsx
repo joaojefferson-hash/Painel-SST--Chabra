@@ -12,11 +12,12 @@ import {
   Info,
   Lightbulb,
   ListChecks,
+  Printer,
   ShieldCheck,
   Star,
   TrendingUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 interface ItemData {
   label: string;
@@ -186,8 +187,9 @@ const corMap: Record<string, { bg: string; border: string; text: string; badge: 
   },
 };
 
-function ItemChecklist({ label, conceito, como, atencao, marque_sim }: ItemData) {
+function ItemChecklist({ label, conceito, como, atencao, marque_sim, forceOpen }: ItemData & { forceOpen?: boolean }) {
   const [open, setOpen] = useState(false);
+  const isOpen = open || !!forceOpen;
 
   return (
     <div className="rounded-lg border border-gray-100 bg-white overflow-hidden">
@@ -197,13 +199,13 @@ function ItemChecklist({ label, conceito, como, atencao, marque_sim }: ItemData)
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
       >
         <span className="text-sm font-semibold text-gray-900">{label}</span>
-        {open ? (
+        {isOpen ? (
           <ChevronUp className="size-4 text-gray-400 shrink-0" />
         ) : (
           <ChevronDown className="size-4 text-gray-400 shrink-0" />
         )}
       </button>
-      {open && (
+      {isOpen && (
         <div className="px-4 pb-4 space-y-4 border-t border-gray-100">
           <div className="pt-3 space-y-1">
             <p className="text-[11px] font-bold text-purple-600 uppercase tracking-wider">
@@ -246,29 +248,50 @@ function ItemChecklist({ label, conceito, como, atencao, marque_sim }: ItemData)
 }
 
 export default function AjudaRelatorioConformidade() {
+  const [printMode, setPrintMode] = useState(false);
+
+  const handlePrint = useCallback(() => {
+    setPrintMode(true);
+    setTimeout(() => {
+      window.print();
+      const reset = () => { setPrintMode(false); window.removeEventListener("afterprint", reset); };
+      window.addEventListener("afterprint", reset);
+    }, 200);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
 
         {/* Cabeçalho */}
-        <div className="flex items-start gap-4">
-          <div className="shrink-0 rounded-xl bg-emerald-100 p-3">
-            <ShieldCheck className="size-7 text-emerald-700" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <BookOpen className="size-4 text-gray-400" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Manual de uso
-              </span>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="shrink-0 rounded-xl bg-emerald-100 p-3">
+              <ShieldCheck className="size-7 text-emerald-700" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-              Relatório de Conformidade (RNC)
-            </h1>
-            <p className="mt-1 text-sm text-gray-600">
-              Como usar o módulo de auditoria normativa do Painel SST
-            </p>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <BookOpen className="size-4 text-gray-400" />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Manual de uso
+                </span>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+                Relatório de Conformidade (RNC)
+              </h1>
+              <p className="mt-1 text-sm text-gray-600">
+                Como usar o módulo de auditoria normativa do Painel SST
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="print:hidden shrink-0 flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+          >
+            <Printer className="size-4" />
+            Exportar PDF
+          </button>
         </div>
 
         {/* Box "O que é" */}
@@ -350,7 +373,7 @@ export default function AjudaRelatorioConformidade() {
           </div>
           <div className="space-y-2">
             {ITENS_EXPANDIVEIS.map((item) => (
-              <ItemChecklist key={item.label} {...item} />
+              <ItemChecklist key={item.label} {...item} forceOpen={printMode} />
             ))}
           </div>
         </section>
