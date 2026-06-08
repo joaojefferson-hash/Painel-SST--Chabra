@@ -607,9 +607,9 @@ export default function AepAjudaPage() {
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 space-y-4">
           <p className="text-sm text-gray-700 leading-relaxed">
             O Parecer é o texto onde você, como profissional, assume a responsabilidade técnica pelo diagnóstico. Não é um resumo dos
-            checklists — é a sua interpretação do que foi encontrado. Um parecer fraco diz "há riscos ergonômicos no setor". Um parecer
-            forte diz "o setor apresenta risco Alto, caracterizado por movimentos repetitivos de membros superiores com frequência
-            estimada de 8 ciclos/min, durante 6h por turno, em trabalhadores que não realizam pausas além do horário de almoço".
+            checklists — é a sua interpretação do que foi encontrado. Um parecer fraco diz &ldquo;há riscos ergonômicos no setor&rdquo;. Um parecer
+            forte diz &ldquo;o setor apresenta risco Alto, caracterizado por movimentos repetitivos de membros superiores com frequência
+            estimada de 8 ciclos/min, durante 6h por turno, em trabalhadores que não realizam pausas além do horário de almoço&rdquo;.
             A diferença é a especificidade — ela é o que transforma um formulário preenchido em um documento técnico com valor real.
           </p>
           <div className="space-y-2">
@@ -629,7 +629,7 @@ export default function AepAjudaPage() {
           <div className="rounded-lg border border-emerald-300 bg-white p-4">
             <p className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Exemplo de parecer — Linha de Montagem</p>
             <p className="text-sm text-gray-700 leading-relaxed italic">
-              "O setor de Produção — Linha de Montagem 01 apresenta risco ergonômico de nível Alto. Foram identificados movimentos
+              &ldquo;O setor de Produção — Linha de Montagem 01 apresenta risco ergonômico de nível Alto. Foram identificados movimentos
               repetitivos de membros superiores com frequência estimada de 8–10 ciclos/min (pega e encaixe de componentes) durante
               aproximadamente 6h do turno de 8h, com ciclo de trabalho de 25 segundos. Identificou-se também flexão de tronco
               recorrente entre 30–45° durante a pega de componentes na parte inferior da esteira (30–40% do ciclo), e ausência de
@@ -637,7 +637,7 @@ export default function AepAjudaPage() {
               estatura ≥ 1,78 m (aproximadamente 4 dos 12 trabalhadores observados) adotam flexão cervical compensatória para
               visualizar a esteira. Os trabalhadores relatam dor em punhos e ombros ao final do turno de forma consistente.
               Recomenda-se elaboração de AET completa para este posto, com aplicação de RULA e OCRA index para quantificação
-              das exposições."
+              das exposições.&rdquo;
             </p>
           </div>
         </div>
@@ -656,7 +656,7 @@ export default function AepAjudaPage() {
         </div>
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 space-y-4">
           <p className="text-sm text-gray-700 leading-relaxed">
-            Uma recomendação técnica ruim diz "melhorar as condições ergonômicas do posto". Uma recomendação técnica boa diz
+            Uma recomendação técnica ruim diz &ldquo;melhorar as condições ergonômicas do posto&rdquo;. Uma recomendação técnica boa diz
             exatamente o quê fazer, com que referência técnica, em quanto tempo e com que resultado esperado. A priorização
             por urgência não é opcional — é o que permite ao gestor alocar recursos de forma racional: o que precisa ser feito
             esta semana versus o que pode entrar no orçamento do próximo trimestre.
