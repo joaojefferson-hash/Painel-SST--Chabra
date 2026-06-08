@@ -285,11 +285,10 @@ export default function AepSetoresPage({
     const key = `${setorId}:${campo}`;
     setGerandoIA(key);
     try {
+      const sb = createSupabaseBrowserClient();
       const empresa = rel?.empresas as { nome_empresa?: string } | null;
-      const res = await fetch("/api/gerar-parecer-aep-ia", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data, error } = await sb.functions.invoke("gerar-parecer-aep-ia", {
+        body: {
           campo,
           empresa_nome: empresa?.nome_empresa ?? null,
           setor_nome: setor.nome_setor || "Setor",
@@ -301,14 +300,10 @@ export default function AepSetoresPage({
           checklist_organizacional: setor.checklist_organizacional as unknown as Record<string, string>,
           observacoes: setor.observacoes_checklist ?? {},
           textoAtual: (setor[campo] as string) || null,
-        }),
+        },
       });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        toast.error(json.error ?? "Erro ao gerar texto");
-        return;
-      }
-      updateSetor(setorId, { [campo]: json.data.texto });
+      if (error) { toast.error(error.message ?? "Erro ao gerar texto"); return; }
+      updateSetor(setorId, { [campo]: data.data.texto });
       toast.success("Texto gerado com sucesso");
     } catch {
       toast.error("Falha na conexão com a IA");

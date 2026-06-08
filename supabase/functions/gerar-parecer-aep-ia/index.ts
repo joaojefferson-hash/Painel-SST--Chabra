@@ -1,9 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createSupabaseServerClient } from "@/lib/supabase/client";
+// Edge Function — gera Parecer Técnico Preliminar ou Recomendações
+// para um setor da AEP, via Groq (Llama 3.1 8B Instant).
+//
+// DEPLOY:
+//   supabase functions deploy gerar-parecer-aep-ia
+//
+// Cliente: supabase.functions.invoke('gerar-parecer-aep-ia', { body })
 
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+
+const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL = "llama-3.1-8b-instant";
+
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 type CampoAep = "parecer_tecnico" | "recomendacoes";
 
@@ -48,7 +61,9 @@ function buildPrompt(ctx: ContextoAepIA): string {
   if (ctx.empresa_nome) l.push(`Empresa: ${ctx.empresa_nome}`);
   l.push(`Setor: ${ctx.setor_nome}`);
   if (ctx.cargos?.length) {
-    const lista = ctx.cargos.map((c) => c.descricao ? `${c.cargo} (${c.descricao})` : c.cargo).filter(Boolean);
+    const lista = ctx.cargos
+      .map((c) => (c.descricao ? `${c.cargo} (${c.descricao})` : c.cargo))
+      .filter(Boolean);
     if (lista.length) l.push(`Cargos: ${lista.join("; ")}`);
   }
   if (ctx.jornada) l.push(`Jornada: ${ctx.jornada}`);
@@ -78,25 +93,26 @@ function buildPrompt(ctx: ContextoAepIA): string {
   return l.join("\n");
 }
 
-export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const supabase = createSupabaseServerClient(cookieStore);
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
-  const GROQ_API_KEY = process.env.GROQ_API_KEY;
-  if (!GROQ_API_KEY) return NextResponse.json({ error: "GROQ_API_KEY não configurada." }, { status: 500 });
-
-  let body: ContextoAepIA;
-  try { body = await req.json(); } catch {
-    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
-  }
-  if (!body?.setor_nome || !body?.campo) {
-    return NextResponse.json({ error: "setor_nome e campo são obrigatórios" }, { status: 400 });
+  if (!GROQ_API_KEY) {
+    return new Response(
+      JSON.stringify({ error: "GROQ_API_KEY não configurada." }),
+      { status: 500, headers: { ...CORS, "Content-Type": "application/json" } }
+    );
   }
 
   try {
-    const res = await fetch(GROQ_URL, {
+    const body = (await req.json()) as ContextoAepIA;
+    if (!body?.setor_nome || !body?.campo) {
+      return new Response(
+        JSON.stringify({ error: "setor_nome e campo são obrigatórios" }),
+        { status: 400, headers: { ...CORS, "Content-Type": "application/json" } }
+      );
+    }
+
+    const groqRes = await fetch(GROQ_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -110,21 +126,53 @@ export async function POST(req: NextRequest) {
         max_tokens: 700,
       }),
     });
-    if (!res.ok) return NextResponse.json({ error: `Groq ${res.status}` }, { status: 502 });
 
-    const groqData = await res.json();
-    const content: string | undefined = groqData?.choices?.[0]?.message?.content;
-    if (!content) return NextResponse.json({ error: "Resposta vazia" }, { status: 502 });
-
-    let parsed: { texto?: unknown };
-    try { parsed = JSON.parse(content); } catch {
-      return NextResponse.json({ error: "JSON inválido do modelo" }, { status: 502 });
+    if (!groqRes.ok) {
+      const txt = await groqRes.text();
+      return new Response(
+        JSON.stringify({ error: `Groq ${groqRes.status}: ${txt}` }),
+        { status: 502, headers: { ...CORS, "Content-Type": "application/json" } }
+      );
     }
-    const texto = typeof parsed?.texto === "string" ? parsed.texto.trim() : "";
-    if (!texto) return NextResponse.json({ error: "Campo texto ausente" }, { status: 502 });
 
-    return NextResponse.json({ data: { texto } });
+    const groqData = await groqRes.json();
+    const content: string | undefined = groqData?.choices?.[0]?.message?.content;
+    if (!content) {
+      return new Response(
+        JSON.stringify({ error: "Resposta vazia do modelo" }),
+        { status: 502, headers: { ...CORS, "Content-Type": "application/json" } }
+      );
+    }
+
+    let parsed: Record<string, unknown>;
+    try { parsed = JSON.parse(content); } catch {
+      return new Response(
+        JSON.stringify({ error: "JSON inválido do modelo", raw: content.slice(0, 400) }),
+        { status: 502, headers: { ...CORS, "Content-Type": "application/json" } }
+      );
+    }
+
+    const texto = (
+      typeof parsed?.texto === "string" ? parsed.texto :
+      typeof parsed?.text  === "string" ? parsed.text  :
+      Object.values(parsed).find((v) => typeof v === "string") as string | undefined ?? ""
+    ).trim();
+
+    if (!texto) {
+      return new Response(
+        JSON.stringify({ error: "Campo 'texto' ausente", raw: content.slice(0, 400) }),
+        { status: 502, headers: { ...CORS, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(JSON.stringify({ data: { texto } }), {
+      status: 200,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return new Response(
+      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
+      { status: 500, headers: { ...CORS, "Content-Type": "application/json" } }
+    );
   }
-}
+});
