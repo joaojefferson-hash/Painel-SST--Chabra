@@ -83,16 +83,14 @@ function Tristate({
           ))}
         </div>
       </div>
-      {value === "sim" && (
-        <textarea
-          disabled={disabled}
-          value={observacao ?? ""}
-          onChange={(e) => onObservacaoChange?.(e.target.value)}
-          rows={1}
-          placeholder="Observação de campo..."
-          className="w-full resize-none rounded border border-red-100 bg-white px-2 py-1 text-[11px] text-gray-700 placeholder:text-gray-400 focus:border-red-300 focus:outline-none focus:ring-1 focus:ring-red-200 disabled:bg-gray-50"
-        />
-      )}
+      <textarea
+        disabled={disabled}
+        value={observacao ?? ""}
+        onChange={(e) => onObservacaoChange?.(e.target.value)}
+        rows={1}
+        placeholder="Observação de campo..."
+        className="w-full resize-none rounded border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-700 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:bg-gray-50"
+      />
     </div>
   );
 }
