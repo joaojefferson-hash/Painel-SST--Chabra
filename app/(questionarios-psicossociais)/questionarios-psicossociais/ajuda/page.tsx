@@ -264,11 +264,11 @@ export default function QpsAjudaPage() {
             <div className="grid sm:grid-cols-2 gap-3 mt-2">
               <div className="rounded-lg border border-red-200 bg-red-50 p-3">
                 <p className="text-xs font-bold text-red-600 uppercase tracking-wider mb-1">Pergunta incorreta</p>
-                <p className="text-sm text-red-800 italic">"Quem está adoecendo? Esses trabalhadores precisam de resiliência?"</p>
+                <p className="text-sm text-red-800 italic">&ldquo;Quem está adoecendo? Esses trabalhadores precisam de resiliência?&rdquo;</p>
               </div>
               <div className="rounded-lg border border-green-200 bg-green-50 p-3">
                 <p className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Pergunta correta</p>
-                <p className="text-sm text-green-800 italic">"O que na organização está gerando este risco? O que pode ser mudado?"</p>
+                <p className="text-sm text-green-800 italic">&ldquo;O que na organização está gerando este risco? O que pode ser mudado?&rdquo;</p>
               </div>
             </div>
           </div>
@@ -444,7 +444,7 @@ export default function QpsAjudaPage() {
               nos últimos 3 meses (confirmada com registros de ponto); meta de produção aumentada em 25% no último trimestre
               sem aumento de pessoal; ausência de pausas programadas além do intervalo de almoço; ritmo de trabalho ditado
               pela velocidade da esteira, sem possibilidade de ajuste pelo operador. O conjunto de alta demanda e ausência de
-              controle sobre o próprio ritmo configura o quadrante de 'trabalho de alto risco' no modelo Karasek.
+              controle sobre o próprio ritmo configura o quadrante de &apos;trabalho de alto risco&apos; no modelo Karasek.
               Recomendação: revisão da meta de produção com base em capacidade real; implantação de pausas de 10 min a cada
               50 min conforme NR-17 7.4; avaliação de possibilidade de ajuste de velocidade da esteira por setor.&rdquo;
             </p>
