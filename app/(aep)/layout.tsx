@@ -4,6 +4,7 @@ import { type ReactNode, useMemo } from "react";
 import {
   BookOpen,
   ClipboardCheck,
+  HelpCircle,
   Info,
   LayoutDashboard,
   List,
@@ -27,7 +28,7 @@ export default function AepLayout({ children }: { children: ReactNode }) {
 
   const match = pathname.match(/\/aep\/([^/]+)\//);
   const idRelatorio = match?.[1];
-  const isConfigPage = ["dashboard", "novo", "texto-padrao"].includes(idRelatorio ?? "");
+  const isConfigPage = ["dashboard", "novo", "texto-padrao", "ajuda"].includes(idRelatorio ?? "");
 
   const sections = useMemo<NavSection[]>(() => {
     const base: NavSection[] = [
@@ -37,6 +38,7 @@ export default function AepLayout({ children }: { children: ReactNode }) {
           { href: "/aep/dashboard", label: "Dashboard",    icon: LayoutDashboard, variant: "dashboard" },
           { href: "/aep",           label: "Análises",     icon: List },
           { href: "/aep/novo",      label: "Nova Análise", icon: Plus, variant: "action" },
+          { href: "/aep/ajuda",     label: "Ajuda",        icon: HelpCircle },
         ],
       },
       ...(isAdmin
