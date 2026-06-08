@@ -48,13 +48,21 @@ const CHECKLIST_COG_LABELS: [keyof AepChecklistCognitiva, string][] = [
 ];
 
 const CHECKLIST_ORG_LABELS: [keyof AepChecklistOrganizacional, string][] = [
-  ["metas",                   "Metas agressivas"],
-  ["pausas",                  "Falta de pausas"],
-  ["jornada_extensiva",       "Jornada extensiva"],
-  ["pressao_hierarquica",     "Pressão hierárquica"],
-  ["sobrecarga_operacional",  "Sobrecarga operacional"],
-  ["deficit_equipe",          "Déficit de equipe"],
-  ["conflito_organizacional", "Conflito organizacional"],
+  ["metas",                     "Metas agressivas"],
+  ["pausas",                    "Falta de pausas"],
+  ["jornada_extensiva",         "Jornada extensiva"],
+  ["pressao_hierarquica",       "Pressão hierárquica"],
+  ["sobrecarga_operacional",    "Sobrecarga operacional"],
+  ["deficit_equipe",            "Déficit de equipe"],
+  ["conflito_organizacional",   "Conflito organizacional"],
+  ["falta_autonomia",           "Falta de autonomia"],
+  ["falta_reconhecimento",      "Falta de reconhecimento"],
+  ["ambiguidade_funcoes",       "Ambiguidade de funções"],
+  ["comunicacao_deficiente",    "Comunicação deficiente"],
+  ["violencia_clientes",        "Violência de clientes"],
+  ["excesso_controle",          "Excesso de controle"],
+  ["inseguranca_emprego",       "Insegurança no emprego"],
+  ["mudancas_sem_participacao", "Mudanças sem participação"],
 ];
 
 function labelResposta(v: string) {

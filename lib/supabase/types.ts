@@ -1161,6 +1161,14 @@ export interface AepChecklistOrganizacional {
   sobrecarga_operacional: RespostaChecklist;
   deficit_equipe: RespostaChecklist;
   conflito_organizacional: RespostaChecklist;
+  falta_autonomia: RespostaChecklist;
+  falta_reconhecimento: RespostaChecklist;
+  ambiguidade_funcoes: RespostaChecklist;
+  comunicacao_deficiente: RespostaChecklist;
+  violencia_clientes: RespostaChecklist;
+  excesso_controle: RespostaChecklist;
+  inseguranca_emprego: RespostaChecklist;
+  mudancas_sem_participacao: RespostaChecklist;
 }
 
 export interface AepSetor {

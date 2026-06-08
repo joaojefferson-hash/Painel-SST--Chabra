@@ -134,13 +134,21 @@ const ITENS_COGNITIVA: { key: keyof AepChecklistCognitiva; label: string }[] = [
 ];
 
 const ITENS_ORGANIZACIONAL: { key: keyof AepChecklistOrganizacional; label: string }[] = [
-  { key: "metas",                  label: "Metas agressivas / inatingíveis" },
-  { key: "pausas",                 label: "Ausência ou insuficiência de pausas" },
-  { key: "jornada_extensiva",      label: "Jornada extensiva / horas extras frequentes" },
-  { key: "pressao_hierarquica",    label: "Pressão hierárquica / assédio moral" },
-  { key: "sobrecarga_operacional", label: "Sobrecarga operacional" },
-  { key: "deficit_equipe",         label: "Déficit de equipe / trabalho solitário" },
-  { key: "conflito_organizacional", label: "Conflito organizacional / falta de suporte" },
+  { key: "metas",                      label: "Metas agressivas / inatingíveis" },
+  { key: "pausas",                     label: "Ausência ou insuficiência de pausas" },
+  { key: "jornada_extensiva",          label: "Jornada extensiva / horas extras frequentes" },
+  { key: "pressao_hierarquica",        label: "Pressão hierárquica / assédio moral" },
+  { key: "sobrecarga_operacional",     label: "Sobrecarga operacional" },
+  { key: "deficit_equipe",             label: "Déficit de equipe / trabalho solitário" },
+  { key: "conflito_organizacional",    label: "Conflito organizacional / falta de suporte" },
+  { key: "falta_autonomia",            label: "Falta de autonomia nas decisões do trabalho" },
+  { key: "falta_reconhecimento",       label: "Falta de reconhecimento / valorização" },
+  { key: "ambiguidade_funcoes",        label: "Ambiguidade ou conflito de funções" },
+  { key: "comunicacao_deficiente",     label: "Comunicação organizacional deficiente" },
+  { key: "violencia_clientes",         label: "Violência / agressão de clientes ou terceiros" },
+  { key: "excesso_controle",           label: "Excesso de controle e monitoramento" },
+  { key: "inseguranca_emprego",        label: "Insegurança quanto à continuidade do emprego" },
+  { key: "mudancas_sem_participacao",  label: "Mudanças organizacionais sem participação dos trabalhadores" },
 ];
 
 // ─── Página principal ─────────────────────────────────────────────────────────
