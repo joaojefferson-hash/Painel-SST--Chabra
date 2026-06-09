@@ -858,7 +858,17 @@ export default function AetSetoresPage({
                 {/* ── Dados do setor ── */}
                 <div className="space-y-3">
                   <TextInput label="Nome do Setor" value={setor.nome_setor} disabled={!canEdit} onChange={(v) => updateSetor(setor.id, { nome_setor: v })} />
-                  <CargoList cargos={setor.cargos} disabled={!canEdit} onChange={(v) => updateSetor(setor.id, { cargos: v })} />
+                  <CargoList cargos={setor.cargos} disabled={!canEdit} onChange={(v) => updateSetor(setor.id, { cargos: v, funcao: v.map((c) => c.nome).filter(Boolean).join(", ") })} />
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Função <span className="text-gray-400 font-normal">(preenchida automaticamente pelos cargos)</span></label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={setor.funcao}
+                      placeholder="—"
+                      className="w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-700 cursor-default"
+                    />
+                  </div>
                   <TagInput label="Máquinas e Equipamentos" value={setor.maquinas_equipamentos} disabled={!canEdit} onChange={(v) => updateSetor(setor.id, { maquinas_equipamentos: v })} />
                   <div>
                     <label className="mb-1 block text-xs font-medium text-gray-600">Descrição Geral da Atividade</label>

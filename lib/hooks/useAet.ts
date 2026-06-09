@@ -41,6 +41,7 @@ function normalizarSetor(s: unknown): AetSetor {
   const setor = s as Record<string, unknown>;
   return {
     ...setor,
+    funcao: (setor.funcao as string) ?? "",
     cargos: normalizarCargos(setor.cargos),
     checklist: normalizarChecklist(setor.checklist),
     respostas_extras: (setor.respostas_extras as Record<string, RespostaChecklist>) ?? {},
@@ -633,6 +634,7 @@ export function setorVazio(): AetSetor {
   return {
     id: crypto.randomUUID(),
     nome_setor: "",
+    funcao: "",
     maquinas_equipamentos: "",
     cargos: [],
     descricao_atividade: "",

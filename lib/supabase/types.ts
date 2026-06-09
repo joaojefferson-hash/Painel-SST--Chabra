@@ -1337,6 +1337,7 @@ export interface AetCargo {
 export interface AetSetor {
   id: string;
   nome_setor: string;
+  funcao: string;
   maquinas_equipamentos: string;
   cargos: AetCargo[];
   descricao_atividade: string;
