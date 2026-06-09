@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -256,9 +256,11 @@ export default function AepSetoresPage({
     updateSetor(setorId, { riscos: setor.riscos.filter((r) => r.id !== riscoId) });
   }
 
-  function syncFuncao(setorId: string, cargos: AepCargoSetor[]) {
-    const nomes = cargos.map((c) => c.cargo).filter(Boolean).join(", ");
-    updateSetor(setorId, { funcao: nomes });
+  function buildTrabalhadores(cargos: AepCargoSetor[]): string {
+    return cargos
+      .filter((c) => c.cargo)
+      .map((c) => c.quantidade > 0 ? `${c.quantidade} ${c.cargo}` : c.cargo)
+      .join(", ");
   }
 
   function addCargo(setorId: string) {
@@ -266,22 +268,35 @@ export default function AepSetoresPage({
     if (!setor) return;
     const novo: AepCargoSetor = { id: crypto.randomUUID(), cargo: "", descricao: "", quantidade: 0 };
     const novos = [...(setor.cargos ?? []), novo];
-    updateSetor(setorId, { cargos: novos, funcao: novos.map((c) => c.cargo).filter(Boolean).join(", ") });
+    updateSetor(setorId, {
+      cargos: novos,
+      funcao: novos.map((c) => c.cargo).filter(Boolean).join(", "),
+      trabalhadores_consultados: buildTrabalhadores(novos),
+    });
   }
 
   function updateCargo(setorId: string, cargoId: string, patch: Partial<AepCargoSetor>) {
     const setor = setores.find((s) => s.id === setorId);
     if (!setor) return;
     const novos = (setor.cargos ?? []).map((c) => (c.id === cargoId ? { ...c, ...patch } : c));
-    const extra = "cargo" in patch ? { funcao: novos.map((c) => c.cargo).filter(Boolean).join(", ") } : {};
-    updateSetor(setorId, { cargos: novos, ...extra });
+    const syncCargo = "cargo" in patch;
+    const syncQtd = "quantidade" in patch || syncCargo;
+    updateSetor(setorId, {
+      cargos: novos,
+      ...(syncCargo && { funcao: novos.map((c) => c.cargo).filter(Boolean).join(", ") }),
+      ...(syncQtd && { trabalhadores_consultados: buildTrabalhadores(novos) }),
+    });
   }
 
   function removeCargo(setorId: string, cargoId: string) {
     const setor = setores.find((s) => s.id === setorId);
     if (!setor) return;
     const novos = (setor.cargos ?? []).filter((c) => c.id !== cargoId);
-    updateSetor(setorId, { cargos: novos, funcao: novos.map((c) => c.cargo).filter(Boolean).join(", ") });
+    updateSetor(setorId, {
+      cargos: novos,
+      funcao: novos.map((c) => c.cargo).filter(Boolean).join(", "),
+      trabalhadores_consultados: buildTrabalhadores(novos),
+    });
   }
 
   async function gerarTextoIA(setorId: string, campo: "parecer_tecnico" | "recomendacoes") {
@@ -542,23 +557,16 @@ export default function AepSetoresPage({
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-xs font-medium text-gray-600">Método de coleta</label>
-                        <select
-                          disabled={!canEdit}
+                        <MetodoColetaSelect
                           value={setor.metodo_coleta}
-                          onChange={(e) => updateSetor(setor.id, { metodo_coleta: e.target.value })}
-                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
-                        >
-                          <option value="">Selecione…</option>
-                          <option value="Observação direta">Observação direta</option>
-                          <option value="Entrevista com trabalhadores">Entrevista com trabalhadores</option>
-                          <option value="Entrevista com gestores">Entrevista com gestores</option>
-                          <option value="Observação + entrevistas">Observação + entrevistas</option>
-                          <option value="Análise documental">Análise documental</option>
-                          <option value="Múltiplos métodos">Múltiplos métodos</option>
-                        </select>
+                          disabled={!canEdit}
+                          onChange={(v) => updateSetor(setor.id, { metodo_coleta: v })}
+                        />
                       </div>
                       <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-600">Trabalhadores consultados</label>
+                        <label className="mb-1 block text-xs font-medium text-gray-600">
+                          Trabalhadores consultados <span className="text-gray-400 font-normal">(auto)</span>
+                        </label>
                         <input
                           type="text"
                           disabled={!canEdit}
@@ -795,6 +803,71 @@ export default function AepSetoresPage({
             {salvando ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
             Salvar tudo
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MetodoColetaSelect ───────────────────────────────────────────────────────
+
+const METODOS_COLETA = [
+  "Observação direta",
+  "Entrevista com trabalhadores",
+  "Entrevista com gestores",
+  "Análise documental",
+  "Questionário aplicado",
+];
+
+function MetodoColetaSelect({ value, disabled, onChange }: { value: string; disabled: boolean; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const selecionados = value
+    ? value.split(", ").map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  function toggle(metodo: string) {
+    const novos = selecionados.includes(metodo)
+      ? selecionados.filter((m) => m !== metodo)
+      : [...selecionados, metodo];
+    onChange(novos.join(", "));
+  }
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-left focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
+      >
+        <span className={selecionados.length === 0 ? "text-gray-400 truncate" : "text-gray-800 truncate"}>
+          {selecionados.length === 0 ? "Selecione…" : selecionados.join(", ")}
+        </span>
+        <ChevronDown className="size-3.5 text-gray-400 shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+          {METODOS_COLETA.map((metodo) => (
+            <label key={metodo} className="flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer hover:bg-emerald-50 first:rounded-t-lg last:rounded-b-lg">
+              <input
+                type="checkbox"
+                checked={selecionados.includes(metodo)}
+                onChange={() => toggle(metodo)}
+                className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              {metodo}
+            </label>
+          ))}
         </div>
       )}
     </div>
