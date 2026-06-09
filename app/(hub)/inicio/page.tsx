@@ -129,7 +129,7 @@ const CARDS: HubCardCfg[] = [
   },
   {
     modulo: "psicossocial",
-    href: "/psicossocial/sinalizacao-psicossocial",
+    href: "/sinalizacao-psicossocial",
     title: "Sinalização Psicossocial",
     description: "Painel de alertas organizacionais por empresa e setor identificados nas triagens AEP",
     icon: <Brain className="size-12" />,
