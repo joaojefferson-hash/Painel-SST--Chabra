@@ -1,0 +1,166 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, Brain, ExternalLink } from "lucide-react";
+import { useAepRelatorios } from "@/lib/hooks/useAep";
+import EmpresaSelect from "@/components/empresas/EmpresaSelect";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import type { AepChecklistOrganizacional } from "@/lib/supabase/types";
+
+const ITENS_ORG: { key: keyof AepChecklistOrganizacional; label: string }[] = [
+  { key: "metas",                     label: "Metas agressivas / inatingíveis" },
+  { key: "pausas",                    label: "Ausência ou insuficiência de pausas" },
+  { key: "jornada_extensiva",         label: "Jornada extensiva / horas extras frequentes" },
+  { key: "pressao_hierarquica",       label: "Pressão hierárquica / assédio moral" },
+  { key: "sobrecarga_operacional",    label: "Sobrecarga operacional" },
+  { key: "deficit_equipe",            label: "Déficit de equipe / trabalho solitário" },
+  { key: "conflito_organizacional",   label: "Conflito organizacional / falta de suporte" },
+  { key: "falta_autonomia",           label: "Falta de autonomia nas decisões do trabalho" },
+  { key: "falta_reconhecimento",      label: "Falta de reconhecimento / valorização" },
+  { key: "ambiguidade_funcoes",       label: "Ambiguidade ou conflito de funções" },
+  { key: "comunicacao_deficiente",    label: "Comunicação organizacional deficiente" },
+  { key: "violencia_clientes",        label: "Violência / agressão de clientes ou terceiros" },
+  { key: "excesso_controle",          label: "Excesso de controle e monitoramento" },
+  { key: "inseguranca_emprego",       label: "Insegurança quanto à continuidade do emprego" },
+  { key: "mudancas_sem_participacao", label: "Mudanças organizacionais sem participação dos trabalhadores" },
+];
+
+const LABEL_MAP = Object.fromEntries(ITENS_ORG.map(({ key, label }) => [key, label]));
+
+function severidadeChip(count: number) {
+  if (count >= 5) return "bg-red-100 text-red-700 border-red-200";
+  if (count >= 3) return "bg-orange-100 text-orange-700 border-orange-200";
+  return "bg-yellow-100 text-yellow-700 border-yellow-200";
+}
+
+export default function SinalizacaoPsicossocialPage() {
+  const router = useRouter();
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
+  const { data: relatorios = [], isLoading } = useAepRelatorios(empresaId);
+
+  // Processa apenas setores com alertas organizacionais
+  const dados = relatorios
+    .map((rel) => {
+      const empresa = rel.empresas as { nome_empresa?: string } | null;
+      const setoresComAlerta = rel.setores
+        .map((setor) => {
+          const cl = setor.checklist_organizacional as unknown as Record<string, string>;
+          const alertas = ITENS_ORG
+            .filter(({ key }) => cl?.[key] === "sim")
+            .map(({ key }) => LABEL_MAP[key]);
+          return { id: setor.id, nome: setor.nome_setor || "Setor sem nome", alertas };
+        })
+        .filter((s) => s.alertas.length > 0);
+
+      return {
+        id: rel.id_relatorio,
+        empresa: empresa?.nome_empresa ?? "Empresa não informada",
+        data: rel.data_elaboracao,
+        setores: setoresComAlerta,
+        totalAlertas: setoresComAlerta.reduce((a, s) => a + s.alertas.length, 0),
+      };
+    })
+    .filter((d) => d.setores.length > 0);
+
+  const totalEmpresas = dados.length;
+  const totalSetores  = dados.reduce((a, d) => a + d.setores.length, 0);
+  const totalAlertas  = dados.reduce((a, d) => a + d.totalAlertas, 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Sinalização de Fatores Psicossociais</h1>
+          <p className="text-sm text-gray-500">
+            Riscos organizacionais identificados nas triagens AEP — por empresa e setor
+          </p>
+        </div>
+        <div className="w-60">
+          <EmpresaSelect value={empresaId} onChange={setEmpresaId} placeholder="Todas as empresas" modulo="aep" allowAll />
+        </div>
+      </div>
+
+      {/* Stats */}
+      {!isLoading && (
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Empresas c/ alertas",  value: totalEmpresas, color: "bg-indigo-50 border-indigo-200 text-indigo-700" },
+            { label: "Setores afetados",      value: totalSetores,  color: "bg-violet-50 border-violet-200 text-violet-700" },
+            { label: "Alertas psicossociais", value: totalAlertas,  color: "bg-red-50 border-red-200 text-red-700" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className={`rounded-xl border p-4 text-center ${color}`}>
+              <p className="text-3xl font-bold">{value}</p>
+              <p className="text-xs font-medium mt-1">{label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isLoading && <LoadingSkeleton rows={3} />}
+
+      {!isLoading && dados.length === 0 && (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center">
+          <Brain className="mx-auto size-8 text-gray-300 mb-3" />
+          <p className="text-sm text-gray-500">Nenhum fator psicossocial sinalizado nas análises.</p>
+        </div>
+      )}
+
+      {/* Cards por empresa */}
+      <div className="space-y-4">
+        {dados.map((d) => (
+          <div key={d.id} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            {/* Cabeçalho empresa */}
+            <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-gray-50/60 px-5 py-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertTriangle className="size-4 shrink-0 text-indigo-500" />
+                <span className="font-semibold text-gray-900 truncate">{d.empresa}</span>
+                {d.data && (
+                  <span className="text-xs text-gray-400 shrink-0">
+                    {new Date(d.data).toLocaleDateString("pt-BR")}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${severidadeChip(d.totalAlertas)}`}>
+                  {d.totalAlertas} alerta{d.totalAlertas > 1 ? "s" : ""}
+                </span>
+                <button
+                  onClick={() => router.push(`/aep/${d.id}/setores`)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
+                >
+                  Ver AEP <ExternalLink className="size-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Setores */}
+            <div className="divide-y divide-gray-100">
+              {d.setores.map((setor) => (
+                <div key={setor.id} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-start">
+                  <div className="flex items-center gap-2 shrink-0 min-w-[180px]">
+                    <span className={`inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border ${severidadeChip(setor.alertas.length)}`}>
+                      {setor.alertas.length}
+                    </span>
+                    <span className="text-sm font-medium text-gray-800">{setor.nome}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {setor.alertas.map((label) => (
+                      <span
+                        key={label}
+                        className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[11px] font-medium text-indigo-700"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
