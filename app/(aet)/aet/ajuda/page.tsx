@@ -120,6 +120,180 @@ const FATORES_ITENS: ItemData[] = [
   },
 ];
 
+// ─── Dados — Fatores Psicossociais ───────────────────────────────────────────
+
+const PSICOSSOCIAIS_ITENS: ItemData[] = [
+  {
+    label: "F01 — Assédio de qualquer natureza no trabalho",
+    conceito: `O assédio no trabalho — moral, sexual ou discriminatório — é qualquer conduta abusiva que viola a dignidade ou integridade do trabalhador. O assédio moral foi sistematizado por Leymann como conduta negativa, repetida, que deteriora as condições de trabalho. A Lei 14.457/2022 exige de empresas com CIPA canais de denúncia sigilosos e política de prevenção. Na AET, este fator é avaliado por questionário (QPS F01) — respostas que indicam frequência elevada de condutas abusivas, ausência de canal de denúncia e cultura permissiva ao desrespeito elevam o score.`,
+    como: [
+      "Consolide as respostas do QPS F01: as perguntas mapeiam presença de assédio percebido, acesso a canal de denúncia e resposta institucional.",
+      "Score 1–2: ausência de relatos, canal existente e atuante. Score 3: relatos esporádicos sem resolução. Score 4–5: relatos sistemáticos, ausência de canal ou resposta institucional omissa.",
+      "Avalie indicadores indiretos: absenteísmo elevado em trabalhadores específicos, rotatividade concentrada em setor com o mesmo gestor, solicitações frequentes de transferência.",
+      "Confronte com dados de saúde: afastamentos por transtornos ansiosos e depressivos são sinalizadores de ambientes com assédio crônico.",
+      "Na entrevista qualitativa: 'Como é a relação com a liderança direta?' / 'Existe alguém no trabalho que te faz se sentir mal com frequência?'",
+    ],
+    atencao: "Não avalie este fator apenas por documentos formais. Trabalhadores sob assédio raramente relatam em questionários identificados — a taxa de subnotificação é alta. O score deve considerar evidências indiretas.",
+    marque_sim: "Score ≥ 3 quando há relatos de ≥ 2 trabalhadores sobre condutas abusivas, ausência de canal de denúncia sigiloso, ou absenteísmo/turnover concentrado sugerindo clima de medo.",
+  },
+  {
+    label: "F02 — Falta de suporte / apoio no trabalho",
+    conceito: `O modelo JD-R (Job Demands-Resources) demonstra que o suporte do supervisor e dos colegas é um dos recursos mais protetores no trabalho — amortece o impacto das demandas sobre o bem-estar. Na AET, o QPS F02 avalia a percepção de suporte disponível quando o trabalhador enfrenta dificuldades técnicas ou emocionais. Ausência de suporte é preditor independente de burnout mesmo quando o volume de trabalho é aceitável.`,
+    como: [
+      "QPS F02 mapeia: disponibilidade do gestor para apoiar, suporte dos colegas, acesso ao RH, ausência de estigma para pedir ajuda.",
+      "Score 1–2: suporte percebido como disponível e acessível. Score 3: suporte formal existe mas inacessível na prática. Score 4–5: ausência percebida de apoio em múltiplos níveis.",
+      "Verifique a coerência com dados de turnover: rotatividade alta num setor com mesmo gestor, enquanto setores similares têm baixa rotatividade, indica falta de suporte da liderança.",
+      "Entrevista qualitativa: 'Quando você tem um problema que não resolve sozinho, o que faz?' / 'Você sente que pode ir ao seu gestor quando tem uma dificuldade?' Resposta 'resolvo sozinho sempre' é indicador.",
+      "Avalie o estigma de saúde mental: em culturas onde 'pedir ajuda é fraqueza', o suporte formal existe mas ninguém usa.",
+    ],
+    atencao: "Erro comum: verificar apenas se há PAE ou RH disponível. O que importa é o suporte percebido — se os trabalhadores não se sentem seguros para usá-lo, o programa existe só no papel.",
+    marque_sim: "Score ≥ 3 quando ≥ 2 trabalhadores relatam resolver todos os problemas sozinhos, há turnover elevado concentrado em setores específicos, ou ausência de canais de comunicação ascendente confiáveis.",
+  },
+  {
+    label: "F03 — Má gestão de mudanças organizacionais",
+    conceito: `Mudanças organizacionais — reestruturações, novos sistemas, alteração de processos, mudança de gestão — são eventos de alta demanda psicossocial por combinarem incerteza, perda de controle e sobrecarga durante a transição. A NR-01 revisada (GRO/PGR) reconhece a gestão de mudanças como elemento do gerenciamento de riscos. O QPS F03 avalia se mudanças recentes foram comunicadas com antecedência, se houve consulta aos trabalhadores e se as dificuldades da transição foram apoiadas.`,
+    como: [
+      "QPS F03 mapeia: comunicação prévia de mudanças, participação na decisão, suporte durante transição e resolução de dificuldades reportadas.",
+      "Score 1–2: mudanças comunicadas antecipadamente com espaço para participação. Score 3: comunicação tardia sem participação. Score 4–5: mudanças impostas sem aviso, dificuldades não resolvidas.",
+      "Identifique mudanças relevantes nos últimos 12 meses: novos sistemas, reestruturações, mudança de gestão. Para cada uma, avalie como foi o processo.",
+      "Verifique estrutura de participação: há CIPA ativa? Pesquisa de clima? Canal para sugestões? Sem essas estruturas, participação real é impossível.",
+      "Avalie a sobrecarga durante transições: mudanças de sistema criam sobrecarga enquanto o trabalhador aprende. Verificar se houve ajuste de carga.",
+    ],
+    atencao: "Comunicação unilateral não é participação. 'Avisamos com 2 semanas de antecedência' é notificação. Participação envolve consulta antes da decisão e canal para reportar dificuldades durante a implementação.",
+    marque_sim: "Score ≥ 3 quando mudanças relevantes foram implementadas sem consulta, trabalhadores relatam dificuldades não resolvidas de mudanças recentes, ou não há estrutura formal de participação.",
+  },
+  {
+    label: "F04 — Baixa clareza de papel / função",
+    conceito: `A ambiguidade de papel — quando o trabalhador não tem clareza sobre responsabilidades, critérios de avaliação e nível de autoridade — é um estressor comprovado que aumenta a ansiedade e reduz o comprometimento. O conflito de papel ocorre quando há demandas contraditórias de fontes diferentes. O QPS F04 avalia a clareza percebida sobre o que é esperado e a consistência das instruções recebidas.`,
+    como: [
+      "QPS F04 mapeia: clareza de metas, consistência das instruções, definição de responsabilidades e feedback sobre desempenho.",
+      "Score 1–2: papel claro, instruções consistentes, critérios de avaliação transparentes. Score 3: alguma ambiguidade relatada. Score 4–5: papel mal definido com múltiplas fontes contraditórias.",
+      "Entrevista: 'Descreva suas 3 principais responsabilidades em 2 minutos.' Resposta vaga ou que lista 8 prioridades iguais indica ambiguidade.",
+      "Verifique se existe job description escrita e atualizada — solicitar ao RH. Ausência é indicador estrutural de ambiguidade.",
+      "Avalie novos trabalhadores: ambiguidade é mais intensa no primeiro ano. Após > 6 meses com dificuldade de entender o que é esperado, há problema estrutural de onboarding.",
+    ],
+    atencao: "Trabalhadores proativos que 'resolvem tudo' podem estar sofrendo acúmulo de papel não formalizado — fazem o trabalho de vários sem reconhecimento.",
+    marque_sim: "Score ≥ 3 quando o trabalhador não descreve claramente responsabilidades, há relatos de instruções contraditórias, ausência de job description formalizado, ou acúmulo de funções não previsto na contratação.",
+  },
+  {
+    label: "F05 — Baixas recompensas e reconhecimento",
+    conceito: `O modelo ERI (Esforço-Recompensa) de Siegrist demonstra que o estresse surge quando o esforço é sistematicamente desproporcional à recompensa — financeira, simbólica e de desenvolvimento. Trabalhadores em alto desequilíbrio ERI têm 2–3 vezes mais risco de depressão e cardiopatia. O QPS F05 avalia se os trabalhadores percebem reconhecimento adequado pelo seu trabalho e se há perspectiva de desenvolvimento.`,
+    como: [
+      "QPS F05 mapeia: frequência de feedback positivo, adequação do salário ao esforço, perspectiva de desenvolvimento e respeito no tratamento.",
+      "Score 1–2: reconhecimento presente e equilibrado com o esforço. Score 3: reconhecimento insuficiente ou inconsistente. Score 4–5: ausência sistemática, desequilíbrio ERI evidente.",
+      "Entrevista: 'Quando você faz um bom trabalho, recebe algum feedback? De quem e com que frequência?' Resposta 'só ouço quando erro' é indicador forte.",
+      "Avalie o histórico de promoções: quantos foram promovidos nos últimos 2 anos? Estagnação de bons profissionais é indicador de risco ERI.",
+      "Identifique assimetria: em muitos ambientes, erros são documentados formalmente enquanto acertos são ignorados — sistema que só registra falhas cria reconhecimento exclusivamente negativo.",
+    ],
+    atencao: "Bom salário não substitui reconhecimento. Herzberg distingue fatores higiênicos (salário — cuja ausência gera insatisfação, mas presença não gera motivação) de motivadores (reconhecimento, realização). Os dois são necessários.",
+    marque_sim: "Score ≥ 3 quando ≥ 2 trabalhadores relatam ausência de feedback positivo, há desequilíbrio evidente entre exigência e recompensa, ou o sistema de gestão registra apenas falhas.",
+  },
+  {
+    label: "F06 — Baixo controle no trabalho / Falta de autonomia",
+    conceito: `No modelo de Karasek (Demanda-Controle), alta demanda com baixo controle é o perfil de "trabalho de alto risco" — associado ao dobro do risco cardiovascular. A autonomia é um mecanismo fisiológico de regulação do estresse: perceber controle sobre a própria situação atenua a resposta de ameaça do sistema nervoso autônomo. O QPS F06 avalia o grau de controle sobre o ritmo, método e sequência do trabalho.`,
+    como: [
+      "QPS F06 mapeia: liberdade para decidir como trabalhar, influência sobre a quantidade de trabalho, margem para adaptar o método.",
+      "Score 1–2: autonomia adequada à função. Score 3: controle parcial com restrições relevantes. Score 4–5: trabalho inteiramente prescrito sem margem de adaptação.",
+      "Escala de Karasek simplificada: 'Você tem liberdade para decidir como fazer seu trabalho?' e 'Pode influenciar a quantidade de trabalho?' (1–4 cada). Score total ≤ 4 = baixo controle.",
+      "Identifique sistemas de monitoramento por minuto (call center com scripts, linhas com takt time rígido) — esses tendem a autonomia próxima de zero.",
+      "Avalie penalização por adaptações: organizações que punem iniciativa bem-intencionada destroem a autonomia mesmo quando o procedimento formal prevê abertura.",
+    ],
+    atencao: "Padronização necessária não é ausência de autonomia. Procedimentos claros reduzem incerteza (recurso positivo). O problema é padronização sem qualquer margem para adaptar o método às variações reais da tarefa.",
+    marque_sim: "Score ≥ 3 quando o trabalhador não pode ajustar sequência ou método, não resolve problemas rotineiros sem autorização, o trabalho é inteiramente prescrito por sistema, ou há relatos de punição por iniciativas adaptativas.",
+  },
+  {
+    label: "F07 — Baixa justiça organizacional",
+    conceito: `A justiça organizacional abrange equidade distributiva (resultados justos), procedimental (critérios transparentes e consistentes) e interacional (tratamento com respeito). Injustiça percebida gera ressentimento, desmotivação e erosão da confiança institucional. O QPS F07 avalia se as práticas da organização — promoções, avaliações, desligamentos, acesso a benefícios — são percebidas como justas e transparentes.`,
+    como: [
+      "QPS F07 mapeia: transparência nos critérios de promoção e avaliação, consistência na aplicação de regras, percepção de favoritismo e respeito no tratamento.",
+      "Score 1–2: percepção de critérios claros, regras aplicadas igualmente. Score 3: percepção de inconsistência em situações específicas. Score 4–5: percepção generalizada de favoritismo ou tratamento diferenciado.",
+      "Entrevista: 'Você sabe por quais critérios as promoções são definidas?' Resposta 'não sei' ou 'depende de quem te conhece' indica baixa transparência.",
+      "Observe consistência de regras entre níveis: políticas que valem para operadores mas não para gestores são percebidas como injustas.",
+      "Verifique histórico de ações trabalhistas: número elevado de reclamações em relação ao setor pode indicar percepção generalizada de tratamento injusto.",
+    ],
+    atencao: "O que importa é a percepção dos trabalhadores — uma política justa aplicada de forma inconsistente é percebida como injusta, com os mesmos efeitos sobre saúde e motivação.",
+    marque_sim: "Score ≥ 3 quando trabalhadores relatam critérios opacos ou variáveis para avaliação/promoção, percepção de favoritismo, desligamentos percebidos como arbitrários, ou regras aplicadas diferentemente por nível hierárquico.",
+  },
+  {
+    label: "F08 — Eventos violentos ou traumáticos",
+    conceito: `Exposição a violência física ou psicológica grave, acidentes com vítimas ou ameaças sérias podem causar TEPT, depressão grave e afastamentos prolongados. A violência de clientes (Tipo II) é a mais comum e subestimada — a violência verbal crônica tem impacto comparável a um incidente físico por ser cumulativa. O QPS F08 avalia a frequência de exposição a eventos violentos ou perturbadores e a percepção de proteção da empresa.`,
+    como: [
+      "QPS F08 mapeia: frequência de situações violentas ou perturbadoras, acesso a suporte pós-incidente, adequação das medidas de proteção.",
+      "Score 1–2: ausência de eventos ou com protocolo de suporte efetivo. Score 3: eventos esporádicos sem suporte adequado. Score 4–5: eventos frequentes, ausência de protocolo, trabalhadores sem amparo.",
+      "Entrevista direta: 'Você já sofreu ou presenciou agressão verbal ou física durante o trabalho? Com que frequência?' A normalização é alta — só relatam se perguntado diretamente.",
+      "Verifique registros: há livro de ocorrências, SIPAT com registros, BO registrado? Ausência de registros em atendimento ao público não significa ausência de eventos.",
+      "Avalie ansiedade antecipatória: 'Você se sente ansioso antes de começar o turno por medo de situações difíceis?' Pensamentos intrusivos sobre incidentes são sinais de resposta traumática.",
+    ],
+    atencao: "Não limitar a avaliação a agressões físicas registradas. A agressão verbal crônica de clientes tem impacto de saúde mental comparável ou superior a incidente físico único — por ser cumulativa e raramente reconhecida.",
+    marque_sim: "Score ≥ 3 quando há relatos de agressão por clientes ou colegas, ausência de protocolo de proteção e suporte pós-incidente, ou trabalhadores relatam ansiedade antecipatória relacionada ao trabalho.",
+  },
+  {
+    label: "F09 — Baixa demanda no trabalho (Subcarga)",
+    conceito: `A subcarga — volume e complexidade das tarefas sistematicamente abaixo da capacidade do trabalhador — é fator de risco frequentemente negligenciado. Ociosidade crônica e subutilização de competências geram desmotivação, perda de sentido e ansiedade por inutilidade. O modelo de Enriquecimento do Trabalho (Hackman e Oldham) demonstra que tarefas significativas com variedade de habilidades são prerequisitos para motivação e bem-estar. O QPS F09 avalia se o trabalho é percebido como desafiador e significativo.`,
+    como: [
+      "QPS F09 mapeia: percepção de subutilização de habilidades, frequência de ociosidade, senso de significado e variedade das tarefas.",
+      "Score 1–2: trabalho adequado à capacidade, desafiador e variado. Score 3: alguma percepção de subutilização. Score 4–5: ociosidade habitual, habilidades claramente subutilizadas.",
+      "Entrevista: 'Você costuma ter tempo ocioso por falta de tarefas?' e 'Suas habilidades são bem utilizadas?' Afirmativa à primeira e negativa à segunda indicam subcarga.",
+      "Verifique rotatividade de qualificados: saídas voluntárias de bons profissionais sem razões evidentes podem indicar falta de desafio.",
+      "Observe correspondência formação/função: trabalhador com formação técnica ou superior em função com tarefas simples repetitivas tende à subcarga cognitiva.",
+    ],
+    atencao: "Ociosidade crônica não é descanso — é estressor. A privação de trabalho significativo tem impacto negativo comprovado na saúde mental. Não interpretar baixa demanda como 'bom para o trabalhador'.",
+    marque_sim: "Score ≥ 3 quando trabalhadores relatam tempo ocioso habitual, sentem habilidades pouco utilizadas, há turnover voluntário de bons profissionais sem razão evidente, ou o trabalho é percebido como monótono a ponto de gerar desânimo.",
+  },
+  {
+    label: "F10 — Excesso de demandas no trabalho (Sobrecarga)",
+    conceito: `A sobrecarga crônica — quando o volume de demandas excede regularmente a capacidade disponível — ativa mecanismos de coping que a curto prazo parecem soluções (trabalhar mais rápido, pular etapas) mas a longo prazo levam ao burnout. A CLT limita a jornada a 8h/dia e 44h/semana — > 55h/semana aumenta 33% o risco de AVC e 13% o risco de cardiopatia. O QPS F10 avalia a percepção de sobrecarga habitual e a capacidade de concluir as tarefas na jornada regular.`,
+    como: [
+      "QPS F10 mapeia: frequência com que a carga excede a capacidade, necessidade habitual de horas extras, percepção de backlog permanente.",
+      "Score 1–2: carga adequada com margem para imprevistos. Score 3: sobrecarga frequente com horas extras habituais. Score 4–5: sobrecarga crônica, burnout percebido, impossibilidade de concluir tarefas.",
+      "Confronte com dados de jornada: jornada média > 50h/semana é preocupante; > 55h é alto risco cardiovascular.",
+      "Verifique banco de horas: saldo crescente sem compensação indica horas extras estruturais — a empresa usa o banco como extensão permanente de jornada.",
+      "Absenteísmo > 4% mensal está associado a sobrecarga operacional — o trabalhador usa a ausência como válvula de escape.",
+    ],
+    atencao: "Não responsabilizar o trabalhador pela sobrecarga. 'Precisa se organizar melhor' frequentemente mascara problema de dimensionamento ou processo que é responsabilidade da organização.",
+    marque_sim: "Score ≥ 3 quando carga excede 85% da jornada habitualmente, jornada média > 50h/semana, backlog permanente, acúmulo de funções sem compensação, ou absenteísmo > 4% mensalmente.",
+  },
+  {
+    label: "F11 — Maus relacionamentos no local de trabalho",
+    conceito: `Conflitos crônicos, rivalidade, comunicação agressiva e hostilidade entre colegas ou com a liderança consomem energia mental mesmo de quem não está diretamente envolvido. O ambiente hostil ativa a resposta de ameaça do sistema nervoso autônomo de forma contínua. A qualidade das relações interpessoais é um recurso fundamental no modelo JD-R — sua deterioração amplifica qualquer dificuldade. O QPS F11 avalia a percepção do clima relacional e a frequência de conflitos.`,
+    como: [
+      "QPS F11 mapeia: qualidade percebida das relações com colegas e liderança, frequência de conflitos, presença de comportamentos hostis.",
+      "Score 1–2: relações positivas, conflitos raros e resolvidos. Score 3: conflitos recorrentes não resolvidos. Score 4–5: ambiente hostil percebido, rivalidade ou isolamento social.",
+      "Entrevista: 'Como é o relacionamento entre as pessoas da sua equipe?' Respostas vagas ou evasivas são indicadores.",
+      "Observe o comportamento durante a visita: trabalhadores que evitam contato visual entre si, respostas tensas em presença de certas pessoas, grupos isolados sem interação.",
+      "Verifique protocolo de mediação: a empresa tem processo formal? O RH atua como mediador? Ausência significa que conflitos se resolvem por força ou se cronificam.",
+    ],
+    atencao: "Ausência de conflito declarado não é bom relacionamento. Em culturas de alta hierarquia, os trabalhadores raramente expressam conflito abertamente — silêncio pode mascarar hostilidade passiva.",
+    marque_sim: "Score ≥ 3 quando há relatos de conflitos interpessoais crônicos não resolvidos, trabalhadores relatam evitar colegas ou superiores, há rivalidade percebida sem mediação, ou o clima é descrito como tenso.",
+  },
+  {
+    label: "F12 — Trabalho em condições de difícil comunicação",
+    conceito: `Algumas condições estruturais dificultam inerentemente a comunicação: turnos diferentes sem sobreposição, distância física, ambientes com ruído elevado, trabalho externo ou em campo. Essas barreiras criam risco de desinformação, isolamento percebido e falhas de segurança. O QPS F12 avalia se as condições de trabalho permitem comunicação adequada com liderança e colegas, e se as informações necessárias chegam a tempo.`,
+    como: [
+      "QPS F12 mapeia: acesso a informações necessárias, qualidade da comunicação com o gestor, barreiras físicas ou estruturais à comunicação.",
+      "Score 1–2: comunicação fluida sem barreiras estruturais. Score 3: dificuldades identificadas mas contornáveis. Score 4–5: barreiras estruturais severas que comprometem a segurança ou a eficiência.",
+      "Mapeie as condições: há turnos distintos sem sobreposição? Ambientes com ruído que impede conversa? Trabalhadores em campo sem protocolo de contato?",
+      "Avalie a passagem de turno: como se dá? Há registro formal? Trabalhadores do noturno ficam desatualizados de decisões tomadas durante o dia?",
+      "Para trabalho isolado com risco: ausência de comunicação em trabalho solitário, noturno ou em área confinada é risco de segurança direto.",
+    ],
+    atencao: "Distinguir comunicação organizacional deficiente (problema de gestão) de trabalho em condições estruturais de difícil comunicação (problema físico/de turno que requer solução técnica diferente).",
+    marque_sim: "Score ≥ 3 quando turnos distintos impedem comunicação direta, trabalhadores em campo sem protocolo de contato regular, ambientes com ruído que inviabiliza conversa, ou trabalhadores relatam receber informações importantes com atraso.",
+  },
+  {
+    label: "F13 — Trabalho remoto e isolado",
+    conceito: `O trabalho remoto e o trabalho fisicamente isolado compartilham o risco psicossocial do isolamento social. O contato presencial não é apenas conforto — é fonte de suporte, reconhecimento e amortecimento do estresse. Trabalhadores remotos tendem a trabalhar mais horas e relatam sentimento de invisibilidade — percepção de que seu trabalho não é visto ou valorizado. O QPS F13 avalia a intensidade do isolamento percebido e a adequação do protocolo de conexão com a equipe.`,
+    como: [
+      "QPS F13 mapeia: frequência de contato com equipe e liderança, senso de pertencimento, percepção de isolamento, equidade de tratamento em relação a presenciais.",
+      "Score 1–2: protocolo de contato regular, pertencimento percebido. Score 3: isolamento parcial sem protocolo adequado. Score 4–5: isolamento severo, ausência de contato regular, invisibilidade percebida.",
+      "Avalie o protocolo de check-in: há contato programado entre líder e trabalhador remoto/isolado? Com que frequência? Por qual meio?",
+      "Pergunte: 'Você se sente parte da equipe trabalhando remoto/isolado?' / 'Você fica sabendo das novidades no mesmo tempo que os colegas presenciais?'",
+      "Para trabalho isolado com risco físico: verificar protocolo de segurança — check-ins de segurança, acesso a emergência.",
+    ],
+    atencao: "Trabalhadores remotos produtivos podem estar em sofrimento psicossocial significativo — isolamento e falta de pertencimento não aparecem nos indicadores de entrega.",
+    marque_sim: "Score ≥ 3 quando trabalhadores remotos ou isolados sem protocolo regular de contato, relatam sentimento de distância ou invisibilidade, não há encontros presenciais periódicos, ou trabalhadores isolados sem protocolo de segurança.",
+  },
+];
+
 // ─── Passos ───────────────────────────────────────────────────────────────────
 
 const PASSOS = [
@@ -629,6 +803,35 @@ export default function AetAjudaPage() {
             </p>
           </div>
           {FATORES_ITENS.map((item, i) => (
+            <ItemChecklist key={i} {...item} forceOpen={printMode} />
+          ))}
+        </div>
+      </div>
+
+      {/* Fatores psicossociais expandíveis */}
+      <div>
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-purple-100">
+            <ClipboardList className="size-4 text-purple-700" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-gray-800">13 Fatores Psicossociais — como pontuar cada um</h2>
+            <p className="text-xs text-gray-500">
+              Guia de pontuação Likert 1–5 para os fatores psicossociais avaliados via QPS. Clique em cada fator para ver o conceito,
+              como aplicar e o critério de score ≥ 3. Base: NR-01 GRO/PGR + literatura JD-R / Karasek / Siegrist.
+            </p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 space-y-3">
+          <div className="rounded-lg border border-purple-100 bg-white/70 px-4 py-3">
+            <p className="text-xs text-gray-700 leading-relaxed">
+              Os fatores psicossociais são avaliados por questionário QPS aplicado aos trabalhadores. O score Likert (1–5) reflete
+              a intensidade média das respostas para cada fator: <strong>1–2</strong> = ausente/aceitável;{" "}
+              <strong>3</strong> = moderado (gerar registro na Matriz); <strong>4</strong> = alto (intervenção imediata);{" "}
+              <strong>5</strong> = crítico (ação emergencial). Os itens abaixo orientam como interpretar e validar cada score.
+            </p>
+          </div>
+          {PSICOSSOCIAIS_ITENS.map((item, i) => (
             <ItemChecklist key={i} {...item} forceOpen={printMode} />
           ))}
         </div>

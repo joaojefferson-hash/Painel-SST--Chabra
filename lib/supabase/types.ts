@@ -1154,21 +1154,19 @@ export interface AepChecklistCognitiva {
 }
 
 export interface AepChecklistOrganizacional {
-  metas: RespostaChecklist;
-  pausas: RespostaChecklist;
-  jornada_extensiva: RespostaChecklist;
-  pressao_hierarquica: RespostaChecklist;
-  sobrecarga_operacional: RespostaChecklist;
-  deficit_equipe: RespostaChecklist;
-  conflito_organizacional: RespostaChecklist;
-  falta_autonomia: RespostaChecklist;
-  falta_reconhecimento: RespostaChecklist;
-  ambiguidade_funcoes: RespostaChecklist;
-  comunicacao_deficiente: RespostaChecklist;
-  violencia_clientes: RespostaChecklist;
-  excesso_controle: RespostaChecklist;
-  inseguranca_emprego: RespostaChecklist;
-  mudancas_sem_participacao: RespostaChecklist;
+  assedio: RespostaChecklist;
+  falta_suporte: RespostaChecklist;
+  gestao_mudancas: RespostaChecklist;
+  clareza_papel: RespostaChecklist;
+  recompensas: RespostaChecklist;
+  baixo_controle: RespostaChecklist;
+  justica_organizacional: RespostaChecklist;
+  eventos_traumaticos: RespostaChecklist;
+  subcarga: RespostaChecklist;
+  sobrecarga: RespostaChecklist;
+  maus_relacionamentos: RespostaChecklist;
+  comunicacao_dificil: RespostaChecklist;
+  trabalho_remoto: RespostaChecklist;
 }
 
 export interface AepCargoSetor {

@@ -8,21 +8,19 @@ import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import type { AepChecklistOrganizacional } from "@/lib/supabase/types";
 
 const ITENS_ORG: { key: keyof AepChecklistOrganizacional; label: string }[] = [
-  { key: "metas",                     label: "Metas agressivas / inatingíveis" },
-  { key: "pausas",                    label: "Ausência ou insuficiência de pausas" },
-  { key: "jornada_extensiva",         label: "Jornada extensiva / horas extras frequentes" },
-  { key: "pressao_hierarquica",       label: "Pressão hierárquica / assédio moral" },
-  { key: "sobrecarga_operacional",    label: "Sobrecarga operacional" },
-  { key: "deficit_equipe",            label: "Déficit de equipe / trabalho solitário" },
-  { key: "conflito_organizacional",   label: "Conflito organizacional / falta de suporte" },
-  { key: "falta_autonomia",           label: "Falta de autonomia nas decisões do trabalho" },
-  { key: "falta_reconhecimento",      label: "Falta de reconhecimento / valorização" },
-  { key: "ambiguidade_funcoes",       label: "Ambiguidade ou conflito de funções" },
-  { key: "comunicacao_deficiente",    label: "Comunicação organizacional deficiente" },
-  { key: "violencia_clientes",        label: "Violência / agressão de clientes ou terceiros" },
-  { key: "excesso_controle",          label: "Excesso de controle e monitoramento" },
-  { key: "inseguranca_emprego",       label: "Insegurança quanto à continuidade do emprego" },
-  { key: "mudancas_sem_participacao", label: "Mudanças organizacionais sem participação dos trabalhadores" },
+  { key: "assedio",               label: "Assédio de qualquer natureza no trabalho" },
+  { key: "falta_suporte",         label: "Falta de suporte / apoio no trabalho" },
+  { key: "gestao_mudancas",       label: "Má gestão de mudanças organizacionais" },
+  { key: "clareza_papel",         label: "Baixa clareza de papel / função" },
+  { key: "recompensas",           label: "Baixas recompensas e reconhecimento" },
+  { key: "baixo_controle",        label: "Baixo controle no trabalho / Falta de autonomia" },
+  { key: "justica_organizacional",label: "Baixa justiça organizacional" },
+  { key: "eventos_traumaticos",   label: "Eventos violentos ou traumáticos" },
+  { key: "subcarga",              label: "Baixa demanda no trabalho (Subcarga)" },
+  { key: "sobrecarga",            label: "Excesso de demandas no trabalho (Sobrecarga)" },
+  { key: "maus_relacionamentos",  label: "Maus relacionamentos no local de trabalho" },
+  { key: "comunicacao_dificil",   label: "Trabalho em condições de difícil comunicação" },
+  { key: "trabalho_remoto",       label: "Trabalho remoto e isolado" },
 ];
 
 const LABEL_MAP = Object.fromEntries(ITENS_ORG.map(({ key, label }) => [key, label]));
