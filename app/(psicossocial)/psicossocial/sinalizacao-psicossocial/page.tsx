@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { AlertTriangle, Brain, ExternalLink } from "lucide-react";
+import { AlertTriangle, Brain } from "lucide-react";
 import { useAepRelatorios } from "@/lib/hooks/useAep";
 import EmpresaSelect from "@/components/empresas/EmpresaSelect";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -35,11 +34,9 @@ function severidadeChip(count: number) {
 }
 
 export default function SinalizacaoPsicossocialPage() {
-  const router = useRouter();
   const [empresaId, setEmpresaId] = useState<string | null>(null);
   const { data: relatorios = [], isLoading } = useAepRelatorios(empresaId);
 
-  // Processa apenas setores com alertas organizacionais
   const dados = relatorios
     .map((rel) => {
       const empresa = rel.empresas as { nome_empresa?: string } | null;
@@ -74,7 +71,7 @@ export default function SinalizacaoPsicossocialPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-900">Sinalização de Fatores Psicossociais</h1>
           <p className="text-sm text-gray-500">
-            Riscos organizacionais identificados nas triagens AEP — por empresa e setor
+            Empresas e setores com riscos organizacionais identificados nas triagens AEP — priorize para aplicação do questionário
           </p>
         </div>
         <div className="w-60">
@@ -122,17 +119,9 @@ export default function SinalizacaoPsicossocialPage() {
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${severidadeChip(d.totalAlertas)}`}>
-                  {d.totalAlertas} alerta{d.totalAlertas > 1 ? "s" : ""}
-                </span>
-                <button
-                  onClick={() => router.push(`/aep/${d.id}/setores`)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
-                >
-                  Ver AEP <ExternalLink className="size-3" />
-                </button>
-              </div>
+              <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${severidadeChip(d.totalAlertas)}`}>
+                {d.totalAlertas} alerta{d.totalAlertas > 1 ? "s" : ""}
+              </span>
             </div>
 
             {/* Setores */}

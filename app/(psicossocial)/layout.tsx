@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Gauge,
   FlaskConical,
+  Brain,
 } from "lucide-react";
 import SidebarShell, { type NavSection } from "@/components/layout/SidebarShell";
 import ModuleTopbar from "@/components/layout/ModuleTopbar";
@@ -30,8 +31,9 @@ const SECTIONS_LISTA: NavSection[] = [
   {
     label: "Psicossocial",
     items: [
-      { href: "/psicossocial/dashboard-geral", label: "Dashboard Geral", icon: Globe },
-      { href: "/psicossocial", label: "Relatórios DRPS", icon: Files },
+      { href: "/psicossocial/dashboard-geral",          label: "Dashboard Geral",          icon: Globe },
+      { href: "/psicossocial",                           label: "Relatórios DRPS",           icon: Files },
+      { href: "/psicossocial/sinalizacao-psicossocial",  label: "Sinalização Psicossocial",  icon: Brain },
     ],
   },
   {
@@ -122,6 +124,7 @@ function extrairIdRelatorio(pathname: string): string | null {
     "metodologia",
     "texto-padrao",
     "dashboard-geral",
+    "sinalizacao-psicossocial",
   ]);
   if (reservadas.has(candidato)) return null;
   return candidato;
