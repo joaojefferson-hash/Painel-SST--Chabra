@@ -33,6 +33,7 @@ export default function SinalizacaoPsicossocialLayout({ children }: { children: 
         subtitle="Psicossocial"
         logoHref="/sinalizacao-psicossocial"
         sections={SECTIONS}
+        backHref="/inicio"
       />
       <div className="md:pl-[220px] print:pl-0">
         <ModuleTopbar title="Sinalização de Fatores Psicossociais" />
