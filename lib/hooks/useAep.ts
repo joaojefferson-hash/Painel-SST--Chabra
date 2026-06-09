@@ -241,6 +241,8 @@ export function useAepRelatorios(empresaId?: string | null) {
   });
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function useAepRelatorio(id: string) {
   return useQuery({
     queryKey: ["aep-relatorio", id],
@@ -254,7 +256,7 @@ export function useAepRelatorio(id: string) {
       if (error) throw error;
       return normalizarRelatorio(data);
     },
-    enabled: !!id,
+    enabled: !!id && UUID_RE.test(id),
   });
 }
 
