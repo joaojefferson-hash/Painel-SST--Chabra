@@ -1173,6 +1173,7 @@ export interface AepCargoSetor {
   id: string;
   cargo: string;
   descricao: string;
+  quantidade: number;
 }
 
 export interface AepSetor {
@@ -1330,6 +1331,7 @@ export interface AetPerfilOwas {
 export interface AetCargo {
   nome: string;
   descricao: string;
+  quantidade: number;
 }
 
 export interface AetSetor {

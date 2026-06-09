@@ -7,9 +7,10 @@ import { useUserStore } from "@/lib/store";
 import type { Aet13FatorConfig, Aet13FatorPergunta, Aet13FatorSemaforo, AetCargo, AetChecklist, AetChecklistPergunta, AetLaudoFatorPsi, AetLaudoQpsMeta, AetLaudoQpsResposta, AetOwas, AetOwasCategoria, AetOwasSelectCampo, AetPerfilOwas, AetRelatorio, AetSetor, AetTextoPadraoCapitulo, RespostaChecklist, StatusAET, ZonaPsi } from "@/lib/supabase/types";
 
 function normalizarCargos(raw: unknown): AetCargo[] {
-  if (Array.isArray(raw)) return raw as AetCargo[];
+  if (Array.isArray(raw))
+    return (raw as AetCargo[]).map((c) => ({ ...c, quantidade: c.quantidade ?? 0 }));
   if (typeof raw === "string" && raw.trim())
-    return raw.split("\n").filter(Boolean).map((nome) => ({ nome, descricao: "" }));
+    return raw.split("\n").filter(Boolean).map((nome) => ({ nome, descricao: "", quantidade: 0 }));
   return [];
 }
 

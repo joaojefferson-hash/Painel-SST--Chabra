@@ -1480,7 +1480,7 @@ function TextInput({ label, value, disabled, onChange }: { label: string; value:
 // ─── CargoList ────────────────────────────────────────────────────────────────
 
 function CargoList({ cargos, disabled, onChange }: { cargos: AetCargo[]; disabled: boolean; onChange: (cargos: AetCargo[]) => void }) {
-  function addCargo() { onChange([...cargos, { nome: "", descricao: "" }]); }
+  function addCargo() { onChange([...cargos, { nome: "", descricao: "", quantidade: 0 }]); }
   function removeCargo(idx: number) { onChange(cargos.filter((_, i) => i !== idx)); }
   function updateCargo(idx: number, patch: Partial<AetCargo>) { onChange(cargos.map((c, i) => (i === idx ? { ...c, ...patch } : c))); }
 
@@ -1505,6 +1505,13 @@ function CargoList({ cargos, disabled, onChange }: { cargos: AetCargo[]; disable
                 <input type="text" value={cargo.nome} disabled={disabled} onChange={(e) => updateCargo(idx, { nome: e.target.value })}
                   placeholder="Nome do cargo"
                   className="flex-1 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm font-medium focus:border-verde-primary focus:outline-none disabled:bg-white" />
+                <div className="flex items-center gap-1 shrink-0">
+                  <input type="number" min={0} value={cargo.quantidade || ""} disabled={disabled}
+                    onChange={(e) => updateCargo(idx, { quantidade: Number(e.target.value) })}
+                    placeholder="Qtd" title="Quantidade de pessoas neste cargo"
+                    className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm text-center focus:border-verde-primary focus:outline-none disabled:bg-white" />
+                  <span className="text-xs text-gray-400 whitespace-nowrap">pessoas</span>
+                </div>
                 {!disabled && (
                   <button type="button" onClick={() => removeCargo(idx)} className="text-red-400 hover:text-red-600"><X className="size-4" /></button>
                 )}

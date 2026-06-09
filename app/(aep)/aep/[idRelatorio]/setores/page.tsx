@@ -256,25 +256,32 @@ export default function AepSetoresPage({
     updateSetor(setorId, { riscos: setor.riscos.filter((r) => r.id !== riscoId) });
   }
 
+  function syncFuncao(setorId: string, cargos: AepCargoSetor[]) {
+    const nomes = cargos.map((c) => c.cargo).filter(Boolean).join(", ");
+    updateSetor(setorId, { funcao: nomes });
+  }
+
   function addCargo(setorId: string) {
     const setor = setores.find((s) => s.id === setorId);
     if (!setor) return;
-    const novo: AepCargoSetor = { id: crypto.randomUUID(), cargo: "", descricao: "" };
-    updateSetor(setorId, { cargos: [...(setor.cargos ?? []), novo] });
+    const novo: AepCargoSetor = { id: crypto.randomUUID(), cargo: "", descricao: "", quantidade: 0 };
+    const novos = [...(setor.cargos ?? []), novo];
+    updateSetor(setorId, { cargos: novos, funcao: novos.map((c) => c.cargo).filter(Boolean).join(", ") });
   }
 
   function updateCargo(setorId: string, cargoId: string, patch: Partial<AepCargoSetor>) {
     const setor = setores.find((s) => s.id === setorId);
     if (!setor) return;
-    updateSetor(setorId, {
-      cargos: (setor.cargos ?? []).map((c) => (c.id === cargoId ? { ...c, ...patch } : c)),
-    });
+    const novos = (setor.cargos ?? []).map((c) => (c.id === cargoId ? { ...c, ...patch } : c));
+    const extra = "cargo" in patch ? { funcao: novos.map((c) => c.cargo).filter(Boolean).join(", ") } : {};
+    updateSetor(setorId, { cargos: novos, ...extra });
   }
 
   function removeCargo(setorId: string, cargoId: string) {
     const setor = setores.find((s) => s.id === setorId);
     if (!setor) return;
-    updateSetor(setorId, { cargos: (setor.cargos ?? []).filter((c) => c.id !== cargoId) });
+    const novos = (setor.cargos ?? []).filter((c) => c.id !== cargoId);
+    updateSetor(setorId, { cargos: novos, funcao: novos.map((c) => c.cargo).filter(Boolean).join(", ") });
   }
 
   async function gerarTextoIA(setorId: string, campo: "parecer_tecnico" | "recomendacoes") {
@@ -438,6 +445,7 @@ export default function AepSetoresPage({
                       { key: "unidade",    label: "Unidade",  placeholder: "Unidade / filial" },
                       { key: "ghe",        label: "GHE",      placeholder: "Grupo Homogêneo de Exposição" },
                       { key: "jornada",    label: "Jornada",  placeholder: "Ex: 8h/dia, 44h/semana" },
+                      { key: "funcao",     label: "Função",   placeholder: "Preenchida automaticamente pelos cargos" },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <label className="mb-1 block text-xs font-medium text-gray-600">{label}</label>
@@ -484,7 +492,7 @@ export default function AepSetoresPage({
                     ) : (
                       <div className="space-y-2">
                         {(setor.cargos ?? []).map((c) => (
-                          <div key={c.id} className="grid grid-cols-[1fr_2fr_auto] gap-2 items-center">
+                          <div key={c.id} className="grid grid-cols-[1fr_2fr_64px_auto] gap-2 items-center">
                             <input
                               type="text"
                               disabled={!canEdit}
@@ -500,6 +508,16 @@ export default function AepSetoresPage({
                               onChange={(e) => updateCargo(setor.id, c.id, { descricao: e.target.value })}
                               placeholder="Descrição da atividade do cargo"
                               className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
+                            />
+                            <input
+                              type="number"
+                              min={0}
+                              disabled={!canEdit}
+                              value={c.quantidade || ""}
+                              onChange={(e) => updateCargo(setor.id, c.id, { quantidade: Number(e.target.value) })}
+                              placeholder="Qtd"
+                              title="Quantidade de pessoas neste cargo"
+                              className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-center focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
                             />
                             {canEdit && (
                               <button
