@@ -39,6 +39,8 @@ interface HubCardCfg {
   icon: React.ReactNode;
   accent: string;
   categoria: Categoria;
+  skipStats?: boolean;
+  staticLabel?: string;
 }
 
 const CARDS: HubCardCfg[] = [
@@ -124,6 +126,17 @@ const CARDS: HubCardCfg[] = [
     icon: <BookOpen className="size-12" />,
     accent: "#6366F1",
     categoria: "psicossocial",
+  },
+  {
+    modulo: "aep",
+    href: "/aep/sinalizacao-psicossocial",
+    title: "Sinalização Psicossocial",
+    description: "Painel de alertas organizacionais por empresa e setor identificados nas triagens AEP",
+    icon: <Brain className="size-12" />,
+    accent: "#7C3AED",
+    categoria: "psicossocial",
+    skipStats: true,
+    staticLabel: "Dashboard · Fatores organizacionais",
   },
   // ── Chabra Sistema Interno ─────────────────────────────────────────
   {
@@ -436,12 +449,12 @@ function InicioContent() {
                     catCards.length >= 3 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
                   )}
                 >
-                  {catCards.map((c) => (
+                  {catCards.map((c, i) => (
                     <HubCard
-                      key={c.modulo}
+                      key={`${c.modulo}-${i}`}
                       {...c}
-                      stats={statsPorModulo(stats, c.modulo)}
-                      isLoadingStats={stats.isLoading}
+                      stats={c.skipStats ? undefined : statsPorModulo(stats, c.modulo)}
+                      isLoadingStats={c.skipStats ? false : stats.isLoading}
                     />
                   ))}
                 </div>
@@ -547,6 +560,7 @@ function HubCard({
   accent,
   stats,
   isLoadingStats,
+  staticLabel,
 }: {
   href: string;
   title: string;
@@ -555,6 +569,8 @@ function HubCard({
   accent: string;
   stats?: ModuloStats;
   isLoadingStats?: boolean;
+  staticLabel?: string;
+  skipStats?: boolean;
 }) {
   return (
     <Link
@@ -613,6 +629,8 @@ function HubCard({
               )}
             </span>
           </>
+        ) : staticLabel ? (
+          <span className="font-medium" style={{ color: accent }}>{staticLabel}</span>
         ) : (
           <span className="italic text-gray-400">Em construção</span>
         )}
