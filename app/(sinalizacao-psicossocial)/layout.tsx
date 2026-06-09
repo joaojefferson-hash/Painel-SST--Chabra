@@ -24,7 +24,7 @@ const SECTIONS: NavSection[] = [
 
 export default function SinalizacaoPsicossocialLayout({ children }: { children: ReactNode }) {
   useAuth();
-  useRequireModule("psicossocial");
+  useRequireModule(["aep", "psicossocial"]);
 
   return (
     <div className="min-h-screen">
