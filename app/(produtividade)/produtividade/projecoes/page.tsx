@@ -71,6 +71,13 @@ export default function ProjecoesPage() {
   const { data: documentos = [] } = useProdDocumentos();
   const { data: colaboradores = [] } = useProdColaboradores();
 
+  // ── Modo manual de entrada dos dados base ─────────────────────────────────
+  const [modoManual,       setModoManual]       = useState(false);
+  const [manualClientes,   setManualClientes]   = useState("0");
+  const [manualTotalDocs,  setManualTotalDocs]  = useState("0");
+  const [manualPendentes,  setManualPendentes]  = useState("0");
+  const [manualVisitasPend,setManualVisitasPend]= useState("0");
+
   // ── Simulação ────────────────────────────────────────────────────────────
   const [colabAtual,     setColabAtual]     = useState("0");
   const [tecnicoAtual,   setTecnicoAtual]   = useState("0");
@@ -79,13 +86,18 @@ export default function ProjecoesPage() {
   const [prazoDesejado,  setPrazoDesejado]  = useState("3");
   const [crescClientes,  setCrescClientes]  = useState("0");
 
-  // Situação atual
-  const totalDocs      = documentos.length;
-  const docsPendentes  = documentos.filter((d) =>
+  // Situação atual — banco ou manual
+  const totalDocsDB      = documentos.length;
+  const docsPendentesDB  = documentos.filter((d) =>
     ["vencido", "a_vencer", "pendente_visita", "pendente_informacao", "pendente_ssg", "pendente_revisao", "nao_iniciado"].includes(d.status)
   ).length;
-  const visitasPend    = documentos.filter((d) => d.status === "pendente_visita").length;
-  const clientesUnicos = new Set(documentos.map((d) => d.id_empresa)).size;
+  const visitasPendDB    = documentos.filter((d) => d.status === "pendente_visita").length;
+  const clientesUnicosDB = new Set(documentos.map((d) => d.id_empresa)).size;
+
+  const totalDocs      = modoManual ? Math.max(0, Number(manualTotalDocs)  || 0) : totalDocsDB;
+  const docsPendentes  = modoManual ? Math.max(0, Number(manualPendentes)  || 0) : docsPendentesDB;
+  const visitasPend    = modoManual ? Math.max(0, Number(manualVisitasPend)|| 0) : visitasPendDB;
+  const clientesUnicos = modoManual ? Math.max(0, Number(manualClientes)   || 0) : clientesUnicosDB;
 
   // Capacidade atual (somada dos colaboradores cadastrados)
   const capDocsMes    = colaboradores.reduce((s, c) => s + c.capacidade_docs_mes, 0);
@@ -166,10 +178,39 @@ export default function ProjecoesPage() {
 
       {/* Estado atual */}
       <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Estado Atual</h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Estado Atual</h2>
+          <button
+            type="button"
+            onClick={() => setModoManual((v) => !v)}
+            className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+              modoManual
+                ? "bg-teal-700 text-white hover:bg-teal-800"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            <span className={`size-2 rounded-full ${modoManual ? "bg-teal-300" : "bg-gray-400"}`} />
+            {modoManual ? "Entrada manual ativa" : "Inserir manualmente"}
+          </button>
+        </div>
+
+        {modoManual && (
+          <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 p-4">
+            <p className="mb-3 text-xs text-teal-700 font-semibold">
+              Informe os valores base para a simulação (independente do cadastro)
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <InputNum label="Clientes" sub="Total de empresas/clientes" value={manualClientes} onChange={setManualClientes} />
+              <InputNum label="Total de Docs SST" sub="Documentos que precisam ser gerenciados" value={manualTotalDocs} onChange={setManualTotalDocs} />
+              <InputNum label="Docs Pendentes" sub="Precisam ser regularizados" value={manualPendentes} onChange={setManualPendentes} />
+              <InputNum label="Visitas Pendentes" sub="Aguardam técnico de campo" value={manualVisitasPend} onChange={setManualVisitasPend} />
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <ResultCard label="Clientes" value={clientesUnicos} sub="empresas com docs" />
-          <ResultCard label="Total Docs" value={totalDocs} sub="documentos SST" />
+          <ResultCard label="Clientes" value={clientesUnicos} sub={modoManual ? "entrada manual" : "empresas com docs"} />
+          <ResultCard label="Total Docs" value={totalDocs} sub={modoManual ? "entrada manual" : "documentos SST"} />
           <ResultCard label="Docs Pendentes" value={docsPendentes} sub="requerem regularização" colorClass="text-orange-600" />
           <ResultCard label="Visitas Pendentes" value={visitasPend} sub="aguardam técnico" colorClass="text-blue-600" />
         </div>
