@@ -21,6 +21,11 @@ const ROUTE_LABELS: Record<string, string> = {
   "pdfs-gerados":        "PDFs Gerados",
   "inspecoes-ficha":     "Ficha em Branco",
   ficha:                 "Ficha em Branco",
+  produtividade:         "Produtividade",
+  unidades:              "Unidades",
+  documentos:            "Documentos SST",
+  projecoes:             "Projeções",
+  registros:             "Registros",
 };
 
 function buildCrumbs(pathname: string): { label: string; href: string }[] {

@@ -19,7 +19,8 @@ export type ModuloPermitido =
   | "analise_quimicos"
   | "aet"
   | "aep"
-  | "questionarios_psicossociais";
+  | "questionarios_psicossociais"
+  | "produtividade";
 
 export const TODOS_MODULOS: ModuloPermitido[] = [
   "painel",
@@ -32,6 +33,7 @@ export const TODOS_MODULOS: ModuloPermitido[] = [
   "aet",
   "aep",
   "questionarios_psicossociais",
+  "produtividade",
 ];
 
 export const ROTULO_MODULO: Record<ModuloPermitido, string> = {
@@ -45,6 +47,7 @@ export const ROTULO_MODULO: Record<ModuloPermitido, string> = {
   aet: "AET – Análise Ergonômica do Trabalho",
   aep: "AEP – Análise Ergonômica Preliminar",
   questionarios_psicossociais: "Questionários Psicossociais / DRPS",
+  produtividade: "Projeção de Produtividade CHABRA",
 };
 
 // ─── QPS — Questionários Psicossociais ───────────────────────────────────────

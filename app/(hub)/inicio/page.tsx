@@ -20,6 +20,7 @@ import {
   ClipboardCheck,
   BookOpen,
   FileClock,
+  TrendingUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useUserStore } from "@/lib/store";
@@ -147,6 +148,17 @@ const CARDS: HubCardCfg[] = [
     icon: <Boxes className="size-12" />,
     accent: "#2563EB",
     categoria: "interno",
+  },
+  {
+    modulo: "produtividade",
+    href: "/produtividade",
+    title: "Projeção de Produtividade CHABRA",
+    description: "Controle de unidades, documentos SST, produtividade da equipe e projeção de capacidade operacional",
+    icon: <TrendingUp className="size-12" />,
+    accent: "#0F766E",
+    categoria: "interno",
+    skipStats: true,
+    staticLabel: "Dashboard · Projeção de capacidade",
   },
 ];
 
