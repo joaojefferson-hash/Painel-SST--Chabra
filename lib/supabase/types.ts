@@ -7,7 +7,7 @@ export type StatusInspecao =
   | "DELETADA";
 export type TipoCriacao = "BRANCO" | "REVISAO" | "COPIA_EMPRESA";
 export type StatusEmpresa = "Ativo" | "Inativa";
-export type PerfilUsuario = "Admin" | "Tecnico" | "Visualizador";
+export type PerfilUsuario = "Admin" | "Tecnico" | "Visualizador" | "Cliente";
 
 export type ModuloPermitido =
   | "painel"
@@ -1070,6 +1070,92 @@ export interface RelatorioNaoConformidadeItem {
   updated_at: string | null;
 }
 
+// ─────────────────────────────────────────────
+// Portal do Cliente
+// ─────────────────────────────────────────────
+
+export type StatusDocumentoPortal = "liberado" | "assinado" | "vencido" | "substituido";
+export type StatusPendenciaPortal = "pendente" | "recebido" | "em_analise" | "resolvido";
+export type PrioridadePortal = "baixa" | "media" | "alta";
+export type StatusSolicitacaoPortal = "aberta" | "em_analise" | "em_execucao" | "concluida" | "cancelada";
+export type TipoSolicitacaoPortal =
+  | "visita_tecnica"
+  | "atualizacao_documento"
+  | "treinamento"
+  | "inclusao_setor"
+  | "inclusao_maquina"
+  | "duvida"
+  | "outro";
+export type TipoDocumentoPortal =
+  | "AET" | "AEP" | "RNC" | "Conformidade" | "DRPS" | "NR-12" | "Quimicos" | "Inspecao" | "Outro";
+export type ReferenciaPortalTipo = "pendencia" | "solicitacao" | "nao_conformidade" | "documento";
+
+export interface PortalDocumentoCliente {
+  id: string;
+  empresa_id: string;
+  titulo: string;
+  tipo_documento: TipoDocumentoPortal;
+  modulo_origem: string;
+  arquivo_pdf_url: string | null;
+  status: StatusDocumentoPortal;
+  versao: number;
+  data_emissao: string | null;
+  data_validade: string | null;
+  criado_por: string | null;
+  criado_em: string;
+  atualizado_em: string;
+  referencia_tipo: string | null;
+  referencia_id: string | null;
+}
+
+export interface PortalPendenciaCliente {
+  id: string;
+  empresa_id: string;
+  titulo: string;
+  descricao: string | null;
+  status: StatusPendenciaPortal;
+  prioridade: PrioridadePortal;
+  prazo: string | null;
+  criado_por: string | null;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface PortalSolicitacaoCliente {
+  id: string;
+  empresa_id: string;
+  tipo_solicitacao: TipoSolicitacaoPortal;
+  descricao: string;
+  prioridade: PrioridadePortal;
+  status: StatusSolicitacaoPortal;
+  criado_por: string | null;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface PortalComentario {
+  id: string;
+  empresa_id: string;
+  referencia_tipo: ReferenciaPortalTipo;
+  referencia_id: string;
+  texto: string;
+  criado_por: string | null;
+  criado_em: string;
+}
+
+export interface PortalAnexo {
+  id: string;
+  empresa_id: string;
+  referencia_tipo: ReferenciaPortalTipo;
+  referencia_id: string;
+  nome_arquivo: string;
+  storage_path: string;
+  tamanho_bytes: number | null;
+  mime_type: string | null;
+  criado_por: string | null;
+  criado_em: string;
+}
+
 // Schema esperado pelo @supabase/ssr / supabase-js (Database genérico).
 type TableShape<T> = {
   Row: T;
@@ -1117,6 +1203,13 @@ export interface Database {
       aet_textos_padrao: TableShape<AetTextoPadraoCapitulo>;
       aep_relatorios: TableShape<AepRelatorio>;
       aep_textos_padrao: TableShape<AepTextoPadraoCapitulo>;
+      relatorios_nao_conformidade: TableShape<RelatorioNaoConformidade>;
+      relatorios_nao_conformidade_itens: TableShape<RelatorioNaoConformidadeItem>;
+      portal_documentos_cliente: TableShape<PortalDocumentoCliente>;
+      portal_pendencias_cliente: TableShape<PortalPendenciaCliente>;
+      portal_solicitacoes_cliente: TableShape<PortalSolicitacaoCliente>;
+      portal_comentarios: TableShape<PortalComentario>;
+      portal_anexos: TableShape<PortalAnexo>;
     };
   };
 }

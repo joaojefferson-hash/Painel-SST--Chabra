@@ -252,6 +252,11 @@ function InicioContent() {
 
   const temCards = cardsDisponiveis.length > 0;
 
+  // Clientes não usam o hub — redirecionados para o portal
+  useEffect(() => {
+    if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
+  }, [user?.perfil, router]);
+
   const [saudacao, setSaudacao] = useState("");
   const [agora, setAgora] = useState<Date | null>(null);
   useEffect(() => {
