@@ -9,7 +9,7 @@ import { closeDb } from './services/database/sqlite'
 import { stopSyncLoop } from './services/sync/syncEngine'
 
 const isDev = process.env.NODE_ENV === 'development'
-const SERVER_PORT = 3456
+const SERVER_PORT = 3457
 
 let mainWindow: BrowserWindow | null = null
 let nextServerProcess: ChildProcess | null = null
