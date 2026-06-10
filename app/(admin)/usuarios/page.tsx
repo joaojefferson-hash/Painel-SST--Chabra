@@ -353,6 +353,11 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
     }
   }, [open, usuario]);
 
+  const [buscaEmpresa, setBuscaEmpresa] = useState("");
+  // Limpa busca ao abrir/fechar modal
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setBuscaEmpresa(""); }, [open]);
+
   // Quando o admin troca o perfil, reaplica os defaults granulares (só se
   // for criação — em edição, mantém o que o admin já configurou pra não
   // perder ajustes manuais)
@@ -752,27 +757,55 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
                 : `Empresas vinculadas (vazio = todas) — ${form.empresas_vinculadas.length} selecionadas`
             }
           >
+            <input
+              type="text"
+              value={buscaEmpresa}
+              onChange={(e) => setBuscaEmpresa(e.target.value)}
+              placeholder="Buscar empresa…"
+              className="mb-2 w-full rounded-md border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-verde-primary/40"
+            />
             <div className="max-h-48 overflow-auto rounded-md border border-gray-200 bg-white p-2">
               {empresas.length === 0 ? (
                 <p className="p-2 text-xs text-gray-500">
                   Nenhuma empresa cadastrada.
                 </p>
-              ) : (
-                empresas.map((e) => (
-                  <label
-                    key={e.id_empresa}
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={form.empresas_vinculadas.includes(e.id_empresa)}
-                      onChange={() => toggleEmpresa(e.id_empresa)}
-                      className="rounded border-gray-300 text-verde-primary focus:ring-verde-primary/30"
-                    />
-                    <span className="text-sm text-gray-700">{e.nome_empresa}</span>
-                  </label>
-                ))
-              )}
+              ) : (() => {
+                const filtradas = empresas.filter((e) =>
+                  e.nome_empresa.toLowerCase().includes(buscaEmpresa.toLowerCase())
+                );
+                if (filtradas.length === 0)
+                  return <p className="p-2 text-xs text-gray-500">Nenhuma empresa encontrada.</p>;
+                return filtradas.map((e) =>
+                  form.perfil === "Cliente" ? (
+                    <label
+                      key={e.id_empresa}
+                      className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50"
+                    >
+                      <input
+                        type="radio"
+                        name="empresa_cliente"
+                        checked={form.empresas_vinculadas[0] === e.id_empresa}
+                        onChange={() => setForm({ ...form, empresas_vinculadas: [e.id_empresa] })}
+                        className="border-gray-300 text-verde-primary focus:ring-verde-primary/30"
+                      />
+                      <span className="text-sm text-gray-700">{e.nome_empresa}</span>
+                    </label>
+                  ) : (
+                    <label
+                      key={e.id_empresa}
+                      className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.empresas_vinculadas.includes(e.id_empresa)}
+                        onChange={() => toggleEmpresa(e.id_empresa)}
+                        className="rounded border-gray-300 text-verde-primary focus:ring-verde-primary/30"
+                      />
+                      <span className="text-sm text-gray-700">{e.nome_empresa}</span>
+                    </label>
+                  )
+                );
+              })()}
             </div>
           </Field>
         )}
