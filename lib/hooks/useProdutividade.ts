@@ -105,6 +105,7 @@ export interface ProdDocumentoSST {
   nome_empresa: string | null;
   id_unidade: string;
   tipo_documento: string;
+  numero: string | null;
   status: StatusDocumentoSST;
   data_emissao: string | null;
   data_vencimento: string | null;

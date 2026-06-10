@@ -22,6 +22,22 @@ const TODOS_STATUS: StatusDocumentoSST[] = [
   "pendente_revisao", "concluido", "nao_iniciado",
 ];
 
+// Converte DD/MM/AAAA ou AAAA-MM-DD → AAAA-MM-DD (para salvar no banco)
+function parseDateBr(s: string): string | null {
+  if (!s.trim()) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return s || null;
+}
+// Converte AAAA-MM-DD → DD/MM/AAAA (para exibir no input)
+function formatDateBr(s: string | null | undefined): string {
+  if (!s) return "";
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return s;
+}
+
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
 function ModalDocumento({
@@ -34,31 +50,37 @@ function ModalDocumento({
   const { data: unidades = [] } = useProdUnidades();
   const save = useSaveDocumento();
 
-  const [idEmpresa,     setIdEmpresa]     = useState(initial?.id_empresa ?? "");
-  const [nomeEmpresa,   setNomeEmpresa]   = useState(initial?.nome_empresa ?? "");
-  const [idUnidade,     setIdUnidade]     = useState(initial?.id_unidade ?? "");
-  const [tipoDoc,       setTipoDoc]       = useState(initial?.tipo_documento ?? "PGR");
-  const [status,        setStatus]        = useState<StatusDocumentoSST>(initial?.status ?? "nao_iniciado");
-  const [dataEmissao,   setDataEmissao]   = useState(initial?.data_emissao ?? "");
-  const [dataVenc,      setDataVenc]      = useState(initial?.data_vencimento ?? "");
-  const [responsavel,   setResponsavel]   = useState(initial?.responsavel_nome ?? "");
-  const [observacoes,   setObservacoes]   = useState(initial?.observacoes ?? "");
+  const [idEmpresa,   setIdEmpresa]   = useState(initial?.id_empresa ?? "");
+  const [nomeEmpresa, setNomeEmpresa] = useState(initial?.nome_empresa ?? "");
+  const [idUnidade,   setIdUnidade]   = useState(initial?.id_unidade ?? "");
+  const [tipoDoc,     setTipoDoc]     = useState(initial?.tipo_documento ?? "PGR");
+  const [numero,      setNumero]      = useState(initial?.numero ?? "");
+  const [status,      setStatus]      = useState<StatusDocumentoSST>(initial?.status ?? "nao_iniciado");
+  const [dataEmissao, setDataEmissao] = useState(formatDateBr(initial?.data_emissao));
+  const [dataVenc,    setDataVenc]    = useState(formatDateBr(initial?.data_vencimento));
+  const [responsavel, setResponsavel] = useState(initial?.responsavel_nome ?? "");
+  const [observacoes, setObservacoes] = useState(initial?.observacoes ?? "");
+
+  const INPUT = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500";
 
   async function handleSave() {
     if (!nomeEmpresa.trim() && !idEmpresa.trim()) { toast.error("Informe a empresa"); return; }
     if (!idUnidade) { toast.error("Selecione a unidade"); return; }
+    const emissao = parseDateBr(dataEmissao);
+    const venc    = parseDateBr(dataVenc);
     try {
       await save.mutateAsync({
-        id: initial?.id,
-        id_empresa:     idEmpresa.trim() || nomeEmpresa.trim(),
-        nome_empresa:   nomeEmpresa.trim() || null,
-        id_unidade:     idUnidade,
-        tipo_documento: tipoDoc,
+        id:               initial?.id,
+        id_empresa:       idEmpresa.trim() || nomeEmpresa.trim(),
+        nome_empresa:     nomeEmpresa.trim() || null,
+        id_unidade:       idUnidade,
+        tipo_documento:   tipoDoc,
+        numero:           numero.trim() || null,
         status,
-        data_emissao:   dataEmissao || null,
-        data_vencimento: dataVenc || null,
+        data_emissao:     emissao,
+        data_vencimento:  venc,
         responsavel_nome: responsavel.trim() || null,
-        observacoes:    observacoes.trim() || null,
+        observacoes:      observacoes.trim() || null,
       });
       toast.success(initial?.id ? "Documento atualizado" : "Documento adicionado");
       onClose();
@@ -77,46 +99,62 @@ function ModalDocumento({
         <div className="grid gap-3 p-5 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="mb-1.5 block text-xs font-semibold text-gray-600">Nome da Empresa *</label>
-            <input value={nomeEmpresa} onChange={(e) => setNomeEmpresa(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Ex: Empresa ABC Ltda" />
+            <input value={nomeEmpresa} onChange={(e) => setNomeEmpresa(e.target.value)} className={INPUT} placeholder="Ex: Empresa ABC Ltda" />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-gray-600">ID da Empresa (opcional)</label>
-            <input value={idEmpresa} onChange={(e) => setIdEmpresa(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Código interno" />
+            <label className="mb-1.5 block text-xs font-semibold text-gray-600">CNPJ / Código (opcional)</label>
+            <input value={idEmpresa} onChange={(e) => setIdEmpresa(e.target.value)} inputMode="numeric" className={INPUT} placeholder="00.000.000/0000-00" />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-gray-600">Unidade Chabra *</label>
-            <select value={idUnidade} onChange={(e) => setIdUnidade(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <select value={idUnidade} onChange={(e) => setIdUnidade(e.target.value)} className={INPUT}>
               <option value="">Selecionar…</option>
               {unidades.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
             </select>
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-gray-600">Tipo de Documento *</label>
-            <select value={tipoDoc} onChange={(e) => setTipoDoc(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <select value={tipoDoc} onChange={(e) => setTipoDoc(e.target.value)} className={INPUT}>
               {TIPOS_DOCUMENTO_SST.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div>
+            <label className="mb-1.5 block text-xs font-semibold text-gray-600">Número / Referência</label>
+            <input value={numero} onChange={(e) => setNumero(e.target.value)} className={INPUT} placeholder="Ex: 001/2026" />
+          </div>
+          <div>
             <label className="mb-1.5 block text-xs font-semibold text-gray-600">Status</label>
-            <select value={status} onChange={(e) => setStatus(e.target.value as StatusDocumentoSST)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <select value={status} onChange={(e) => setStatus(e.target.value as StatusDocumentoSST)} className={INPUT}>
               {TODOS_STATUS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
             </select>
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-gray-600">Data de Emissão</label>
-            <input type="date" value={dataEmissao} onChange={(e) => setDataEmissao(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            <input
+              value={dataEmissao}
+              onChange={(e) => setDataEmissao(e.target.value)}
+              className={INPUT}
+              placeholder="DD/MM/AAAA"
+              inputMode="numeric"
+            />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-gray-600">Data de Vencimento</label>
-            <input type="date" value={dataVenc} onChange={(e) => setDataVenc(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            <input
+              value={dataVenc}
+              onChange={(e) => setDataVenc(e.target.value)}
+              className={INPUT}
+              placeholder="DD/MM/AAAA"
+              inputMode="numeric"
+            />
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1.5 block text-xs font-semibold text-gray-600">Responsável</label>
-            <input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Nome do responsável pelo documento" />
+            <input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} className={INPUT} placeholder="Nome do responsável pelo documento" />
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1.5 block text-xs font-semibold text-gray-600">Observações</label>
-            <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={2} className={INPUT} />
           </div>
         </div>
         <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
@@ -249,6 +287,7 @@ export default function DocumentosPage() {
                   <th className="px-4 py-3 text-left">Empresa</th>
                   <th className="px-4 py-3 text-left">Unidade</th>
                   <th className="px-4 py-3 text-left">Tipo</th>
+                  <th className="px-4 py-3 text-left">Nº / Ref.</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left">Emissão</th>
                   <th className="px-4 py-3 text-left">Vencimento</th>
@@ -267,6 +306,7 @@ export default function DocumentosPage() {
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500">{unidade?.nome ?? "—"}</td>
                       <td className="px-4 py-3 text-gray-700">{doc.tipo_documento}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 font-mono">{doc.numero ?? "—"}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${cor.bg} ${cor.text}`}>
                           {STATUS_LABEL[doc.status]}
