@@ -267,7 +267,17 @@ function InicioContent() {
   const primeiroNome = user?.nome ? user.nome.split(" ")[0] : "";
 
   // Evita flash do hub antes do redirect completar (depois de todos os hooks)
-  if (user?.perfil === "Cliente") return null;
+  if (user?.perfil === "Cliente") {
+    return (
+      <div
+        className="min-h-screen"
+        style={{
+          background:
+            "linear-gradient(135deg, #1e4d28 0%, #006B54 60%, #00835A 100%)",
+        }}
+      />
+    );
+  }
 
   async function handleLogout() {
     sessionStorage.setItem("intentional-logout", "1");
