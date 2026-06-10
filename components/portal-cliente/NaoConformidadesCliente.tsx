@@ -100,14 +100,13 @@ export default function NaoConformidadesCliente() {
         const itens = (rel as {
           relatorios_nao_conformidade_itens?: {
             id_item: string;
-            descricao_nao_conformidade: string;
-            nr_codigo: string | null;
-            setor: string | null;
-            responsavel: string | null;
+            descricao: string;
+            norma_violada: string | null;
+            responsavel_tratativa: string | null;
             criticidade: string | null;
             status_tratativa: string | null;
             prazo: string | null;
-            fotos_urls: string[] | null;
+            foto_urls: string[] | null;
           }[];
         }).relatorios_nao_conformidade_itens ?? [];
 
@@ -156,19 +155,18 @@ export default function NaoConformidadesCliente() {
                       )}
                     </div>
 
-                    <p className="text-sm text-gray-800">{item.descricao_nao_conformidade}</p>
+                    <p className="text-sm text-gray-800">{item.descricao}</p>
 
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
-                      {item.nr_codigo && <span>NR: {item.nr_codigo}</span>}
-                      {item.setor && <span>Setor: {item.setor}</span>}
-                      {item.responsavel && <span>Responsável: {item.responsavel}</span>}
+                      {item.norma_violada && <span>NR: {item.norma_violada}</span>}
+                      {item.responsavel_tratativa && <span>Responsável: {item.responsavel_tratativa}</span>}
                       {item.prazo && <span>Prazo: {item.prazo}</span>}
                     </div>
 
                     {/* Fotos técnicas */}
-                    {item.fotos_urls && item.fotos_urls.length > 0 && (
+                    {item.foto_urls && item.foto_urls.length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {item.fotos_urls.map((url, i) => (
+                        {item.foto_urls.map((url, i) => (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             key={i}

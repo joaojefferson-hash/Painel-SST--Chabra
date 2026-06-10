@@ -7,14 +7,13 @@ import type { Empresa } from "@/lib/supabase/types";
 
 type NcItem = {
   id_item: string;
-  descricao_nao_conformidade: string;
-  nr_codigo: string | null;
-  setor: string | null;
-  responsavel: string | null;
+  descricao: string;
+  norma_violada: string | null;
   criticidade: string | null;
+  responsavel_tratativa: string | null;
   status_tratativa: string | null;
   prazo: string | null;
-  fotos_urls: string[] | null;
+  foto_urls: string[] | null;
 };
 
 type NcComItens = {
@@ -37,7 +36,7 @@ type AcaoResumo = {
   status: string | null;
   prioridade: string | null;
   data_conclusao: string | null;
-  criado_em: string;
+  created_at: string;
 };
 
 export function usePortalEmpresa() {
@@ -123,8 +122,8 @@ export function usePortalNaoConformidades() {
         .select(
           `id_relatorio, titulo, data_inspecao, status,
            relatorios_nao_conformidade_itens(
-             id_item, descricao_nao_conformidade, nr_codigo, setor,
-             responsavel, criticidade, status_tratativa, prazo, fotos_urls
+             id_item, descricao, norma_violada,
+             responsavel_tratativa, criticidade, status_tratativa, prazo, foto_urls
            )`
         )
         .eq("id_empresa", empresaId!)
@@ -148,7 +147,7 @@ export function usePortalPlanoAcao() {
       const { data, error } = await sb
         .from("acoes_5w2h")
         .select(
-          "id_acao, what_acao, why_justificativa, where_local, when_prazo, who_responsavel, how_metodo, how_much_custo, status, prioridade, data_conclusao, criado_em"
+          "id_acao, what_acao, why_justificativa, where_local, when_prazo, who_responsavel, how_metodo, how_much_custo, status, prioridade, data_conclusao, created_at"
         )
         .eq("id_empresa", empresaId!)
         .order("when_prazo", { ascending: true, nullsFirst: false });
