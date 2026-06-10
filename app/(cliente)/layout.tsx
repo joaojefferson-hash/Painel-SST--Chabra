@@ -14,7 +14,7 @@ export default async function ClienteLayout({ children }: { children: React.Reac
   const { data } = await supabase
     .from("usuarios")
     .select("perfil")
-    .eq("id_usuario", user.id)
+    .eq("email", user.email!)
     .single();
 
   const perfil = (data as { perfil?: string } | null)?.perfil;
