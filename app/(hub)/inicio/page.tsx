@@ -257,6 +257,9 @@ function InicioContent() {
     if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
   }, [user?.perfil, router]);
 
+  // Evita flash do hub antes do redirect completar
+  if (user?.perfil === "Cliente") return null;
+
   const [saudacao, setSaudacao] = useState("");
   const [agora, setAgora] = useState<Date | null>(null);
   useEffect(() => {
