@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { AlertTriangle, CheckCircle2, TrendingUp, Users } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Info, TrendingUp, Users } from "lucide-react";
 import {
   useProdUnidades,
   useProdDocumentos,
@@ -103,8 +103,9 @@ export default function ProjecoesPage() {
   const { data: documentos = [] } = useProdDocumentos();
   const { data: colaboradores = [] } = useProdColaboradores();
 
-  // ── Modo manual por unidade ───────────────────────────────────────────────
-  const [modoManual, setModoManual] = useState(false);
+  // ── UI ────────────────────────────────────────────────────────────────────
+  const [modoManual,   setModoManual]   = useState(false);
+  const [showCalcInfo, setShowCalcInfo] = useState(false);
   // keyed by unidade.id
   const [dadosManuais, setDadosManuais] = useState<Record<string, DadosUnidade>>({});
 
@@ -316,6 +317,87 @@ export default function ProjecoesPage() {
           <InputNum label="Prazo desejado (meses)"            sub="Para zerar todas as pendências"         value={prazoDesejado} onChange={setPrazoDesejado} />
           <InputNum label="Crescimento de clientes / mês"     sub="Novos clientes estimados por mês"       value={crescClientes} onChange={setCrescClientes} />
         </div>
+      </div>
+
+      {/* ── Como calculamos ─────────────────────────────────────────────────── */}
+      <div className="overflow-hidden rounded-xl bg-blue-50 ring-1 ring-blue-200">
+        <button
+          type="button"
+          onClick={() => setShowCalcInfo((v) => !v)}
+          className="flex w-full items-center justify-between px-5 py-3 text-left"
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-blue-800">
+            <Info className="size-4" /> Como os cálculos funcionam
+          </span>
+          {showCalcInfo ? <ChevronUp className="size-4 text-blue-600" /> : <ChevronDown className="size-4 text-blue-600" />}
+        </button>
+
+        {showCalcInfo && (
+          <div className="border-t border-blue-200 px-5 py-4 text-sm text-blue-900 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+
+              <div className="rounded-lg bg-white/70 p-3">
+                <p className="font-bold text-blue-800 mb-1">📄 Capacidade docs/mês</p>
+                <p className="text-xs text-gray-600 mb-1.5">Quantidade de documentos que a equipe consegue produzir por mês com a configuração informada.</p>
+                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
+                  Colaboradores × Docs/colaborador/mês<br/>
+                  = {n(colabAtual)} × {n(docsPorColab, 50)} = <strong>{calc.capDocsEquipe} docs/mês</strong>
+                </code>
+              </div>
+
+              <div className="rounded-lg bg-white/70 p-3">
+                <p className="font-bold text-blue-800 mb-1">⏱ Prazo estimado</p>
+                <p className="text-xs text-gray-600 mb-1.5">Quantos meses serão necessários para zerar todos os documentos pendentes com a equipe simulada.</p>
+                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
+                  ⌈Docs pendentes ÷ Capacidade/mês⌉<br/>
+                  = ⌈{docsPendentes} ÷ {calc.capDocsEquipe || "—"}⌉ = <strong>{calc.prazoSimMeses === Infinity ? "∞" : `${calc.prazoSimMeses}m`}</strong>
+                </code>
+              </div>
+
+              <div className="rounded-lg bg-white/70 p-3">
+                <p className="font-bold text-blue-800 mb-1">👥 Colaboradores ideais</p>
+                <p className="text-xs text-gray-600 mb-1.5">Mínimo de colaboradores para zerar as pendências no prazo desejado, já considerando o crescimento de clientes.</p>
+                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
+                  ⌈(Pendentes + Cresc×Prazo×5) ÷ (Prazo × Docs/colab)⌉<br/>
+                  = ⌈({docsPendentes} + {n(crescClientes)}×{n(prazoDesejado,3)}×5) ÷ ({n(prazoDesejado,3)} × {n(docsPorColab,50)})⌉<br/>
+                  = <strong>{calc.colabIdeal} colaboradores</strong>
+                </code>
+                <p className="mt-1.5 text-[11px] text-gray-500">* Cada novo cliente gera ~5 documentos SST (estimativa padrão)</p>
+              </div>
+
+              <div className="rounded-lg bg-white/70 p-3">
+                <p className="font-bold text-blue-800 mb-1">🔧 Técnicos ideais</p>
+                <p className="text-xs text-gray-600 mb-1.5">Mínimo de técnicos de campo para cobrir todas as visitas pendentes no prazo desejado.</p>
+                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
+                  ⌈Visitas pendentes ÷ (Prazo × Visitas/técnico)⌉<br/>
+                  = ⌈{visitasPend} ÷ ({n(prazoDesejado,3)} × {n(visitasPorTec,20)})⌉<br/>
+                  = <strong>{calc.tecIdeal} técnicos</strong>
+                </code>
+              </div>
+
+              <div className="rounded-lg bg-white/70 p-3 sm:col-span-2">
+                <p className="font-bold text-blue-800 mb-1">📊 Gráfico — Evolução de pendências</p>
+                <p className="text-xs text-gray-600 mb-1.5">Para cada marco de tempo, compara a capacidade acumulada da equipe com o total de pendências acumuladas (incluindo crescimento).</p>
+                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
+                  Pendentes no mês M = Docs pendentes + (Cresc/mês × 5) × M<br/>
+                  Cap. acumulada     = Capacidade/mês × M<br/>
+                  Saldo pendente     = max(0, Pendentes − Cap. acumulada)
+                </code>
+              </div>
+
+              <div className="rounded-lg bg-white/70 p-3 sm:col-span-2">
+                <p className="font-bold text-blue-800 mb-1">🔢 Cenários de crescimento</p>
+                <p className="text-xs text-gray-600 mb-1.5">Simula quantos colaboradores e técnicos serão necessários se a carteira crescer em diferentes ritmos, mantendo o prazo desejado.</p>
+                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
+                  Total docs = Pendentes + (Novos clientes × 5 × Prazo)<br/>
+                  Colabs necessários = ⌈Total ÷ (Prazo × Docs/colab)⌉<br/>
+                  Técnicos necessários = ⌈(Visitas pend + Novos×2) ÷ (Prazo × Vis/técnico)⌉
+                </code>
+              </div>
+
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Resultados ───────────────────────────────────────────────────────── */}
