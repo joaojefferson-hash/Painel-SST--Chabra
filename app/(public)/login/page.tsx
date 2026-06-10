@@ -128,7 +128,8 @@ function LoginInner() {
 
       setUser(perfil);
       const raw = params.get("next") ?? "";
-      const next = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/inicio";
+      const defaultHome = perfil.perfil === "Cliente" ? "/portal-cliente/inicio" : "/inicio";
+      const next = raw.startsWith("/") && !raw.startsWith("//") ? raw : defaultHome;
       router.replace(next);
     } catch (err) {
       setAutoLogging(false);

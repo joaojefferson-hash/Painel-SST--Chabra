@@ -486,7 +486,17 @@ function InicioContent() {
 
 export default function InicioPage() {
   return (
-    <Suspense>
+    <Suspense
+      fallback={
+        <div
+          className="min-h-screen"
+          style={{
+            background:
+              "linear-gradient(135deg, #1e4d28 0%, #006B54 60%, #00835A 100%)",
+          }}
+        />
+      }
+    >
       <InicioContent />
     </Suspense>
   );
