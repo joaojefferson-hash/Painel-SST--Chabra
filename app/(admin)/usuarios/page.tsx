@@ -34,7 +34,7 @@ import type {
 } from "@/lib/supabase/types";
 import { ROTULO_MODULO, TODOS_MODULOS } from "@/lib/supabase/types";
 
-const PERFIS: PerfilUsuario[] = ["Admin", "Tecnico", "Visualizador"];
+const PERFIS: PerfilUsuario[] = ["Admin", "Tecnico", "Visualizador", "Cliente"];
 
 /**
  * Defaults granulares por perfil (V45+). Admin sempre tudo; Técnico cria
@@ -417,7 +417,9 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
             perfil: form.perfil,
             ativo_sistema: form.ativo_sistema,
             empresas_vinculadas:
-              form.perfil === "Tecnico" ? form.empresas_vinculadas : [],
+              form.perfil === "Tecnico" || form.perfil === "Cliente"
+                ? form.empresas_vinculadas
+                : [],
             modulos_permitidos: form.modulos_permitidos,
             pode_criar: form.pode_criar,
             pode_editar: form.pode_editar,
@@ -453,7 +455,9 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
             perfil: form.perfil,
             ativo_sistema: form.ativo_sistema,
             empresas_vinculadas:
-              form.perfil === "Tecnico" ? form.empresas_vinculadas : [],
+              form.perfil === "Tecnico" || form.perfil === "Cliente"
+                ? form.empresas_vinculadas
+                : [],
             modulos_permitidos: form.modulos_permitidos,
             pode_criar: form.pode_criar,
             pode_editar: form.pode_editar,
@@ -688,11 +692,8 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
           </Field>
         </div>
 
-        {/* Permissões granulares (V45+). Admin tem tudo por padrão (e
-            contorna esses flags no código) — mas o checkbox aparece pra
-            clareza visual. Visualizador começa sem nada; admin pode
-            habilitar individualmente. */}
-        <Field label="Permissões">
+        {/* Permissões granulares (V45+). Oculto para perfil Cliente. */}
+        {form.perfil !== "Cliente" && <Field label="Permissões">
           <p className="mt-0.5 text-[11px] text-gray-500">
             O perfil define defaults. Admin contorna estes flags. Visualizador
             só pode criar/editar/excluir o que estiver marcado aqui.
@@ -741,11 +742,15 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
               </span>
             </label>
           </div>
-        </Field>
+        </Field>}
 
-        {form.perfil === "Tecnico" && (
+        {(form.perfil === "Tecnico" || form.perfil === "Cliente") && (
           <Field
-            label={`Empresas vinculadas (vazio = todas) — ${form.empresas_vinculadas.length} selecionadas`}
+            label={
+              form.perfil === "Cliente"
+                ? `Empresa do cliente — ${form.empresas_vinculadas.length === 0 ? "nenhuma selecionada" : form.empresas_vinculadas[0]}`
+                : `Empresas vinculadas (vazio = todas) — ${form.empresas_vinculadas.length} selecionadas`
+            }
           >
             <div className="max-h-48 overflow-auto rounded-md border border-gray-200 bg-white p-2">
               {empresas.length === 0 ? (
@@ -772,7 +777,7 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
           </Field>
         )}
 
-        <Field
+        {form.perfil !== "Cliente" && <Field
           label={`Acesso aos módulos — ${form.modulos_permitidos.length} de ${TODOS_MODULOS.length}`}
         >
           <div className="grid gap-2 rounded-md border border-gray-200 bg-white p-3 sm:grid-cols-2">
@@ -798,7 +803,7 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
             permanecem acessíveis a qualquer Admin, mesmo sem acesso a esses
             módulos.
           </p>
-        </Field>
+        </Field>}
 
         {/* ── Assinatura digital ─────────────────────────────────── */}
         <Field label="Assinatura do Técnico">
