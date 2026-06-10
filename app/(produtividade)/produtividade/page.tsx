@@ -21,7 +21,6 @@ import {
   useProdDocumentos,
   useProdColaboradores,
   STATUS_LABEL,
-  STATUS_COR,
   STATUS_PIE_COLOR,
   type StatusDocumentoSST,
 } from "@/lib/hooks/useProdutividade";
@@ -62,7 +61,6 @@ export default function ProdutividadeDashboard() {
   const emDia       = documentos.filter((d) => d.status === "em_dia").length;
   const vencidos    = documentos.filter((d) => d.status === "vencido").length;
   const aVencer     = documentos.filter((d) => d.status === "a_vencer").length;
-  const concluidos  = documentos.filter((d) => d.status === "concluido").length;
   const pendentes   = documentos.filter((d) =>
     ["pendente_visita", "pendente_informacao", "pendente_ssg", "pendente_revisao", "nao_iniciado"].includes(d.status)
   ).length;

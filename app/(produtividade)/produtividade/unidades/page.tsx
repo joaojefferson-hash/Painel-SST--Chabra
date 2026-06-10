@@ -324,7 +324,7 @@ export default function UnidadesPage() {
         <div className="rounded-xl bg-white p-12 text-center shadow-sm ring-1 ring-black/5">
           <Building2 className="mx-auto size-12 text-gray-200" />
           <p className="mt-3 font-semibold text-gray-600">Nenhuma unidade cadastrada</p>
-          <p className="mt-1 text-sm text-gray-400">Clique em "Nova Unidade" para adicionar as filiais da Chabra.</p>
+          <p className="mt-1 text-sm text-gray-400">Clique em &quot;Nova Unidade&quot; para adicionar as filiais da Chabra.</p>
         </div>
       )}
 
