@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Gauge,
   FlaskConical,
+  Printer,
 } from "lucide-react";
 import SidebarShell, { type NavSection } from "@/components/layout/SidebarShell";
 import ModuleTopbar from "@/components/layout/ModuleTopbar";
@@ -88,6 +89,12 @@ function sectionsRelatorio(idRelatorio: string): NavSection[] {
         { href: `${base}/medidas`, label: "Medidas de Controle", icon: ClipboardCheck },
         { href: `${base}/monitoramento`, label: "Monitoramento", icon: LineChart },
         { href: `${base}/revisao`, label: "Revisão e Melhoria", icon: ListTodo },
+      ],
+    },
+    {
+      label: "Laudo",
+      items: [
+        { href: `${base}/laudo`, label: "Laudo / Imprimir", icon: Printer, variant: "report" as const },
       ],
     },
     {

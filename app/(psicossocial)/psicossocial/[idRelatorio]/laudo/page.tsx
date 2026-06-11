@@ -1,0 +1,568 @@
+"use client";
+
+import { useMemo, useState, use } from "react";
+import { BadgeCheck, Download, Loader2 } from "lucide-react";
+import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
+import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import toast from "react-hot-toast";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import DrpsFiltro from "@/components/drps/DrpsFiltro";
+import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
+import DrpsSumarioPrint from "@/components/drps/DrpsSumarioPrint";
+import DrpsRelatorioExtrasPrint from "@/components/drps/DrpsRelatorioExtrasPrint";
+import DrpsGestaoResumoPrint from "@/components/drps/DrpsGestaoResumoPrint";
+import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
+import { useDrpsStore } from "@/lib/drps/store";
+import { useEmpresa } from "@/lib/hooks/useEmpresas";
+import {
+  useDrpsProbabilidades,
+  useDrpsRelatorio,
+  useDrpsRespondentes,
+  useDrpsTextoPadrao,
+} from "@/lib/hooks/useDrps";
+import {
+  aplicarMatriz,
+  calcularResumoCompleto,
+  filtrarPorSetor,
+  listarSetores,
+} from "@/lib/drps/calculos";
+import {
+  montarValoresVariaveis,
+  substituirVariaveis,
+  substituirVariaveisTexto,
+} from "@/lib/drps/variaveis";
+import { detectRegistroTipo } from "@/lib/registro-profissional";
+import { TOPICOS } from "@/lib/drps/topicos";
+import {
+  formatCNPJ,
+  formatCPF,
+  formatCEI,
+  formatCAEPF,
+  formatCNO,
+} from "@/lib/utils";
+import type { Empresa } from "@/lib/supabase/types";
+import type {
+  DrpsProbabilidade,
+  DrpsRelatorio,
+  TopicoComMatriz,
+} from "@/lib/drps/types";
+
+interface SetorRelatorio {
+  setor: string;
+  totalRespondentes: number;
+  funcoes: string;
+  topicos: TopicoComMatriz[];
+}
+
+function montarMapaProb(
+  probabilidades: DrpsProbabilidade[],
+  setor: string
+): Record<number, 1 | 2 | 3> {
+  const m: Record<number, 1 | 2 | 3> = {};
+  for (let i = 0; i < TOPICOS.length; i++) m[i] = 1;
+  for (const p of probabilidades) {
+    if (p.setor === setor) m[p.topico_idx] = p.probabilidade as 1 | 2 | 3;
+  }
+  return m;
+}
+
+export default function PsicossocialLaudoPage({
+  params,
+}: {
+  params: Promise<{ idRelatorio: string }>;
+}) {
+  const { idRelatorio } = use(params);
+  const setor = useDrpsStore((s) => s.setor);
+  const { data: relatorio } = useDrpsRelatorio(idRelatorio);
+  const { data: empresa } = useEmpresa(relatorio?.id_empresa);
+  const { data: respondentes = [] } = useDrpsRespondentes(idRelatorio);
+  const { data: probabilidades = [] } = useDrpsProbabilidades(idRelatorio);
+  const { data: capitulos = [] } = useDrpsTextoPadrao();
+
+  const valoresVars = useMemo(() => {
+    const base = montarValoresVariaveis(empresa, relatorio ?? null);
+    const timestamps = respondentes
+      .map((r) => r.data_carimbo)
+      .filter((d): d is string => !!d)
+      .map((d) => new Date(d).getTime())
+      .filter((n) => !Number.isNaN(n));
+    const inicio = timestamps.length > 0
+      ? new Date(Math.min(...timestamps)).toLocaleDateString("pt-BR")
+      : "";
+    const fim = timestamps.length > 0
+      ? new Date(Math.max(...timestamps)).toLocaleDateString("pt-BR")
+      : "";
+    return { ...base, data_carimbo_inicio: inicio, data_carimbo_fim: fim };
+  }, [empresa, relatorio, respondentes]);
+
+  const setoresParaRelatorio = useMemo<string[]>(() => {
+    if (setor === "Todos") return listarSetores(respondentes);
+    return [setor];
+  }, [setor, respondentes]);
+
+  const relatoriosPorSetor = useMemo<SetorRelatorio[]>(() => {
+    return setoresParaRelatorio.map((s) => {
+      const filtrados = filtrarPorSetor(respondentes, s);
+      const topicos = calcularResumoCompleto(filtrados);
+      const mapaProb = montarMapaProb(probabilidades, s);
+      const topicosComMatriz = aplicarMatriz(topicos, mapaProb);
+      const cargosSet = new Set<string>();
+      for (const r of filtrados) {
+        if (r.cargo && r.cargo.trim()) cargosSet.add(r.cargo.trim());
+      }
+      const funcoes = Array.from(cargosSet)
+        .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
+        .join(", ");
+      return { setor: s, totalRespondentes: filtrados.length, funcoes, topicos: topicosComMatriz };
+    });
+  }, [setoresParaRelatorio, respondentes, probabilidades]);
+
+  const { pdfAssinado, recarregar } = usePdfAssinado("drps_relatorios_analise", idRelatorio);
+  const [baixando, setBaixando] = useState(false);
+
+  async function handleBaixarPdf() {
+    if (!pdfAssinado) return;
+    setBaixando(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: blob, error } = await supabase.storage
+        .from("pdfs-assinados")
+        .download(pdfAssinado.pdf_path);
+      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "relatorio-drps-assinado.pdf"; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch { toast.error("Erro ao baixar o PDF."); }
+    finally { setBaixando(false); }
+  }
+
+  const podeImprimir = !!relatorio && respondentes.length > 0 && setoresParaRelatorio.length > 0;
+
+  return (
+    <div className="space-y-4">
+      <style>{`
+        .drps-print-container {
+          font-family: var(--font-sans), Inter, system-ui, sans-serif;
+          color: #111827;
+          font-size: 11px;
+          line-height: 1.55;
+        }
+        @media print {
+          @page { size: A4; margin: 1.4cm 1.2cm; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
+          .drps-print-container { padding: 0 !important; box-shadow: none !important; border: none !important; }
+          .drps-capitulos { break-after: page; }
+          .drps-capitulo--capa { break-before: page; break-after: page; }
+          .drps-capitulo--capa:first-child { break-before: auto; }
+          .drps-setor-bloco { break-before: page; }
+          .drps-setor-bloco:first-child { break-before: auto; }
+          .drps-tabela tr, .drps-tabela td, .drps-tabela th { break-inside: avoid; }
+          .drps-capitulo-conteudo p,
+          .drps-capitulo-conteudo li { break-inside: avoid; page-break-inside: avoid; }
+          .drps-capitulos-apos-setores { break-before: page; }
+        }
+        .drps-tabela { border-collapse: collapse; width: 100%; font-size: 11px; }
+        .drps-tabela td, .drps-tabela th { border: 1px solid #cbd5e1; padding: 7px 10px; vertical-align: top; }
+        .drps-label { background: #f0f9f4; font-weight: 600; color: #1e4d28; font-size: 10.5px; letter-spacing: 0.02em; width: 30%; }
+        .drps-header-section { background: #d4edda; color: #1e4d28; font-weight: 700; text-align: center; font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 10px; }
+        .drps-title { background: linear-gradient(180deg, #006B54 0%, #00563f 100%); color: white; font-weight: 700; font-size: 13px; text-align: center; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 12px; }
+        .drps-capitulo { margin-bottom: 22px; }
+        .drps-setor-bloco { margin-bottom: 24px; }
+        .drps-setor-bloco .drps-tabela + .drps-tabela { margin-top: 0; }
+        .drps-capitulo--capa { position: relative; min-height: calc(297mm - 2.8cm); margin: -1.5rem -1.5rem 0 -1.5rem; overflow: hidden; color: inherit; }
+        .drps-capitulo-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; z-index: 0; }
+        .drps-capitulo--capa .drps-capitulo-titulo { display: none; }
+        .drps-capitulo--capa .drps-capitulo-conteudo, .drps-capitulo--capa .drps-caixa-texto { position: relative; z-index: 1; }
+        @media print {
+          .drps-capitulo--capa { margin: 0; padding: 0; height: calc(297mm - 2.8cm - 1mm); min-height: calc(297mm - 2.8cm - 1mm); max-height: calc(297mm - 2.8cm - 1mm); }
+          .drps-capitulo--capa .drps-capitulo-conteudo { padding: 1.2cm; }
+        }
+        .drps-capitulo-titulo { font-size: 14px; font-weight: 700; color: #1e4d28; border-bottom: 2px solid #006B54; padding-bottom: 4px; margin-bottom: 8px; }
+        .drps-capitulo-conteudo { font-size: 11px; color: #1f2937; line-height: 1.55; }
+        .drps-capitulo-conteudo p { margin: 0 0 8px 0; }
+        .drps-capitulo-conteudo h1 { font-size: 16px; font-weight: 700; color: #1e4d28; margin: 12px 0 6px; }
+        .drps-capitulo-conteudo h2 { font-size: 14px; font-weight: 700; color: #1e4d28; margin: 10px 0 6px; }
+        .drps-capitulo-conteudo h3 { font-size: 12px; font-weight: 700; color: #1e4d28; margin: 8px 0 4px; }
+        .drps-capitulo-conteudo ul, .drps-capitulo-conteudo ol { margin: 0 0 8px 20px; padding: 0; }
+        .drps-capitulo-conteudo li { margin: 2px 0; }
+        .drps-capitulo-conteudo a { color: #006B54; text-decoration: underline; }
+        .drps-capitulo-conteudo img { max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0; }
+        .drps-capitulo-conteudo table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 10px; }
+        .drps-capitulo-conteudo th, .drps-capitulo-conteudo td { border: 1px solid #999; padding: 5px 7px; vertical-align: top; }
+        .drps-capitulo-conteudo th { background: #d4edda; color: #1e4d28; font-weight: 700; text-align: left; }
+      `}</style>
+
+      {/* ── Cabeçalho da página ─────────────────────────────────── */}
+      <div className="print:hidden">
+        <h1 className="text-xl font-semibold text-gray-900">Laudo DRPS</h1>
+        <p className="text-sm text-gray-600">
+          {empresa?.nome_empresa ?? "Carregando..."}
+          {relatorio && (
+            <span className="ml-2 text-xs text-gray-400">Rev. {relatorio.revisao}</span>
+          )}
+        </p>
+      </div>
+
+      {/* ── Filtro de setor ─────────────────────────────────────── */}
+      <div className="print:hidden">
+        <DrpsFiltro idRelatorio={idRelatorio} />
+      </div>
+
+      {/* ── Barra de ações ──────────────────────────────────────── */}
+      <div className="sticky top-0 z-20 flex flex-wrap items-center justify-end gap-2 border-b border-gray-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur print:hidden">
+        {pdfAssinado ? (
+          <>
+            <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+              <BadgeCheck className="size-3.5 shrink-0" />
+              Assinado em {new Date(pdfAssinado.assinado_em).toLocaleDateString("pt-BR")}
+            </div>
+            <button
+              type="button"
+              onClick={handleBaixarPdf}
+              disabled={baixando}
+              className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500 bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            >
+              {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              Baixar PDF Assinado
+            </button>
+          </>
+        ) : (
+          <BotaoAssinarPdf
+            tabelaNome="drps_relatorios_analise"
+            docId={idRelatorio}
+            onAssinado={recarregar}
+          />
+        )}
+        <BotaoGerarPdf
+          tabelaNome="drps_relatorios_analise"
+          docId={idRelatorio}
+          disabled={!podeImprimir}
+          className="inline-flex items-center gap-2 rounded-md bg-verde-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-verde-accent disabled:cursor-not-allowed disabled:opacity-50"
+          registrarPdf={{
+            modulo: "drps",
+            tipoDocumento: "Diagnóstico de Riscos Psicossociais",
+            idRelatorio,
+            empresaId: relatorio?.id_empresa ?? undefined,
+            empresaNome: empresa?.nome_empresa ?? undefined,
+            empresaCnpj: empresa?.cnpj ?? undefined,
+            responsavelTecnico: relatorio?.responsavel_tecnico ?? undefined,
+          }}
+        />
+      </div>
+
+      {respondentes.length === 0 ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 print:hidden">
+          Nenhum respondente importado — não é possível gerar o laudo.
+        </div>
+      ) : (
+        <div className="drps-print-container rounded border border-gray-300 bg-white p-6 shadow-sm">
+          {capitulos.filter((c) => c.tipo !== "fixo").length === 0 && (
+            <RelatorioPrintHeader
+              titulo="Diagnóstico de Riscos Psicossociais (DRPS)"
+              subtitulo={empresa?.nome_empresa ?? null}
+              terciario={setor !== "Todos" ? `Setor: ${setor}` : "Consolidado por setor"}
+            />
+          )}
+
+          {renderCapitulosPosicao(capitulos, "inicio", valoresVars, "drps-capitulos-inicio")}
+
+          <DrpsSumarioPrint
+            setores={relatoriosPorSetor.map((r) => r.setor)}
+            valores={valoresVars}
+            temConclusaoGeral={!!relatorio?.conclusao_geral}
+            temMedidas={true}
+            temMonitoramento={true}
+            temRevisao={true}
+          />
+
+          {renderCapitulosPosicao(capitulos, "apos_sumario", valoresVars, "drps-capitulos-apos-sumario")}
+
+          {relatoriosPorSetor.map((r, idx) => (
+            <BlocoSetorLaudo
+              key={r.setor}
+              relatorio={r}
+              drpsRel={relatorio ?? null}
+              empresa={empresa ?? null}
+              indice={idx + 1}
+              total={relatoriosPorSetor.length}
+              ehConsolidado={setor === "Todos"}
+            />
+          ))}
+
+          {renderCapitulosPosicao(capitulos, "apos_setores", valoresVars, "drps-capitulos-apos-setores")}
+
+          {relatorio?.conclusao_geral && (
+            <section className="drps-conclusao-geral-print">
+              <style>{`
+                .drps-conclusao-geral-print { page-break-before: always; font-family: 'Times New Roman', Times, serif; }
+                .drps-conclusao-geral-print h2 { font-size: 16pt; font-weight: 700; color: #1e4d28; border-bottom: 2px solid #006B54; padding-bottom: 6px; margin: 0 0 14pt 0; text-transform: uppercase; letter-spacing: 0.05em; }
+                .drps-conclusao-geral-print p { font-size: 12pt; line-height: 1.6; text-align: justify; color: #1f2937; margin: 0 0 12pt 0; text-indent: 1.25cm; white-space: pre-wrap; }
+              `}</style>
+              <h2>Conclusão Geral</h2>
+              <p>{relatorio.conclusao_geral}</p>
+            </section>
+          )}
+
+          {renderCapitulosPosicao(capitulos, "apos_conclusao", valoresVars, "drps-capitulos-apos-conclusao")}
+
+          <DrpsGestaoResumoPrint idRelatorio={idRelatorio} />
+          <DrpsRelatorioExtrasPrint idRelatorio={idRelatorio} />
+
+          {renderCapitulosPosicao(capitulos, "apos_medidas", valoresVars, "drps-capitulos-apos-medidas")}
+          {renderCapitulosPosicao(capitulos, "fim", valoresVars, "drps-capitulos-fim")}
+
+          <AssinaturaRelatorio
+            nomeResponsavel={relatorio?.responsavel_tecnico ?? undefined}
+            tabelaNome="drps_relatorios_analise"
+            docId={idRelatorio}
+            hideAcoes
+          />
+
+          <p className="mt-6 text-center text-[9px] text-gray-500 print:hidden">
+            Documento gerado pelo Painel SST Chabra em{" "}
+            {new Date().toLocaleDateString("pt-BR")}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderCapitulosPosicao(
+  capitulos: import("@/lib/drps/types").DrpsTextoPadraoCapitulo[],
+  posicao: import("@/lib/drps/types").DrpsPosicaoPdf,
+  valoresVars: Record<string, string>,
+  className: string
+) {
+  const filtrados = capitulos.filter(
+    (c) => (c.posicao_pdf ?? "inicio") === posicao && c.tipo !== "fixo" && c.ativo !== false
+  );
+  if (filtrados.length === 0) return null;
+  return (
+    <section className={`${className} drps-capitulos mb-6`}>
+      {filtrados.map((c) => {
+        const ehCapa = !!c.bg_imagem_url;
+        return (
+          <article key={c.id_capitulo} className={ehCapa ? "drps-capitulo drps-capitulo--capa" : "drps-capitulo"}>
+            {ehCapa && c.bg_imagem_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={c.bg_imagem_url} alt="" className="drps-capitulo-bg-img" />
+            )}
+            {!ehCapa && (
+              <h2 className="drps-capitulo-titulo">
+                {substituirVariaveisTexto(c.titulo, valoresVars)}
+              </h2>
+            )}
+            {ehCapa && c.caixas_texto && c.caixas_texto.length > 0 ? (
+              c.caixas_texto.map((cx) => (
+                <div
+                  key={cx.id}
+                  className="drps-caixa-texto"
+                  style={{
+                    position: "absolute",
+                    left: `${cx.x}%`,
+                    top: `${cx.y}%`,
+                    width: `${cx.w ?? 40}%`,
+                    fontSize: cx.fontSize ?? 16,
+                    fontWeight: cx.bold ? 700 : 400,
+                    color: cx.color ?? "#ffffff",
+                    textAlign: cx.align ?? "left",
+                    whiteSpace: "pre-wrap",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {substituirVariaveisTexto(cx.conteudo, valoresVars)}
+                </div>
+              ))
+            ) : c.conteudo ? (
+              <div
+                className="drps-capitulo-conteudo"
+                dangerouslySetInnerHTML={{ __html: substituirVariaveis(c.conteudo, valoresVars) }}
+              />
+            ) : null}
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
+function BlocoSetorLaudo({
+  relatorio,
+  drpsRel,
+  empresa,
+  indice,
+  total,
+  ehConsolidado,
+}: {
+  relatorio: SetorRelatorio;
+  drpsRel: DrpsRelatorio | null;
+  empresa: Empresa | null;
+  indice: number;
+  total: number;
+  ehConsolidado: boolean;
+}) {
+  const identificadores: { label: string; valor: string }[] = [];
+  if (empresa?.cnpj) identificadores.push({ label: "CNPJ", valor: formatCNPJ(empresa.cnpj) });
+  if (empresa?.cpf)  identificadores.push({ label: "CPF",  valor: formatCPF(empresa.cpf) });
+  if (empresa?.cei)  identificadores.push({ label: "CEI",  valor: formatCEI(empresa.cei) });
+  if (empresa?.caepf) identificadores.push({ label: "CAEPF", valor: formatCAEPF(empresa.caepf) });
+  if (empresa?.cno)  identificadores.push({ label: "CNO",  valor: formatCNO(empresa.cno) });
+  if (identificadores.length === 0) identificadores.push({ label: "CNPJ", valor: "—" });
+
+  const cargoResponsavel = null; // não armazenado no DB; label padrão = "Registro"
+
+  return (
+    <section className="drps-setor-bloco mb-4">
+      <table className="drps-tabela mb-0">
+        <tbody>
+          <tr>
+            <td className="drps-title" colSpan={4}>
+              <div className="flex items-center justify-center gap-3">
+                <span>DRPS — Diagnóstico de Riscos Psicossociais</span>
+                {drpsRel && (
+                  <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold tracking-wide">
+                    Rev. {drpsRel.revisao}
+                  </span>
+                )}
+                {ehConsolidado && (
+                  <span className="text-[10px] font-normal opacity-80">{indice}/{total}</span>
+                )}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td className="drps-label" style={{ width: "30%" }}>
+              Responsável Técnico pela Avaliação (Psicólogo)
+            </td>
+            <td>{drpsRel?.responsavel_tecnico ?? ""}</td>
+            <td className="drps-label" style={{ width: "10%" }}>
+              {detectRegistroTipo(cargoResponsavel).label}
+            </td>
+            <td style={{ width: "20%" }}>{drpsRel?.crp ?? ""}</td>
+          </tr>
+          <tr><td className="drps-header-section" colSpan={4}>IDENTIFICAÇÃO</td></tr>
+          <tr>
+            <td className="drps-label">{identificadores[0].label}</td>
+            <td>{identificadores[0].valor}</td>
+            <td className="drps-label">Data da Elaboração</td>
+            <td>
+              {drpsRel?.data_elaboracao
+                ? new Date(drpsRel.data_elaboracao + "T00:00:00").toLocaleDateString("pt-BR")
+                : ""}
+            </td>
+          </tr>
+          {identificadores.slice(1).map((ident) => (
+            <tr key={ident.label}>
+              <td className="drps-label">{ident.label}</td>
+              <td colSpan={3}>{ident.valor}</td>
+            </tr>
+          ))}
+          <tr>
+            <td className="drps-label">Empresa</td>
+            <td colSpan={3}>{empresa?.nome_empresa ?? "—"}</td>
+          </tr>
+          <tr>
+            <td className="drps-label">Setor</td>
+            <td colSpan={3}>{relatorio.setor}</td>
+          </tr>
+          <tr>
+            <td className="drps-label">Funções</td>
+            <td colSpan={3}>{relatorio.funcoes || "—"}</td>
+          </tr>
+          <tr>
+            <td className="drps-label">Quantidade de Trabalhadores na Função</td>
+            <td colSpan={3}>{relatorio.totalRespondentes}</td>
+          </tr>
+          <tr>
+            <td className="drps-label align-top">
+              Possíveis Agravos à Saúde Mental
+              <div className="mt-1 text-[9px] font-normal italic text-gray-600">
+                Ex: tudo aquilo que pode acontecer com colaboradores se os riscos psicossociais não forem identificados e controlados.
+              </div>
+            </td>
+            <td colSpan={3} className="align-top whitespace-pre-wrap text-[11px]">
+              {drpsRel?.agravos_por_setor?.[relatorio.setor] ?? ""}
+            </td>
+          </tr>
+          <tr>
+            <td className="drps-label align-top">
+              Medidas de Controle Existentes
+              <div className="mt-1 text-[9px] font-normal italic text-gray-600">
+                Ex: ações que a empresa já realiza para controle dos riscos psicossociais.
+              </div>
+            </td>
+            <td colSpan={3} className="align-top whitespace-pre-wrap text-[11px]">
+              {drpsRel?.medidas_por_setor?.[relatorio.setor] ?? ""}
+            </td>
+          </tr>
+          <tr><td className="drps-header-section" colSpan={4}>Classificação de Risco Psicossocial</td></tr>
+          <tr>
+            <td colSpan={4} className="text-center text-[11px] font-semibold uppercase tracking-wider" style={{ background: "#f0f9f4", color: "#1e4d28" }}>
+              Quantitativo e Qualitativo
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table className="drps-tabela mt-0">
+        <thead>
+          <tr>
+            <th className="drps-label" style={{ width: "30%", textAlign: "left" }}>Fatores de Risco</th>
+            <th className="drps-label" style={{ width: "35%", textAlign: "left" }}>Fontes Geradoras do Risco</th>
+            <th className="drps-label" style={{ width: "11%" }}>Gravidade<br /><span className="text-[9px] font-normal italic">(Severidade)</span></th>
+            <th className="drps-label" style={{ width: "12%" }}>Probabilidade<br /><span className="text-[9px] font-normal italic">de Ocorrência</span></th>
+            <th className="drps-label" style={{ width: "12%" }}>Matriz de Risco</th>
+          </tr>
+        </thead>
+        <tbody>
+          {relatorio.topicos.map((t) => (
+            <tr key={t.idx}>
+              <td className="text-[11px] text-gray-900">{t.nome.replace(/^Tópico \d+ - /, "")}</td>
+              <td className="text-[10px] text-gray-700">{t.fonteGeradora}</td>
+              <td className="text-center">
+                <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ backgroundColor: t.classificacaoGravidade.cor }}>
+                  {t.classificacaoGravidade.texto}
+                </span>
+              </td>
+              <td className="text-center text-[10px] text-gray-700">{t.classificacaoProbabilidade}</td>
+              <td className="text-center">
+                <span className="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold text-white" style={{ backgroundColor: t.corMatriz }}>
+                  {t.matriz}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="mt-2 text-[9px] text-gray-500">
+        {relatorio.totalRespondentes} respondente(s) · {relatorio.topicos.length} tópico(s)
+      </div>
+
+      {(() => {
+        const conclusao = drpsRel?.conclusoes_por_setor?.[relatorio.setor] ?? "";
+        return (
+          <table className="drps-tabela mt-2">
+            <tbody>
+              <tr><td className="drps-header-section">Conclusão</td></tr>
+              <tr>
+                <td className="align-top">
+                  <div
+                    className="tiptap-conteudo prose prose-sm max-w-none text-[11px] leading-relaxed text-gray-900"
+                    style={{ minHeight: 70 }}
+                    dangerouslySetInnerHTML={{
+                      __html: conclusao || "<em style=\"color:#9ca3af\">(Conclusão não preenchida)</em>",
+                    }}
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        );
+      })()}
+    </section>
+  );
+}
