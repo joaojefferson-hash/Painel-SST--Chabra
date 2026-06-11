@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -92,6 +93,54 @@ export function usePdfsGerados(filtros?: { modulo?: string; limit?: number }) {
       return comUrls;
     },
   });
+}
+
+// ─── PDF Assinado ─────────────────────────────────────────────────────────────
+
+export interface PdfAssinado {
+  pdf_path: string;
+  assinado_em: string;
+  assinado_por: string;
+}
+
+/** Carrega e mantém atualizado o registro do PDF assinado para um documento. */
+export function usePdfAssinado(tabelaNome?: string, docId?: string) {
+  const queryClient = useQueryClient();
+  const qk = ["pdf_assinado", tabelaNome ?? "", docId ?? ""];
+
+  const { data: pdfAssinado = null } = useQuery({
+    queryKey: qk,
+    enabled: !!(tabelaNome && docId),
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      const { data } = await createSupabaseBrowserClient()
+        .from("pdfs_assinados")
+        .select("pdf_path, assinado_em, assinado_por")
+        .eq("tabela", tabelaNome!)
+        .eq("doc_id", docId!)
+        .single();
+      return (data as PdfAssinado | null) ?? null;
+    },
+  });
+
+  const recarregar = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["pdf_assinado", tabelaNome ?? "", docId ?? ""] });
+  }, [queryClient, tabelaNome, docId]);
+
+  // Recarrega quando BotaoGerarPdf sinaliza assinatura via evento customizado
+  useEffect(() => {
+    if (!tabelaNome || !docId) return;
+    const handler = (e: Event) => {
+      const ev = e as CustomEvent<{ tabelaNome: string; docId: string }>;
+      if (ev.detail.tabelaNome === tabelaNome && ev.detail.docId === docId) {
+        queryClient.invalidateQueries({ queryKey: ["pdf_assinado", tabelaNome, docId] });
+      }
+    };
+    window.addEventListener("pdf:assinado", handler);
+    return () => window.removeEventListener("pdf:assinado", handler);
+  }, [tabelaNome, docId, queryClient]);
+
+  return { pdfAssinado, recarregar };
 }
 
 export function useRegistrarPdf() {

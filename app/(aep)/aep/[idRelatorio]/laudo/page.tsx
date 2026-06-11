@@ -1,13 +1,17 @@
 "use client";
 
-import { use, useMemo } from "react";
-import { Printer, AlertTriangle } from "lucide-react";
+import { use, useMemo, useState } from "react";
+import { AlertTriangle, BadgeCheck, Download, Loader2 } from "lucide-react";
 import { useAepRelatorio, useAepTextoPadrao, CLASS_COLOR_AEP, riscoMaximoSetor } from "@/lib/hooks/useAep";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
+import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
 import { substituirVariaveis, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import type { AepSetor, AepChecklistFisica, AepChecklistCognitiva, AepChecklistOrganizacional } from "@/lib/supabase/types";
+import toast from "react-hot-toast";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -210,6 +214,30 @@ export default function AepLaudoPage({
   const { idRelatorio } = use(params);
   const { data: rel } = useAepRelatorio(idRelatorio);
   const { data: capitulos = [] } = useAepTextoPadrao();
+  const { pdfAssinado, recarregar } = usePdfAssinado("aep_relatorios", idRelatorio);
+  const [baixando, setBaixando] = useState(false);
+
+  async function handleBaixarPdf() {
+    if (!pdfAssinado) return;
+    setBaixando(true);
+    try {
+      const { data, error } = await createSupabaseBrowserClient()
+        .storage
+        .from("pdfs-assinados")
+        .download(pdfAssinado.pdf_path);
+      if (error || !data) { toast.error("Não foi possível baixar o PDF. Tente novamente."); return; }
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "relatorio-aep-assinado.pdf";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error("Erro ao baixar o PDF.");
+    } finally {
+      setBaixando(false);
+    }
+  }
 
   const empresa = rel?.empresas as { nome_empresa?: string; cnpj?: string | null } | null;
   const setoresComAet = rel?.setores.filter((s) => s.necessita_aet) ?? [];
@@ -237,24 +265,50 @@ export default function AepLaudoPage({
       `}</style>
 
       {/* Toolbar — não imprime */}
-      <div className="no-print mb-6 flex items-center justify-between">
+      <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-bold text-gray-900">Laudo AEP</h1>
           <p className="text-sm text-gray-500">{empresa?.nome_empresa}</p>
         </div>
-        <BotaoGerarPdf
-          tabelaNome="aep_relatorios"
-          docId={idRelatorio}
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
-          registrarPdf={{
-            modulo: "aep",
-            tipoDocumento: "Análise Ergonômica Preliminar",
-            idRelatorio,
-            empresaNome: empresa?.nome_empresa ?? undefined,
-            empresaCnpj: empresa?.cnpj ?? undefined,
-            responsavelTecnico: rel.responsavel_elaboracao ?? undefined,
-          }}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {pdfAssinado && (
+            <>
+              <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+                <BadgeCheck className="size-3.5 shrink-0" />
+                Assinado em {new Date(pdfAssinado.assinado_em).toLocaleDateString("pt-BR")}
+              </div>
+              <button
+                type="button"
+                onClick={handleBaixarPdf}
+                disabled={baixando}
+                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500 bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                Baixar PDF Assinado
+              </button>
+              <BotaoAssinarPdf
+                defaultSignatoryEmail={pdfAssinado.assinado_por}
+                tabelaNome="aep_relatorios"
+                docId={idRelatorio}
+                onAssinado={recarregar}
+                reAssinatura
+              />
+            </>
+          )}
+          <BotaoGerarPdf
+            tabelaNome="aep_relatorios"
+            docId={idRelatorio}
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+            registrarPdf={{
+              modulo: "aep",
+              tipoDocumento: "Análise Ergonômica Preliminar",
+              idRelatorio,
+              empresaNome: empresa?.nome_empresa ?? undefined,
+              empresaCnpj: empresa?.cnpj ?? undefined,
+              responsavelTecnico: rel.responsavel_elaboracao ?? undefined,
+            }}
+          />
+        </div>
       </div>
 
       {/* Laudo */}
@@ -341,6 +395,7 @@ export default function AepLaudoPage({
           dataRelatorio={formatarDataBR(rel.data_elaboracao) || undefined}
           tabelaNome="aep_relatorios"
           docId={idRelatorio}
+          hideAcoes
         />
       </div>
     </>

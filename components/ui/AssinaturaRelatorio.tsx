@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { BadgeCheck, Download, ShieldCheck } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import toast from "react-hot-toast";
 
@@ -14,6 +15,7 @@ export default function AssinaturaRelatorio({
   dataRelatorio,
   tabelaNome,
   docId,
+  hideAcoes = false,
 }: {
   nomeResponsavel?: string;
   cargoResponsavel?: string;
@@ -22,6 +24,8 @@ export default function AssinaturaRelatorio({
   tabelaNome?: string;
   /** ID do documento. Necessário para salvar/carregar PDF assinado. */
   docId?: string;
+  /** Quando true, oculta a barra de ações (baixar + re-assinar) — usada quando a toolbar da página já exibe esses botões. */
+  hideAcoes?: boolean;
 }) {
   const user = useUserStore((s) => s.user);
   const { data: configs } = useConfiguracoes();
@@ -52,11 +56,7 @@ export default function AssinaturaRelatorio({
     email?: string | null;
   } | null>(null);
 
-  const [pdfAssinado, setPdfAssinado] = useState<{
-    pdf_path: string;
-    assinado_em: string;
-    assinado_por: string;
-  } | null>(null);
+  const { pdfAssinado, recarregar } = usePdfAssinado(tabelaNome, docId);
 
   // Carrega dados de assinatura do profissional
   useEffect(() => {
@@ -91,45 +91,22 @@ export default function AssinaturaRelatorio({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nomeResponsavel, user?.email, user?.nome, isLoggedUserResponsavel]);
 
-  // Carrega estado do PDF assinado (se tabelaNome + docId fornecidos)
-  const carregarPdfAssinado = useCallback(() => {
-    if (!tabelaNome || !docId) return;
-    createSupabaseBrowserClient()
-      .from("pdfs_assinados")
-      .select("pdf_path, assinado_em, assinado_por")
-      .eq("tabela", tabelaNome)
-      .eq("doc_id", docId)
-      .single()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then(({ data }: { data: any }) => setPdfAssinado(data ?? null));
-  }, [tabelaNome, docId]);
-
-  useEffect(() => { carregarPdfAssinado(); }, [carregarPdfAssinado]);
-
-  // Recarrega estado quando BotaoGerarPdf assina via fluxo integrado
-  useEffect(() => {
-    if (!tabelaNome || !docId) return;
-    const handler = (e: Event) => {
-      const ev = e as CustomEvent<{ tabelaNome: string; docId: string }>;
-      if (ev.detail.tabelaNome === tabelaNome && ev.detail.docId === docId) {
-        carregarPdfAssinado();
-      }
-    };
-    window.addEventListener("pdf:assinado", handler);
-    return () => window.removeEventListener("pdf:assinado", handler);
-  }, [tabelaNome, docId, carregarPdfAssinado]);
-
   async function handleBaixarPdf() {
     if (!pdfAssinado) return;
     const { data, error } = await createSupabaseBrowserClient()
       .storage
       .from("pdfs-assinados")
-      .createSignedUrl(pdfAssinado.pdf_path, 3600);
-    if (error || !data?.signedUrl) {
-      toast.error("Não foi possível gerar o link de download. Tente novamente.");
+      .download(pdfAssinado.pdf_path);
+    if (error || !data) {
+      toast.error("Não foi possível baixar o PDF. Tente novamente.");
       return;
     }
-    window.open(data.signedUrl, "_blank", "noopener");
+    const url = URL.createObjectURL(data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "relatorio-assinado.pdf";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   const cargo = cargoResponsavel ?? sigData?.cargo ?? user?.cargo ?? "";
@@ -159,8 +136,8 @@ export default function AssinaturaRelatorio({
         </div>
       )}
 
-      {/* ── Barra de ações: baixar + re-assinar (visível só após assinatura) ── */}
-      {pdfAssinado && (
+      {/* ── Barra de ações: baixar + re-assinar (visível só após assinatura, quando não hideAcoes) ── */}
+      {!hideAcoes && pdfAssinado && (
         <div className="mt-4 flex flex-wrap items-center justify-end gap-2 print:hidden">
           <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
             <BadgeCheck className="size-3.5 shrink-0" />
@@ -178,7 +155,7 @@ export default function AssinaturaRelatorio({
             defaultSignatoryEmail={sigData?.email ?? undefined}
             tabelaNome={tabelaNome}
             docId={docId}
-            onAssinado={carregarPdfAssinado}
+            onAssinado={recarregar}
             reAssinatura
           />
         </div>
