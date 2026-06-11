@@ -49,6 +49,12 @@ export async function gerarHtmlParaPdf(opts?: { forSigning?: boolean }): Promise
 
   const clone = document.documentElement.cloneNode(true) as HTMLElement
 
+  // Remove scripts — quando o Puppeteer executa os scripts do Next.js sem contexto
+  // de servidor (sem __NEXT_DATA__, sem router), o React tenta hidratar e falha,
+  // resultando em página em branco. O conteúdo já está no DOM clonado.
+  clone.querySelectorAll('script').forEach((el) => el.remove())
+  clone.querySelectorAll('noscript').forEach((el) => el.remove())
+
   // Remove elementos print:hidden
   clone
     .querySelectorAll<HTMLElement>('[class*="print:hidden"]')

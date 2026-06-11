@@ -312,7 +312,7 @@ export default function AepLaudoPage({
       </div>
 
       {/* Laudo */}
-      <div className="mx-auto max-w-4xl bg-white px-8 py-10 shadow-sm print:shadow-none print:p-0 print:max-w-none">
+      <div data-pdf-content className="mx-auto max-w-4xl bg-white px-8 py-10 shadow-sm print:shadow-none print:p-0 print:max-w-none">
 
         {/* Capa */}
         <div className="mb-10 border-b-4 border-emerald-700 pb-6 text-center print:mb-8">
