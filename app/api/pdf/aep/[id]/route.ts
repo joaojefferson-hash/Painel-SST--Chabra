@@ -129,11 +129,14 @@ export async function GET(
   const rel = normalizarRelatorio(rawRel);
 
   // Busca capítulos editáveis (textos_padrao modulo=aep, ativos, ordenados)
-  const { data: caps } = await supabase
+  const { data: caps, error: capsError } = await supabase
     .from("textos_padrao")
     .select("*")
     .eq("modulo", "aep")
     .order("ordem", { ascending: true });
+
+  if (capsError) console.error("[pdf/aep] textos_padrao error:", capsError);
+  console.log("[pdf/aep] capitulos count:", caps?.length ?? 0);
 
   const capitulos = (caps ?? []) as TextoPadraoCapitulo[];
 

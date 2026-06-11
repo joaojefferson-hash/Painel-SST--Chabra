@@ -553,8 +553,8 @@ function SetorBlock({
                   padding: "2px 8px",
                 }}
               >
-                <span style={{ color: "#4b5563" }}>{l}</span>
-                <span style={{ color: r.color, fontWeight: r.fontWeight }}>
+                <span style={{ color: "#4b5563", flex: 1, minWidth: 0, wordBreak: "break-word", marginRight: 4 }}>{l}</span>
+                <span style={{ color: r.color, fontWeight: r.fontWeight, flexShrink: 0 }}>
                   {r.label}
                 </span>
               </div>
@@ -588,8 +588,8 @@ function SetorBlock({
                   padding: "2px 8px",
                 }}
               >
-                <span style={{ color: "#4b5563" }}>{l}</span>
-                <span style={{ color: r.color, fontWeight: r.fontWeight }}>
+                <span style={{ color: "#4b5563", flex: 1, minWidth: 0, wordBreak: "break-word", marginRight: 4 }}>{l}</span>
+                <span style={{ color: r.color, fontWeight: r.fontWeight, flexShrink: 0 }}>
                   {r.label}
                 </span>
               </div>
@@ -623,8 +623,8 @@ function SetorBlock({
                   padding: "2px 8px",
                 }}
               >
-                <span style={{ color: "#4b5563" }}>{l}</span>
-                <span style={{ color: r.color, fontWeight: r.fontWeight }}>
+                <span style={{ color: "#4b5563", flex: 1, minWidth: 0, wordBreak: "break-word", marginRight: 4 }}>{l}</span>
+                <span style={{ color: r.color, fontWeight: r.fontWeight, flexShrink: 0 }}>
                   {r.label}
                 </span>
               </div>
