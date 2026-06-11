@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
   // como raiz mesmo quando há um lockfile no diretório pai.
   outputFileTracingRoot: path.join(__dirname),
   transpilePackages: ["xlsx"],
+  // Impede o webpack de tentar empacotar os módulos nativos do Puppeteer.
+  // Eles são carregados via require() em runtime pelo Node.js (nunca bundlados).
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core", "puppeteer"],
   images: {
     remotePatterns: [
       // Permite servir fotos do Supabase Storage.
