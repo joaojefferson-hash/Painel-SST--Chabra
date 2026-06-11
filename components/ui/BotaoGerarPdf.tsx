@@ -44,18 +44,20 @@ export default function BotaoGerarPdf({
       // pode ser aberto externamente); no browser abre em nova aba.
       if (typeof window !== "undefined" && window.electronAPI?.isElectron) {
         await window.electronAPI.abrirPdf(new Uint8Array(ab));
-      } else {
+        // Mantém buffer para o fluxo de assinatura (só no desktop)
+        setBuffer(ab);
+      } else if (ab.byteLength > 0) {
+        // Fallback: serviço externo retornou bytes — abre como blob
         const blob = new Blob([ab], { type: "application/pdf" });
         const url = URL.createObjectURL(blob);
         window.open(url, "_blank", "noopener");
         setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        setBuffer(ab);
       }
+      // se ab.byteLength === 0: window.print() foi chamado, sem buffer
 
-      // Mantém buffer para o fluxo de assinatura
-      setBuffer(ab);
-
-      // Registra geração no histórico se configurado
-      if (registrarPdf) {
+      // Registra geração no histórico se configurado (só com buffer real)
+      if (registrarPdf && ab.byteLength > 0) {
         registrar.mutate({ ...registrarPdf, pdfBuffer: ab });
       }
     } catch (err) {

@@ -30,50 +30,13 @@ export async function gerarHtmlParaPdf(): Promise<ArrayBuffer> {
     return ab
   }
 
-  // ── 2. Railway Puppeteer (web) ───────────────────────────────────
-  const tokenRes = await fetch('/api/pdf/token', { method: 'POST' })
-  if (!tokenRes.ok) {
-    const body = await tokenRes.json().catch(() => ({}))
-    throw new Error(
-      (body as { error?: string }).error ?? 'Erro ao autorizar geração de PDF',
-    )
-  }
-  const { token, serviceUrl } = (await tokenRes.json()) as {
-    token: string
-    serviceUrl: string
-  }
-
-  // Clona o DOM sem tocar no DOM ativo (modal continua aberto)
-  const clone = document.documentElement.cloneNode(true) as HTMLElement
-
-  // Remove elementos print:hidden — garante ausência no PDF
-  clone
-    .querySelectorAll<HTMLElement>('[class*="print:hidden"]')
-    .forEach((el) => el.remove())
-
-  // Remove portais renderizados fora do root Next.js (modais, toasts, etc.)
-  const cloneBody = clone.querySelector('body')
-  if (cloneBody) {
-    const nextRoot = cloneBody.firstElementChild
-    Array.from(cloneBody.children).forEach((child) => {
-      if (child !== nextRoot) child.remove()
-    })
-  }
-
-  const html = clone.outerHTML
-
-  const pdfRes = await fetch(`${serviceUrl}/render`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token, html, baseUrl: window.location.origin }),
-  })
-
-  if (!pdfRes.ok) {
-    const body = await pdfRes.json().catch(() => ({}))
-    throw new Error(
-      (body as { error?: string }).error ?? 'Erro ao gerar PDF no serviço',
-    )
-  }
-
-  return pdfRes.arrayBuffer()
+  // ── 2. Browser: impressão nativa (Ctrl+P → Salvar como PDF) ────────
+  // O Railway Puppeteer gerava PDF em branco porque não conseguia
+  // carregar o CSS do Next.js via URL externa. window.print() usa o
+  // mesmo motor Chromium e aplica o @media print corretamente.
+  // A assinatura digital A1 continua disponível apenas no app desktop.
+  window.print()
+  // Retorna buffer vazio — BotaoGerarPdf ignora o fluxo de assinatura
+  // neste caso.
+  return new ArrayBuffer(0)
 }
