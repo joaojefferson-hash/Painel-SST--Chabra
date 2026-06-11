@@ -101,6 +101,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  try {
   const cookieStore = await cookies();
   const supabase = createSupabaseServerClient(cookieStore);
 
@@ -227,4 +228,11 @@ ${bodyHtml}
       "Cache-Control": "no-store",
     },
   });
+  } catch (err) {
+    console.error("[pdf/aep] Erro ao gerar PDF:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Erro interno ao gerar PDF" },
+      { status: 500 },
+    );
+  }
 }
