@@ -557,7 +557,7 @@ export default function ProjecoesPage() {
             </h2>
           </div>
           <p className="px-5 pb-2 text-[11px] text-gray-400">
-            "Cadastrados" = colaboradores ativos do tipo <em>Geração de documentos SST</em> (ADMs) e <em>Técnico de campo</em> (técnicos) registrados em Unidades e Equipe.
+            &ldquo;Cadastrados&rdquo; = colaboradores ativos do tipo <em>Geração de documentos SST</em> (ADMs) e <em>Técnico de campo</em> (técnicos) registrados em Unidades e Equipe.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
