@@ -8,7 +8,6 @@ import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DrpsFiltro from "@/components/drps/DrpsFiltro";
-import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import DrpsSumarioPrint from "@/components/drps/DrpsSumarioPrint";
 import DrpsRelatorioExtrasPrint from "@/components/drps/DrpsRelatorioExtrasPrint";
 import DrpsGestaoResumoPrint from "@/components/drps/DrpsGestaoResumoPrint";
@@ -19,7 +18,6 @@ import {
   useDrpsProbabilidades,
   useDrpsRelatorio,
   useDrpsRespondentes,
-  useDrpsTextoPadrao,
 } from "@/lib/hooks/useDrps";
 import {
   aplicarMatriz,
@@ -27,13 +25,10 @@ import {
   filtrarPorSetor,
   listarSetores,
 } from "@/lib/drps/calculos";
-import {
-  montarValoresVariaveis,
-  substituirVariaveis,
-  substituirVariaveisTexto,
-} from "@/lib/drps/variaveis";
+import { montarValoresVariaveis } from "@/lib/drps/variaveis";
 import { detectRegistroTipo } from "@/lib/registro-profissional";
 import { TOPICOS } from "@/lib/drps/topicos";
+import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import {
   formatCNPJ,
   formatCPF,
@@ -78,8 +73,6 @@ export default function PsicossocialLaudoPage({
   const { data: empresa } = useEmpresa(relatorio?.id_empresa);
   const { data: respondentes = [] } = useDrpsRespondentes(idRelatorio);
   const { data: probabilidades = [] } = useDrpsProbabilidades(idRelatorio);
-  const { data: capitulos = [] } = useDrpsTextoPadrao();
-
   const valoresVars = useMemo(() => {
     const base = montarValoresVariaveis(empresa, relatorio ?? null);
     const timestamps = respondentes
@@ -258,15 +251,7 @@ export default function PsicossocialLaudoPage({
         </div>
       ) : (
         <div className="drps-print-container rounded border border-gray-300 bg-white p-6 shadow-sm">
-          {capitulos.filter((c) => c.tipo !== "fixo").length === 0 && (
-            <RelatorioPrintHeader
-              titulo="Diagnóstico de Riscos Psicossociais (DRPS)"
-              subtitulo={empresa?.nome_empresa ?? null}
-              terciario={setor !== "Todos" ? `Setor: ${setor}` : "Consolidado por setor"}
-            />
-          )}
-
-          {renderCapitulosPosicao(capitulos, "inicio", valoresVars, "drps-capitulos-inicio")}
+          <TextosPadraoPrint modulo="psicossocial" posicao="inicio" valores={valoresVars} />
 
           <DrpsSumarioPrint
             setores={relatoriosPorSetor.map((r) => r.setor)}
@@ -277,7 +262,7 @@ export default function PsicossocialLaudoPage({
             temRevisao={true}
           />
 
-          {renderCapitulosPosicao(capitulos, "apos_sumario", valoresVars, "drps-capitulos-apos-sumario")}
+          <TextosPadraoPrint modulo="psicossocial" posicao="apos_sumario" valores={valoresVars} />
 
           {relatoriosPorSetor.map((r, idx) => (
             <BlocoSetorLaudo
@@ -291,7 +276,7 @@ export default function PsicossocialLaudoPage({
             />
           ))}
 
-          {renderCapitulosPosicao(capitulos, "apos_setores", valoresVars, "drps-capitulos-apos-setores")}
+          <TextosPadraoPrint modulo="psicossocial" posicao="apos_setores" valores={valoresVars} />
 
           {relatorio?.conclusao_geral && (
             <section className="drps-conclusao-geral-print">
@@ -305,13 +290,13 @@ export default function PsicossocialLaudoPage({
             </section>
           )}
 
-          {renderCapitulosPosicao(capitulos, "apos_conclusao", valoresVars, "drps-capitulos-apos-conclusao")}
+          <TextosPadraoPrint modulo="psicossocial" posicao="apos_conclusao" valores={valoresVars} />
 
           <DrpsGestaoResumoPrint idRelatorio={idRelatorio} />
           <DrpsRelatorioExtrasPrint idRelatorio={idRelatorio} />
 
-          {renderCapitulosPosicao(capitulos, "apos_medidas", valoresVars, "drps-capitulos-apos-medidas")}
-          {renderCapitulosPosicao(capitulos, "fim", valoresVars, "drps-capitulos-fim")}
+          <TextosPadraoPrint modulo="psicossocial" posicao="apos_medidas" valores={valoresVars} />
+          <TextosPadraoPrint modulo="psicossocial" posicao="fim" valores={valoresVars} />
 
           <AssinaturaRelatorio
             nomeResponsavel={relatorio?.responsavel_tecnico ?? undefined}
@@ -327,65 +312,6 @@ export default function PsicossocialLaudoPage({
         </div>
       )}
     </div>
-  );
-}
-
-function renderCapitulosPosicao(
-  capitulos: import("@/lib/drps/types").DrpsTextoPadraoCapitulo[],
-  posicao: import("@/lib/drps/types").DrpsPosicaoPdf,
-  valoresVars: Record<string, string>,
-  className: string
-) {
-  const filtrados = capitulos.filter(
-    (c) => (c.posicao_pdf ?? "inicio") === posicao && c.tipo !== "fixo" && c.ativo !== false
-  );
-  if (filtrados.length === 0) return null;
-  return (
-    <section className={`${className} drps-capitulos mb-6`}>
-      {filtrados.map((c) => {
-        const ehCapa = !!c.bg_imagem_url;
-        return (
-          <article key={c.id_capitulo} className={ehCapa ? "drps-capitulo drps-capitulo--capa" : "drps-capitulo"}>
-            {ehCapa && c.bg_imagem_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={c.bg_imagem_url} alt="" className="drps-capitulo-bg-img" />
-            )}
-            {!ehCapa && (
-              <h2 className="drps-capitulo-titulo">
-                {substituirVariaveisTexto(c.titulo, valoresVars)}
-              </h2>
-            )}
-            {ehCapa && c.caixas_texto && c.caixas_texto.length > 0 ? (
-              c.caixas_texto.map((cx) => (
-                <div
-                  key={cx.id}
-                  className="drps-caixa-texto"
-                  style={{
-                    position: "absolute",
-                    left: `${cx.x}%`,
-                    top: `${cx.y}%`,
-                    width: `${cx.w ?? 40}%`,
-                    fontSize: cx.fontSize ?? 16,
-                    fontWeight: cx.bold ? 700 : 400,
-                    color: cx.color ?? "#ffffff",
-                    textAlign: cx.align ?? "left",
-                    whiteSpace: "pre-wrap",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {substituirVariaveisTexto(cx.conteudo, valoresVars)}
-                </div>
-              ))
-            ) : c.conteudo ? (
-              <div
-                className="drps-capitulo-conteudo"
-                dangerouslySetInnerHTML={{ __html: substituirVariaveis(c.conteudo, valoresVars) }}
-              />
-            ) : null}
-          </article>
-        );
-      })}
-    </section>
   );
 }
 
