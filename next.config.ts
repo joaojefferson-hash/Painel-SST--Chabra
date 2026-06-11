@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
   // Impede o webpack de tentar empacotar os módulos nativos do Puppeteer.
   // Eles são carregados via require() em runtime pelo Node.js (nunca bundlados).
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core", "puppeteer"],
+  // Força a inclusão dos binários do Chromium no bundle de deploy do Vercel.
+  // Sem isto, o file-tracing do Next.js não inclui os .br do sparticuz.
+  outputFileTracingIncludes: {
+    "/api/pdf/aep/[id]": ["./node_modules/@sparticuz/chromium/**/*"],
+  },
   images: {
     remotePatterns: [
       // Permite servir fotos do Supabase Storage.
