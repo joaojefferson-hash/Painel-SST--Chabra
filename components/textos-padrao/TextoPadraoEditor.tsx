@@ -892,4 +892,55 @@ const TEMPLATES_POR_MODULO: Record<
         '<p style="text-align: justify">O presente parecer não substitui a análise de risco específica exigida pelo item 12.131 da NR-12 nem dispensa a capacitação obrigatória dos operadores. Recomenda-se reavaliação periódica e sempre que houver modificação significativa na máquina ou no processo. Risco residual final apurado: <strong>{{risco_residual}}</strong>.</p>',
     },
   ],
+  aep: [
+    {
+      titulo: "1. Introdução",
+      conteudo:
+        '<p style="text-align: justify">Esta Análise Ergonômica Preliminar foi elaborada para a empresa <strong>{{empresa_nome}}</strong> (CNPJ {{cnpj}}), com o objetivo de identificar os principais riscos ergonômicos presentes nos postos de trabalho avaliados, em conformidade com a <strong>NR-17 — Ergonomia</strong>.</p>',
+    },
+    {
+      titulo: "2. Metodologia",
+      conteudo:
+        '<p style="text-align: justify">A avaliação foi realizada por meio de inspeção visual, entrevistas com trabalhadores e análise das condições de trabalho, abrangendo aspectos físicos, cognitivos e organizacionais conforme a metodologia de triagem ergonômica. A AEP não substitui a Análise Ergonômica do Trabalho completa (AET), sendo recomendada quando houver indicadores que justifiquem aprofundamento.</p>',
+    },
+    {
+      titulo: "3. Considerações Finais",
+      conteudo:
+        '<p style="text-align: justify">Recomenda-se a implementação das medidas corretivas identificadas neste relatório, com prioridade para os setores de maior risco ergonômico. Para os setores em que foi indicada necessidade de AET completa, sugere-se a contratação de estudo aprofundado conforme NR-17.</p>',
+    },
+  ],
+  aet: [
+    {
+      titulo: "1. Introdução",
+      conteudo:
+        '<p style="text-align: justify">Este Laudo de Análise Ergonômica do Trabalho foi elaborado para a empresa <strong>{{empresa_nome}}</strong> (CNPJ {{cnpj}}), atendendo às exigências da <strong>NR-17 — Ergonomia</strong> e da <strong>NR-01</strong> (GRO/PGR). O estudo abrange os postos de trabalho, condições ambientais e organização do trabalho dos setores avaliados.</p>',
+    },
+    {
+      titulo: "2. Metodologia",
+      conteudo:
+        '<p style="text-align: justify">A avaliação ergonômica foi conduzida por meio de: inspeção visual dos postos de trabalho; análise postural pelo método OWAS; aplicação do QPS Nordic para fatores psicossociais; medições ambientais (iluminação, ruído, temperatura); e entrevistas com trabalhadores e gestores. As ferramentas utilizadas seguem padrões ABNT, ISO 9241 e literatura ergonômica especializada.</p>',
+    },
+    {
+      titulo: "3. Considerações Finais",
+      conteudo:
+        '<p style="text-align: justify">As medidas recomendadas neste laudo visam adequar as condições de trabalho às capacidades e limitações dos trabalhadores, reduzindo a exposição a fatores de risco ergonômico. Recomenda-se revisão periódica deste estudo, especialmente quando houver alterações significativas nos postos de trabalho, nos processos produtivos ou no quadro de trabalhadores.</p>',
+    },
+  ],
+  psicossocial: [
+    {
+      titulo: "1. Introdução",
+      conteudo:
+        '<p style="text-align: justify">Este Diagnóstico de Riscos Psicossociais foi elaborado para a empresa <strong>{{empresa_nome}}</strong> (CNPJ {{cnpj}}), em conformidade com a <strong>NR-01</strong> (GRO/PGR) e com as diretrizes da Organização Mundial da Saúde para gestão de riscos psicossociais no trabalho.</p>',
+    },
+    {
+      titulo: "2. Metodologia",
+      conteudo:
+        '<p style="text-align: justify">O diagnóstico foi conduzido por meio da aplicação do questionário <strong>QPS Nordic</strong> (Questionário Psicossocial Nórdico), instrumento validado para avaliação de fatores psicossociais no ambiente de trabalho. A coleta ocorreu entre {{data_carimbo_inicio}} e {{data_carimbo_fim}}, com análise estatística dos resultados por setor e função.</p>',
+    },
+    {
+      titulo: "3. Considerações Finais",
+      conteudo:
+        '<p style="text-align: justify">Os resultados deste diagnóstico devem ser utilizados como subsídio para a elaboração do Plano de Ação de Controle dos Riscos Psicossociais, com priorização das medidas de acordo com a gravidade e probabilidade identificadas. Recomenda-se nova avaliação em prazo não superior a 12 meses.</p>',
+    },
+  ],
 };
