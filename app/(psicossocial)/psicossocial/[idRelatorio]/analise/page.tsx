@@ -11,7 +11,11 @@ import {
   Sparkles,
   Loader2,
   Check,
+  BadgeCheck,
+  Download,
 } from "lucide-react";
+import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DrpsFiltro from "@/components/drps/DrpsFiltro";
@@ -358,6 +362,24 @@ export default function AnalisePage({
       };
     });
   }, [setoresParaRelatorio, respondentes, probabilidades]);
+
+  const { pdfAssinado, recarregar } = usePdfAssinado("drps_relatorios_analise", idRelatorio);
+  const [baixando, setBaixando] = useState(false);
+
+  async function handleBaixarPdf() {
+    if (!pdfAssinado) return;
+    setBaixando(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
+      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch { toast.error("Erro ao baixar o PDF."); }
+    finally { setBaixando(false); }
+  }
 
   const podeImprimir =
     !!relatorio &&
@@ -712,6 +734,21 @@ export default function AnalisePage({
                   Concluir Análise
                 </button>
               )}
+              {pdfAssinado ? (
+                <>
+                  <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+                    <BadgeCheck className="size-3.5 shrink-0" />
+                    Assinado em {new Date(pdfAssinado.assinado_em).toLocaleDateString("pt-BR")}
+                  </div>
+                  <button type="button" onClick={handleBaixarPdf} disabled={baixando}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500 bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                    {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                    Baixar PDF Assinado
+                  </button>
+                </>
+              ) : (
+                <BotaoAssinarPdf tabelaNome="drps_relatorios_analise" docId={idRelatorio} onAssinado={recarregar} />
+              )}
               <BotaoGerarPdf
                 tabelaNome="drps_relatorios_analise"
                 docId={idRelatorio}
@@ -893,6 +930,7 @@ export default function AnalisePage({
               nomeResponsavel={relatorio?.responsavel_tecnico ?? undefined}
               tabelaNome="drps_relatorios_analise"
               docId={idRelatorio}
+              hideAcoes
             />
 
             <p className="mt-6 text-center text-[9px] text-gray-500 print:hidden">

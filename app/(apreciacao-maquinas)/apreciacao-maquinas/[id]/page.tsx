@@ -20,7 +20,12 @@ import {
   Wand2,
   ListTodo,
   X as IconX,
+  BadgeCheck,
+  Download,
 } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import toast from "react-hot-toast";
 import {
   useApreciacaoMaquina,
@@ -160,6 +165,24 @@ export default function DetalheApreciacaoPage() {
     });
     return r;
   }, [itens]);
+
+  const { pdfAssinado, recarregar } = usePdfAssinado("apreciacoes_maquinas", id ?? "");
+  const [baixando, setBaixando] = useState(false);
+
+  async function handleBaixarPdf() {
+    if (!pdfAssinado) return;
+    setBaixando(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
+      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch { toast.error("Erro ao baixar o PDF."); }
+    finally { setBaixando(false); }
+  }
 
   const totalAvaliados = itens.length - resumo.PENDENTE;
   const totalItens = itens.length;
@@ -402,6 +425,21 @@ export default function DetalheApreciacaoPage() {
           <ArrowLeft className="size-3.5" /> Voltar
         </Link>
         <div className="flex items-center gap-2">
+          {pdfAssinado ? (
+            <>
+              <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+                <BadgeCheck className="size-3.5 shrink-0" />
+                Assinado em {new Date(pdfAssinado.assinado_em).toLocaleDateString("pt-BR")}
+              </div>
+              <button type="button" onClick={handleBaixarPdf} disabled={baixando}
+                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500 bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                Baixar PDF Assinado
+              </button>
+            </>
+          ) : (
+            <BotaoAssinarPdf tabelaNome="apreciacoes_maquinas" docId={id ?? ""} onAssinado={recarregar} />
+          )}
           <BotaoGerarPdf
             tabelaNome="apreciacoes_maquinas"
             docId={id}
@@ -945,6 +983,7 @@ export default function DetalheApreciacaoPage() {
           dataRelatorio={formatarDataBR(apreciacao.data_apreciacao) || undefined}
           tabelaNome="apreciacoes_maquinas"
           docId={id}
+          hideAcoes
         />
       </div>
 

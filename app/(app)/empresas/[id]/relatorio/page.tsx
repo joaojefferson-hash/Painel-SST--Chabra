@@ -1,8 +1,11 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Printer, Building2, ClipboardList } from "lucide-react";
+import { ArrowLeft, Printer, Building2, ClipboardList, BadgeCheck, Download, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
+import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import { useQuery } from "@tanstack/react-query";
@@ -83,6 +86,24 @@ export default function RelatorioConsolidadoPage({ params }: Props) {
       });
   }, [inspecoesValidas, riscosPorInsp]);
 
+  const { pdfAssinado, recarregar } = usePdfAssinado("empresas_relatorio", id);
+  const [baixando, setBaixando] = useState(false);
+
+  async function handleBaixarPdf() {
+    if (!pdfAssinado) return;
+    setBaixando(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
+      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch { toast.error("Erro ao baixar o PDF."); }
+    finally { setBaixando(false); }
+  }
+
   if (loadingInsp || loadingRiscos) return <LoadingSkeleton rows={8} />;
 
   return (
@@ -94,11 +115,28 @@ export default function RelatorioConsolidadoPage({ params }: Props) {
         >
           <ArrowLeft className="size-4" /> Voltar
         </Link>
-        <BotaoGerarPdf
-          tabelaNome="empresas_relatorio"
-          docId={id}
-          className="inline-flex items-center gap-2 rounded-md bg-verde-primary px-4 py-2 text-sm font-semibold text-white hover:bg-verde-accent"
-        />
+        <div className="flex items-center gap-2">
+          {pdfAssinado ? (
+            <>
+              <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+                <BadgeCheck className="size-3.5 shrink-0" />
+                Assinado em {new Date(pdfAssinado.assinado_em).toLocaleDateString("pt-BR")}
+              </div>
+              <button type="button" onClick={handleBaixarPdf} disabled={baixando}
+                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500 bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                Baixar PDF Assinado
+              </button>
+            </>
+          ) : (
+            <BotaoAssinarPdf tabelaNome="empresas_relatorio" docId={id} onAssinado={recarregar} />
+          )}
+          <BotaoGerarPdf
+            tabelaNome="empresas_relatorio"
+            docId={id}
+            className="inline-flex items-center gap-2 rounded-md bg-verde-primary px-4 py-2 text-sm font-semibold text-white hover:bg-verde-accent"
+          />
+        </div>
       </div>
 
       <article className="space-y-6 rounded-xl border border-gray-200 bg-white p-6 print:border-0 print:p-0 print:shadow-none">
@@ -301,7 +339,7 @@ export default function RelatorioConsolidadoPage({ params }: Props) {
           </>
         )}
 
-        <AssinaturaRelatorio tabelaNome="empresas_relatorio" docId={id} />
+        <AssinaturaRelatorio tabelaNome="empresas_relatorio" docId={id} hideAcoes />
       </article>
     </div>
   );

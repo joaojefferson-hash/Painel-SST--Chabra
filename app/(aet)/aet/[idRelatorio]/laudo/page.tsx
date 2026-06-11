@@ -12,11 +12,16 @@ import {
   Printer,
   Save,
   Users,
+  BadgeCheck,
+  Download,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import toast from "react-hot-toast";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
 import { detectRegistroTipo } from "@/lib/registro-profissional";
 import {
@@ -194,6 +199,24 @@ export default function AetLaudoPage({
       setEnderecoEmpresa(rel.endereco_empresa ?? "");
     }
   }, [rel]);
+
+  const { pdfAssinado, recarregar } = usePdfAssinado("aet_relatorios", idRelatorio);
+  const [baixando, setBaixando] = useState(false);
+
+  async function handleBaixarPdf() {
+    if (!pdfAssinado) return;
+    setBaixando(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
+      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch { toast.error("Erro ao baixar o PDF."); }
+    finally { setBaixando(false); }
+  }
 
   function handleSaveDados() {
     salvar.mutate(
@@ -425,6 +448,21 @@ export default function AetLaudoPage({
                 : <Clock className="size-3" />}
               {rel.status === "CONCLUIDO" ? "Concluído" : "Rascunho"}
             </span>
+            {pdfAssinado ? (
+              <>
+                <div className="flex items-center gap-1.5 rounded-md border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur">
+                  <BadgeCheck className="size-3.5 shrink-0" />
+                  Assinado em {new Date(pdfAssinado.assinado_em).toLocaleDateString("pt-BR")}
+                </div>
+                <button type="button" onClick={handleBaixarPdf} disabled={baixando}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/80 px-3 py-2 text-sm font-semibold text-white backdrop-blur hover:bg-emerald-500 disabled:opacity-60">
+                  {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                  Baixar PDF Assinado
+                </button>
+              </>
+            ) : (
+              <BotaoAssinarPdf tabelaNome="aet_relatorios" docId={idRelatorio} onAssinado={recarregar} />
+            )}
             <BotaoGerarPdf
               tabelaNome="aet_relatorios"
               docId={idRelatorio}
@@ -838,6 +876,7 @@ export default function AetLaudoPage({
                         registroProfissional={registroProfissional}
                         idRelatorio={idRelatorio}
                         dataRelatorio={dataElaboracao ? dataFormatada : undefined}
+                        hideAcoes
                       />
                     );
                     break;
@@ -989,6 +1028,7 @@ export default function AetLaudoPage({
               registroProfissional={registroProfissional}
               idRelatorio={idRelatorio}
               dataRelatorio={dataElaboracao ? dataFormatada : undefined}
+              hideAcoes
             />
           </>
         )}
@@ -1817,12 +1857,14 @@ function AssinaturaSection({
   registroProfissional,
   idRelatorio,
   dataRelatorio,
+  hideAcoes,
 }: {
   responsavel: string;
   tituloProfissional: string;
   registroProfissional: string;
   idRelatorio: string;
   dataRelatorio?: string;
+  hideAcoes?: boolean;
 }) {
   return (
     <AssinaturaRelatorio
@@ -1831,6 +1873,7 @@ function AssinaturaSection({
       dataRelatorio={dataRelatorio}
       tabelaNome="aet_relatorios"
       docId={idRelatorio}
+      hideAcoes={hideAcoes}
     />
   );
 }

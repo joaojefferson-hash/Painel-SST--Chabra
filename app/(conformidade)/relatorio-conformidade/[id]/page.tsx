@@ -21,7 +21,11 @@ import {
   Pencil,
   Check,
   Sparkles,
+  BadgeCheck,
+  Download,
 } from "lucide-react";
+import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import toast from "react-hot-toast";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
@@ -78,6 +82,24 @@ export default function DetalheConformidadePage({
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [crossRefAberto, setCrossRefAberto] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ title: string; desc?: string; fn: () => void } | null>(null);
+
+  const { pdfAssinado, recarregar } = usePdfAssinado("relatorios_conformidade", id);
+  const [baixando, setBaixando] = useState(false);
+
+  async function handleBaixarPdf() {
+    if (!pdfAssinado) return;
+    setBaixando(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
+      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch { toast.error("Erro ao baixar o PDF."); }
+    finally { setBaixando(false); }
+  }
 
   if (isLoading) {
     return (
@@ -232,6 +254,21 @@ export default function DetalheConformidadePage({
           <ArrowLeft className="size-3.5" /> Voltar
         </Link>
         <div className="flex items-center gap-2">
+          {pdfAssinado ? (
+            <>
+              <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+                <BadgeCheck className="size-3.5 shrink-0" />
+                Assinado em {new Date(pdfAssinado.assinado_em).toLocaleDateString("pt-BR")}
+              </div>
+              <button type="button" onClick={handleBaixarPdf} disabled={baixando}
+                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500 bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                Baixar PDF Assinado
+              </button>
+            </>
+          ) : (
+            <BotaoAssinarPdf tabelaNome="relatorios_conformidade" docId={id} onAssinado={recarregar} />
+          )}
           <BotaoGerarPdf
             tabelaNome="relatorios_conformidade"
             docId={id}
@@ -515,6 +552,7 @@ export default function DetalheConformidadePage({
         dataRelatorio={formatarDataBR(relatorio.data_inspecao) || undefined}
         tabelaNome="relatorios_conformidade"
         docId={id}
+        hideAcoes
       />
 
       {/* Rodapé pra impressão */}
