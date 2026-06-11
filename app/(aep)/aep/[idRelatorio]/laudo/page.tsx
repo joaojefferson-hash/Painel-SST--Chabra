@@ -2,23 +2,19 @@
 
 import { use, useMemo, useState } from "react";
 import { AlertTriangle, BadgeCheck, Download, Loader2 } from "lucide-react";
-import { useAepRelatorio, useAepTextoPadrao, CLASS_COLOR_AEP, riscoMaximoSetor } from "@/lib/hooks/useAep";
+import { useAepRelatorio, CLASS_COLOR_AEP, riscoMaximoSetor } from "@/lib/hooks/useAep";
+import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
-import { substituirVariaveis, formatarDataBR } from "@/lib/textos-padrao/variaveis";
+import { formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import type { AepSetor, AepChecklistFisica, AepChecklistCognitiva, AepChecklistOrganizacional } from "@/lib/supabase/types";
 import toast from "react-hot-toast";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function RichBlock({ html }: { html: string }) {
-  if (!html?.trim()) return null;
-  return <div className="prose prose-sm max-w-none text-xs leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
-}
 
 function Section({ num, titulo, children }: { num?: string; titulo: string; children: React.ReactNode }) {
   return (
@@ -213,7 +209,6 @@ export default function AepLaudoPage({
 }) {
   const { idRelatorio } = use(params);
   const { data: rel } = useAepRelatorio(idRelatorio);
-  const { data: capitulos = [] } = useAepTextoPadrao();
   const { pdfAssinado, recarregar } = usePdfAssinado("aep_relatorios", idRelatorio);
   const [baixando, setBaixando] = useState(false);
 
@@ -247,10 +242,6 @@ export default function AepLaudoPage({
     () => (rel ? montarValoresAep(rel) : {}),
     [rel]
   );
-
-  const capitulosOrdenados = [...capitulos].sort((a, b) => (a.ordem_global ?? 0) - (b.ordem_global ?? 0));
-  const capitulosAntes = capitulosOrdenados.filter((c) => c.mostrar && c.tipo === "editavel" && (c.ordem_global ?? 0) < 2000);
-  const capitulosDepois = capitulosOrdenados.filter((c) => c.mostrar && c.tipo === "editavel" && (c.ordem_global ?? 0) >= 2000);
 
   if (!rel) return null;
 
@@ -335,12 +326,8 @@ export default function AepLaudoPage({
           )}
         </div>
 
-        {/* Capítulos editáveis antes das seções fixas */}
-        {capitulosAntes.map((cap) => (
-          <Section key={cap.id_capitulo} titulo={cap.titulo}>
-            {cap.conteudo && <RichBlock html={substituirVariaveis(cap.conteudo, valoresVars)} />}
-          </Section>
-        ))}
+        {/* Capítulos antes das seções fixas */}
+        <TextosPadraoPrint modulo="aep" posicao="inicio" valores={valoresVars} />
 
         {/* Escalonamento AET — indicador global */}
         {setoresComAet.length > 0 && (
@@ -373,12 +360,8 @@ export default function AepLaudoPage({
           ))}
         </Section>
 
-        {/* Capítulos editáveis após as seções fixas */}
-        {capitulosDepois.filter((c) => c.slug_fixo === null).map((cap) => (
-          <Section key={cap.id_capitulo} titulo={cap.titulo}>
-            {cap.conteudo && <RichBlock html={substituirVariaveis(cap.conteudo, valoresVars)} />}
-          </Section>
-        ))}
+        {/* Capítulos após as seções fixas */}
+        <TextosPadraoPrint modulo="aep" posicao="fim" valores={valoresVars} />
 
         {/* Considerações finais */}
         {rel.conclusao?.trim() && (

@@ -473,8 +473,9 @@ export function useDrpsTextoPadrao() {
     queryFn: async () => {
       const supabase = createSupabaseBrowserClient();
       const { data, error } = await supabase
-        .from("drps_texto_padrao")
+        .from("textos_padrao")
         .select("*")
+        .eq("modulo", "psicossocial")
         .order("ordem", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as DrpsTextoPadraoCapitulo[];

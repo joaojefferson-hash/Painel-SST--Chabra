@@ -13,6 +13,8 @@ import {
 } from "@/lib/utils";
 import type { Empresa } from "@/lib/supabase/types";
 import type { ModuloTextoPadrao } from "./types";
+import { VARIAVEIS_AEP } from "./variaveis-aep";
+import { VARIAVEIS_AET } from "./variaveis-aet";
 
 export interface VariavelDef {
   chave: string;
@@ -82,6 +84,18 @@ export const VARIAVEIS_POR_MODULO: Record<ModuloTextoPadrao, VariavelDef[]> = {
     { chave: "total_itens", rotulo: "Total de itens avaliados", exemplo: "37" },
     { chave: "total_nao_conforme", rotulo: "Itens não conformes", exemplo: "8" },
     { chave: "risco_residual", rotulo: "Risco residual final", exemplo: "ALTO" },
+  ],
+  aep: VARIAVEIS_AEP,
+  aet: VARIAVEIS_AET,
+  psicossocial: [
+    { chave: "empresa_nome",        rotulo: "Nome da empresa",                   exemplo: "Metalúrgica Exemplo Ltda" },
+    { chave: "cnpj",                rotulo: "CNPJ",                              exemplo: "31.427.455/0001-11" },
+    { chave: "responsavel_tecnico", rotulo: "Responsável técnico",               exemplo: "Ana Silva" },
+    { chave: "crp",                 rotulo: "Registro profissional (CRP/CRP)",   exemplo: "CRP 06/12345" },
+    { chave: "data_elaboracao",     rotulo: "Data de elaboração",                exemplo: "15/05/2026" },
+    { chave: "data_atual",          rotulo: "Data atual (geração do PDF)",       exemplo: "15/05/2026" },
+    { chave: "data_carimbo_inicio", rotulo: "Início da coleta (QPS)",            exemplo: "01/04/2026" },
+    { chave: "data_carimbo_fim",    rotulo: "Fim da coleta (QPS)",               exemplo: "30/04/2026" },
   ],
 };
 

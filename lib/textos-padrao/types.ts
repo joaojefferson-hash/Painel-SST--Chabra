@@ -1,7 +1,3 @@
-// Tipos da feature "Texto Padrão" genérica (Painel SST, Conformidade,
-// Análise de Químicos). O Psicossocial mantém sua estrutura própria em
-// `lib/drps/types.ts` por compatibilidade.
-
 import type { CaixaTexto } from "@/lib/drps/types";
 
 export type ModuloTextoPadrao =
@@ -9,7 +5,10 @@ export type ModuloTextoPadrao =
   | "conformidade"
   | "nao_conformidade"
   | "analise_quimicos"
-  | "apreciacao_maquinas";
+  | "apreciacao_maquinas"
+  | "aep"
+  | "aet"
+  | "psicossocial";
 
 export type OrientacaoPagina = "retrato" | "paisagem";
 
@@ -147,5 +146,29 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
       { titulo: "Plano de Ação NR-12",                   slug_fixo: "apreciacao_plano",         descricao: "Ações de adequação com prioridade e prazo — gerado automaticamente.", ordem_base: 4000 },
       { titulo: "Assinatura do Responsável Técnico",     slug_fixo: "apreciacao_assinatura",    descricao: "Rodapé de assinatura — gerado automaticamente.", ordem_base: 9000 },
     ],
+  },
+  aep: {
+    modulo: "aep",
+    titulo: "Texto Padrão — AEP (Análise Ergonômica Preliminar)",
+    descricao:
+      "Capítulos editáveis para os Laudos AEP: capa, introdução, metodologia, considerações finais. Use variáveis dinâmicas para empresa, responsável técnico, data etc.",
+    destino: "Aparecem no Laudo AEP antes (posição 'início') e após (posição 'fim') a análise por setor.",
+    fixos: [],
+  },
+  aet: {
+    modulo: "aet",
+    titulo: "Texto Padrão — AET (Análise Ergonômica do Trabalho)",
+    descricao:
+      "Capítulos editáveis para os Laudos AET: capa, introdução, metodologia, considerações finais. Use variáveis dinâmicas para empresa, responsável técnico, data etc.",
+    destino: "Aparecem no Laudo AET antes e após as seções analíticas.",
+    fixos: [],
+  },
+  psicossocial: {
+    modulo: "psicossocial",
+    titulo: "Texto Padrão — DRPS (Psicossocial)",
+    descricao:
+      "Capítulos editáveis para os Relatórios DRPS. Suporta todas as 6 posições no PDF: início, após sumário, após setores, após conclusão, após medidas e fim.",
+    destino: "Aparecem no Relatório DRPS na posição configurada em cada capítulo.",
+    fixos: [],
   },
 };

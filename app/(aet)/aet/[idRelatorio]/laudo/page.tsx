@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
+import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
@@ -763,6 +764,9 @@ export default function AetLaudoPage({
           <span className="text-[10px] text-gray-400">{dataFormatada}</span>
         </div>
 
+        {/* Capítulos de texto padrão — posição início */}
+        <TextosPadraoPrint modulo="aet" posicao="inicio" valores={valoresCapitulos} />
+
         {/* ── RENDERIZAÇÃO PRINCIPAL ────────────────────────────────────────────── */}
         {temCapitulosFixos ? (
           /* Modo v56: ordem global unificada — cada capítulo renderizado por slug */
@@ -1032,6 +1036,9 @@ export default function AetLaudoPage({
             />
           </>
         )}
+
+        {/* Capítulos de texto padrão — posição fim */}
+        <TextosPadraoPrint modulo="aet" posicao="fim" valores={valoresCapitulos} />
 
         {/* Rodapé */}
         <p className="mt-8 text-center text-[9px] text-gray-400">
