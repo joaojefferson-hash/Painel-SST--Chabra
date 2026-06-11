@@ -207,21 +207,27 @@ export async function GET(
     }),
   );
 
+  // Move <style> do bodyHtml para o <head> para que @page seja processado corretamente
+  const styleMatch = bodyHtml.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+  const headStyle = styleMatch ? styleMatch[1] : '';
+  const bodyWithoutStyle = bodyHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/, '');
+
   const fullHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <title>Laudo AEP</title>
+  <style>${headStyle}</style>
 </head>
 <body style="margin:0;padding:0;background:#fff;font-family:Arial,Helvetica,sans-serif;">
-${bodyHtml}
+${bodyWithoutStyle}
 </body>
 </html>`;
 
-  // Gera o PDF — margens via @page CSS no template (0 aqui evita soma dupla)
+  // Gera o PDF — margens ABNT via Puppeteer (sem @page margin no CSS para evitar conflito sparticuz)
   const { gerarPdf } = await import("@/lib/pdf/gerar-pdf");
   const pdfBuffer = await gerarPdf(fullHtml, {
-    margens: { top: "0", bottom: "0", left: "0", right: "0" },
+    margens: { top: "25mm", bottom: "25mm", left: "30mm", right: "20mm" },
   });
 
   return new NextResponse(new Uint8Array(pdfBuffer), {

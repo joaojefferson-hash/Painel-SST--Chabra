@@ -177,7 +177,6 @@ function labelResposta(v: RespostaChecklist) {
 const STYLE_BLOCK = `
 @page {
   size: A4 portrait;
-  margin: 25mm 0 25mm 0;
 }
 @page textopadrao-paisagem {
   size: A4 landscape;
@@ -729,7 +728,6 @@ export default function AepTemplate({
     <>
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: STYLE_BLOCK }} />
-      <div style={{ marginLeft: "30mm", marginRight: "20mm" }}>
 
       {/* Capa */}
       <div
@@ -926,7 +924,6 @@ export default function AepTemplate({
         dataHoraAssinatura={dataHoraAssinatura}
         identificadorDocumento={identificadorDocumento}
       />
-      </div>
     </>
   );
 }
