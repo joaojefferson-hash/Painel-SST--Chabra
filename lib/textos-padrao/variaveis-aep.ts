@@ -1,5 +1,5 @@
 import type { VariavelDef } from "./variaveis";
-import { formatarDataBR } from "./variaveis";
+import { formatarDataBR } from "./formatters";
 import type { AepRelatorio } from "@/lib/supabase/types";
 
 export const VARIAVEIS_AEP: VariavelDef[] = [

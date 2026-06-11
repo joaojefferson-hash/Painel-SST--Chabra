@@ -3,7 +3,7 @@
 // Integração: montarValoresAet() no laudo/page.tsx antes de renderizar cada capítulo.
 
 import type { VariavelDef } from "./variaveis";
-import { formatarDataBR } from "./variaveis";
+import { formatarDataBR } from "./formatters";
 import type { AetRelatorio } from "@/lib/supabase/types";
 
 export const VARIAVEIS_AET: VariavelDef[] = [

@@ -15,6 +15,7 @@ import type { Empresa } from "@/lib/supabase/types";
 import type { ModuloTextoPadrao } from "./types";
 import { VARIAVEIS_AEP } from "./variaveis-aep";
 import { VARIAVEIS_AET } from "./variaveis-aet";
+export { formatarDataBR } from "./formatters";
 
 export interface VariavelDef {
   chave: string;
@@ -132,18 +133,6 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-/** Formata data ISO (yyyy-mm-dd) para "dd/mm/yyyy". String vazia se inválido. */
-export function formatarDataBR(iso: string | null | undefined): string {
-  if (!iso) return "";
-  try {
-    const d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso);
-    if (Number.isNaN(d.getTime())) return "";
-    return d.toLocaleDateString("pt-BR");
-  } catch {
-    return "";
-  }
 }
 
 /**

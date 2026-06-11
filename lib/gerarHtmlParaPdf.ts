@@ -70,6 +70,63 @@ async function inlinearImagensExternas(el: HTMLElement): Promise<() => void> {
   return () => restauracoes.forEach((fn) => fn())
 }
 
+/**
+ * Retorna uma lista de zonas [top, bottom] (em pixels PDF escalonados) que
+ * não devem ser cortadas por uma borda de página.
+ * Examina o DOM em busca de linhas de tabela, artigos e blocos marcados
+ * como indivisíveis, para usar na decisão de onde cortar cada página.
+ */
+function buildNoCutZones(
+  el: HTMLElement,
+  scale: number,
+): Array<[number, number]> {
+  const containerRect = el.getBoundingClientRect()
+  const zones: Array<[number, number]> = []
+
+  // Elementos que não devem ser partidos ao meio: linhas de tabela,
+  // artigos (capítulos do texto padrão) e blocos de setor do DRPS.
+  const selectors = [
+    'tr',
+    'article',
+    '.textos-padrao-capitulo',
+    '.drps-setor-bloco',
+    '.drps-capitulo',
+  ].join(',')
+
+  el.querySelectorAll<HTMLElement>(selectors).forEach((child) => {
+    const rect = child.getBoundingClientRect()
+    if (rect.height < 20) return // ignora elementos minúsculos
+    const top = (rect.top - containerRect.top) * scale
+    const bottom = top + rect.height * scale
+    zones.push([top, bottom])
+  })
+
+  return zones
+}
+
+/**
+ * Dado um ponto de corte ingênuo (naiveEnd, em pixels PDF escalonados),
+ * retorna um ponto de corte seguro que não bisecta nenhuma zona proibida.
+ * Se não houver zona violada, devolve naiveEnd.
+ * Se a zona violada for grande demais (ocupa mais de A4_H), aceita o corte.
+ */
+function safeCutPoint(
+  naiveEnd: number,
+  zones: Array<[number, number]>,
+  pageStart: number,
+  A4_H: number,
+): number {
+  for (const [top, bottom] of zones) {
+    // O corte proposto está dentro desta zona?
+    if (naiveEnd > top + 4 && naiveEnd < bottom - 4) {
+      const movedUp = top - 4
+      // Só move se ainda restar ao menos 50 % de página aproveitável
+      if (movedUp >= pageStart + A4_H * 0.5) return movedUp
+    }
+  }
+  return naiveEnd
+}
+
 // ── Função principal ─────────────────────────────────────────────────────────
 
 export async function gerarHtmlParaPdf(opts?: { forSigning?: boolean }): Promise<ArrayBuffer> {
@@ -112,13 +169,17 @@ export async function gerarHtmlParaPdf(opts?: { forSigning?: boolean }): Promise
     )
   }
 
-  // Pré-inlineia imagens cross-origin para evitar que o canvas fique em branco
-  const restaurar = await inlinearImagensExternas(contentEl)
-
   const elW = contentEl.scrollWidth || contentEl.offsetWidth || 794
   const elH = contentEl.scrollHeight || contentEl.offsetHeight || 1123
   const A4_W = 794
   const A4_H = 1123
+  const scale = A4_W / elW
+
+  // Mede posições dos elementos indivisíveis ANTES de alterar o DOM
+  const zones = buildNoCutZones(contentEl, scale)
+
+  // Pré-inlineia imagens cross-origin para evitar que o canvas fique em branco
+  const restaurar = await inlinearImagensExternas(contentEl)
 
   let dataUrl: string
   try {
@@ -140,10 +201,21 @@ export async function gerarHtmlParaPdf(opts?: { forSigning?: boolean }): Promise
     )
   }
 
-  // Carrega a imagem capturada e fatia em páginas A4 via canvas
-  const scaledH = Math.round(elH * (A4_W / elW))
-  const numPages = Math.max(1, Math.ceil(scaledH / A4_H))
+  const scaledH = Math.round(elH * scale)
   const imgEl = await carregarImagem(dataUrl)
+
+  // Calcula fronteiras de página com corte inteligente — evita bisectar
+  // linhas de tabela, capítulos e outros blocos indivisíveis.
+  const pageStarts: number[] = [0]
+  let cursor = 0
+  while (cursor + A4_H < scaledH) {
+    const naiveEnd = cursor + A4_H
+    const end = safeCutPoint(naiveEnd, zones, cursor, A4_H)
+    // Garante progresso mínimo para evitar loop infinito em elementos gigantes
+    const nextCursor = end > cursor + A4_H * 0.3 ? end : naiveEnd
+    pageStarts.push(nextCursor)
+    cursor = nextCursor
+  }
 
   const pdf = new jsPDF({
     orientation: 'portrait',
@@ -152,8 +224,9 @@ export async function gerarHtmlParaPdf(opts?: { forSigning?: boolean }): Promise
     compress: true,
   })
 
-  for (let i = 0; i < numPages; i++) {
+  for (let i = 0; i < pageStarts.length; i++) {
     if (i > 0) pdf.addPage()
+    const pageStart = pageStarts[i]
 
     // Fatia a imagem de alta resolução (2×) para a página i
     const canvas = document.createElement('canvas')
@@ -162,7 +235,8 @@ export async function gerarHtmlParaPdf(opts?: { forSigning?: boolean }): Promise
     const ctx = canvas.getContext('2d')!
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(imgEl, 0, -(i * A4_H * 2), A4_W * 2, scaledH * 2)
+    // pageStart está em pixels PDF (= canvas / 2), por isso * 2 abaixo
+    ctx.drawImage(imgEl, 0, -(pageStart * 2), A4_W * 2, scaledH * 2)
 
     pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A4_W, A4_H)
   }
