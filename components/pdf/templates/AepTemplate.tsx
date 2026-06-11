@@ -253,7 +253,7 @@ body {
 .textos-padrao-capitulo-conteudo td      { border: 1px solid #999; padding: 5px 7px; vertical-align: top; }
 .textos-padrao-capitulo-conteudo th      { background: #d4edda; color: #1e4d28; font-weight: 700; text-align: left; }
 /* Break rules para o laudo */
-.setor-block { break-inside: avoid; page-break-inside: avoid; }
+.setor-block { break-inside: auto; }
 `;
 
 // ── Sub-componentes ───────────────────────────────────────────────────────────
