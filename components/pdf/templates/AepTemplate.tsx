@@ -184,6 +184,7 @@ const STYLE_BLOCK = `
   margin: 2cm 3cm 3cm 2cm;
 }
 * { box-sizing: border-box; }
+html { width: 210mm; }
 body {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 12px;
@@ -191,7 +192,8 @@ body {
   color: #111827;
   background: #fff;
   margin: 0;
-  padding: 0;
+  padding: 25mm 20mm 25mm 30mm;
+  width: 210mm;
 }
 /* ABNT — textos padrão */
 .textos-padrao-capitulo {
