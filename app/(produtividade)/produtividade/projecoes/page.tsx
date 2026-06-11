@@ -128,21 +128,31 @@ export default function ProjecoesPage() {
   // ── Cálculos ──────────────────────────────────────────────────────────────
   const calc = useMemo(() => {
     const dias = num(diasUteis, 60);
-    const adms = num(admsAtuais);
-    const tecs = num(tecsAtuais);
     const dpa  = num(docsPorAdm, 5);
     const ipa  = num(inspPorTec, 3);
 
-    const capDocs = adms * dpa * dias;
-    const capInsp = tecs * ipa * dias;
+    // Soma colaboradores cadastrados nas unidades visíveis
+    const idsVisiveis = unidadesVisiveis.length > 0
+      ? unidadesVisiveis.map((u) => u.id)
+      : Object.keys(colabsPorUnidade);
+    const totalAdmsReg = idsVisiveis.reduce((s, id) => s + (colabsPorUnidade[id]?.adms ?? 0), 0);
+    const totalTecsReg = idsVisiveis.reduce((s, id) => s + (colabsPorUnidade[id]?.tecs ?? 0), 0);
+
+    // Usa cadastrados quando existem; caso contrário, usa input manual
+    const usesReg    = totalAdmsReg > 0 || totalTecsReg > 0;
+    const admsEfet   = usesReg ? totalAdmsReg : num(admsAtuais);
+    const tecsEfet   = usesReg ? totalTecsReg : num(tecsAtuais);
+
+    const capDocs = admsEfet * dpa * dias;
+    const capInsp = tecsEfet * ipa * dias;
 
     const admsNec = dpa * dias > 0 ? Math.ceil(totais.pendDocs / (dpa * dias)) : 0;
     const tecsNec = ipa * dias > 0 ? Math.ceil(totais.pendInsp / (ipa * dias)) : 0;
-    const admsAdd = Math.max(0, admsNec - adms);
-    const tecsAdd = Math.max(0, tecsNec - tecs);
+    const admsAdd = Math.max(0, admsNec - admsEfet);
+    const tecsAdd = Math.max(0, tecsNec - tecsEfet);
 
-    const diasNecDocs = dpa > 0 && adms > 0 ? Math.ceil(totais.pendDocs / (adms * dpa)) : Infinity;
-    const diasNecInsp = ipa > 0 && tecs > 0 ? Math.ceil(totais.pendInsp / (tecs * ipa)) : Infinity;
+    const diasNecDocs = dpa > 0 && admsEfet > 0 ? Math.ceil(totais.pendDocs / (admsEfet * dpa)) : Infinity;
+    const diasNecInsp = ipa > 0 && tecsEfet > 0 ? Math.ceil(totais.pendInsp / (tecsEfet * ipa)) : Infinity;
 
     const pctDocs = totais.pendDocs > 0 ? Math.min(100, Math.round((capDocs / totais.pendDocs) * 100)) : 100;
     const pctInsp = totais.pendInsp > 0 ? Math.min(100, Math.round((capInsp / totais.pendInsp) * 100)) : 100;
@@ -150,7 +160,7 @@ export default function ProjecoesPage() {
     const semanas = [1, 2, 3, 4, 6, 8, 10, 12].filter((s) => s * 5 <= dias + 10);
     const graficoDocs = semanas.map((s) => {
       const diasS   = Math.min(s * 5, dias);
-      const capAcum = adms * dpa * diasS;
+      const capAcum = admsEfet * dpa * diasS;
       return {
         semana: `S${s}`,
         restante:    Math.max(0, totais.pendDocs - capAcum),
@@ -167,8 +177,9 @@ export default function ProjecoesPage() {
       graficoDocs,
       okDocs: admsAdd === 0,
       okInsp: tecsAdd === 0,
+      admsEfet, tecsEfet, usesReg,
     };
-  }, [totais, diasUteis, admsAtuais, tecsAtuais, docsPorAdm, inspPorTec]);
+  }, [totais, diasUteis, admsAtuais, tecsAtuais, docsPorAdm, inspPorTec, colabsPorUnidade, unidadesVisiveis]);
 
   const dias    = num(diasUteis, 60);
   const semanas = Math.round(dias / 5);
@@ -430,7 +441,9 @@ export default function ProjecoesPage() {
               <div className="text-right">
                 <p className="text-xs text-gray-400">Capacidade atual em {diasUteis}d</p>
                 <p className="mt-1 text-xl font-bold text-gray-800">{calc.capDocs.toLocaleString()}</p>
-                <p className="text-xs text-gray-400">{num(admsAtuais)} ADMs × {num(docsPorAdm, 5)} docs/dia × {diasUteis}d</p>
+                <p className="text-xs text-gray-400">
+                  {calc.admsEfet} ADMs{calc.usesReg ? " (cadastrados)" : " (manual)"} × {num(docsPorAdm, 5)} docs/dia × {diasUteis}d
+                </p>
               </div>
             </div>
             <div className="mt-3">
@@ -471,7 +484,9 @@ export default function ProjecoesPage() {
               <div className="text-right">
                 <p className="text-xs text-gray-400">Capacidade atual em {diasUteis}d</p>
                 <p className="mt-1 text-xl font-bold text-gray-800">{calc.capInsp.toLocaleString()}</p>
-                <p className="text-xs text-gray-400">{num(tecsAtuais)} técs × {num(inspPorTec, 3)} insp/dia × {diasUteis}d</p>
+                <p className="text-xs text-gray-400">
+                  {calc.tecsEfet} técs{calc.usesReg ? " (cadastrados)" : " (manual)"} × {num(inspPorTec, 3)} insp/dia × {diasUteis}d
+                </p>
               </div>
             </div>
             <div className="mt-3">
@@ -513,7 +528,7 @@ export default function ProjecoesPage() {
                       <p className="text-xs text-gray-500">ADMs necessários</p>
                       <p className="mt-0.5 text-2xl font-bold text-blue-700">{calc.admsNec} <span className="text-sm font-normal text-gray-500">total</span></p>
                       <p className="mt-0.5 text-sm">
-                        <span className="font-semibold text-gray-700">{num(admsAtuais)} atual</span>
+                        <span className="font-semibold text-gray-700">{calc.admsEfet} atual{calc.usesReg ? " (cad.)" : ""}</span>
                         <span className="mx-1 text-gray-400">+</span>
                         <span className="font-bold text-red-700">{calc.admsAdd} a contratar</span>
                       </p>
@@ -524,7 +539,7 @@ export default function ProjecoesPage() {
                       <p className="text-xs text-gray-500">Técnicos necessários</p>
                       <p className="mt-0.5 text-2xl font-bold text-orange-700">{calc.tecsNec} <span className="text-sm font-normal text-gray-500">total</span></p>
                       <p className="mt-0.5 text-sm">
-                        <span className="font-semibold text-gray-700">{num(tecsAtuais)} atual</span>
+                        <span className="font-semibold text-gray-700">{calc.tecsEfet} atual{calc.usesReg ? " (cad.)" : ""}</span>
                         <span className="mx-1 text-gray-400">+</span>
                         <span className="font-bold text-red-700">{calc.tecsAdd} a contratar</span>
                       </p>
@@ -625,10 +640,10 @@ export default function ProjecoesPage() {
       )}
 
       {/* ── Gráfico burn-down ────────────────────────────────────────────────── */}
-      {num(admsAtuais) > 0 && totais.pendDocs > 0 && (
+      {calc.admsEfet > 0 && totais.pendDocs > 0 && (
         <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/5">
           <h2 className="mb-1 text-sm font-semibold text-gray-700">Progresso semanal — Documentos pendentes</h2>
-          <p className="mb-4 text-xs text-gray-400">Com {num(admsAtuais)} ADMs fazendo {num(docsPorAdm, 5)} docs/dia</p>
+          <p className="mb-4 text-xs text-gray-400">Com {calc.admsEfet} ADMs{calc.usesReg ? " (cadastrados)" : " (manual)"} fazendo {num(docsPorAdm, 5)} docs/dia</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={calc.graficoDocs} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
@@ -678,15 +693,15 @@ export default function ProjecoesPage() {
               <div className="rounded-lg bg-white/80 p-3">
                 <p className="font-bold text-blue-800 mb-1">📊 Capacidade atual</p>
                 <code className="block rounded bg-blue-100 px-3 py-2 text-xs font-mono text-blue-900 whitespace-pre">
-{`Docs: ${num(admsAtuais)} × ${num(docsPorAdm, 5)} × ${num(diasUteis, 60)} = ${calc.capDocs}
-Insp: ${num(tecsAtuais)} × ${num(inspPorTec, 3)} × ${num(diasUteis, 60)} = ${calc.capInsp}`}
+{`Docs: ${calc.admsEfet} × ${num(docsPorAdm, 5)} × ${num(diasUteis, 60)} = ${calc.capDocs}
+Insp: ${calc.tecsEfet} × ${num(inspPorTec, 3)} × ${num(diasUteis, 60)} = ${calc.capInsp}`}
                 </code>
               </div>
               <div className="rounded-lg bg-white/80 p-3">
                 <p className="font-bold text-blue-800 mb-1">➕ A contratar</p>
                 <code className="block rounded bg-blue-100 px-3 py-2 text-xs font-mono text-blue-900 whitespace-pre">
-{`ADMs: max(0, ${calc.admsNec} − ${num(admsAtuais)}) = ${calc.admsAdd}
-Técs: max(0, ${calc.tecsNec} − ${num(tecsAtuais)}) = ${calc.tecsAdd}`}
+{`ADMs: max(0, ${calc.admsNec} − ${calc.admsEfet}) = ${calc.admsAdd}
+Técs: max(0, ${calc.tecsNec} − ${calc.tecsEfet}) = ${calc.tecsAdd}`}
                 </code>
               </div>
             </div>
