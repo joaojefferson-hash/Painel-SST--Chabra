@@ -12,6 +12,7 @@ import {
 import toast from "react-hot-toast";
 import {
   useProdUnidades,
+  useProdColaboradores,
   useSalvarProjecao,
 } from "@/lib/hooks/useProdutividade";
 
@@ -55,8 +56,21 @@ type Tipo = "geral" | "por_unidade";
 // ── Página ─────────────────────────────────────────────────────────────────
 
 export default function ProjecoesPage() {
-  const { data: unidades = [] } = useProdUnidades();
-  const salvarMutation = useSalvarProjecao();
+  const { data: unidades = [] }       = useProdUnidades();
+  const { data: colaboradores = [] }  = useProdColaboradores();
+  const salvarMutation                = useSalvarProjecao();
+
+  // Lookup: unidadeId → { adms, tecs } com base nos colaboradores cadastrados
+  const colabsPorUnidade = useMemo(() => {
+    const map: Record<string, { adms: number; tecs: number }> = {};
+    for (const c of colaboradores) {
+      if (!c.ativo) continue;
+      if (!map[c.id_unidade]) map[c.id_unidade] = { adms: 0, tecs: 0 };
+      if (c.tipo === "documentos")    map[c.id_unidade].adms += 1;
+      if (c.tipo === "tecnico_campo") map[c.id_unidade].tecs += 1;
+    }
+    return map;
+  }, [colaboradores]);
 
   // Tipo de projeção
   const [tipo, setTipo]                               = useState<Tipo>("geral");
@@ -542,6 +556,9 @@ export default function ProjecoesPage() {
               <Users className="size-4 text-teal-600" /> Necessidade por Unidade
             </h2>
           </div>
+          <p className="px-5 pb-2 text-[11px] text-gray-400">
+            "Cadastrados" = colaboradores ativos do tipo <em>Geração de documentos SST</em> (ADMs) e <em>Técnico de campo</em> (técnicos) registrados em Unidades e Equipe.
+          </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -550,18 +567,28 @@ export default function ProjecoesPage() {
                   <th className="px-5 py-3 text-right">Clientes</th>
                   <th className="px-5 py-3 text-right text-orange-600">Pend. Inspeção</th>
                   <th className="px-5 py-3 text-right text-blue-600">Pend. Docs</th>
-                  <th className="px-5 py-3 text-right text-blue-700">ADMs Nec.</th>
-                  <th className="px-5 py-3 text-right text-orange-700">Técs. Nec.</th>
+                  <th className="px-4 py-3 text-right text-blue-700">ADMs Nec.</th>
+                  <th className="px-4 py-3 text-right text-gray-500">ADMs Cad.</th>
+                  <th className="px-4 py-3 text-right">Déficit ADM</th>
+                  <th className="px-4 py-3 text-right text-orange-700">Técs. Nec.</th>
+                  <th className="px-4 py-3 text-right text-gray-500">Técs. Cad.</th>
+                  <th className="px-4 py-3 text-right">Déficit Téc.</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {unidades.map((u) => {
-                  const d     = getDados(u.id);
-                  const pInsp = num(d.pendInspecao);
-                  const pDocs = num(d.pendDocs);
-                  const dpa   = num(docsPorAdm, 5);
-                  const ipa   = num(inspPorTec, 3);
-                  const diasN = num(diasUteis, 60);
+                  const d         = getDados(u.id);
+                  const pInsp     = num(d.pendInspecao);
+                  const pDocs     = num(d.pendDocs);
+                  const dpa       = num(docsPorAdm, 5);
+                  const ipa       = num(inspPorTec, 3);
+                  const diasN     = num(diasUteis, 60);
+                  const admsNec   = dpa * diasN > 0 ? Math.ceil(pDocs / (dpa * diasN)) : 0;
+                  const tecsNec   = ipa * diasN > 0 ? Math.ceil(pInsp / (ipa * diasN)) : 0;
+                  const cadADMs   = colabsPorUnidade[u.id]?.adms ?? 0;
+                  const cadTecs   = colabsPorUnidade[u.id]?.tecs ?? 0;
+                  const defADM    = admsNec - cadADMs;
+                  const defTec    = tecsNec - cadTecs;
                   return (
                     <tr key={u.id} className="hover:bg-gray-50/50">
                       <td className="px-5 py-3 font-medium text-gray-800">{u.nome}</td>
@@ -572,11 +599,21 @@ export default function ProjecoesPage() {
                       <td className="px-5 py-3 text-right">
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${pDocs > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400"}`}>{pDocs}</span>
                       </td>
-                      <td className="px-5 py-3 text-right font-semibold text-blue-700">
-                        {dpa * diasN > 0 ? Math.ceil(pDocs / (dpa * diasN)) : 0}
+                      <td className="px-4 py-3 text-right font-semibold text-blue-700">{admsNec}</td>
+                      <td className="px-4 py-3 text-right text-gray-500">{cadADMs}</td>
+                      <td className="px-4 py-3 text-right">
+                        {defADM > 0
+                          ? <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">+{defADM}</span>
+                          : <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">✓ {Math.abs(defADM) > 0 ? `+${Math.abs(defADM)}` : "ok"}</span>
+                        }
                       </td>
-                      <td className="px-5 py-3 text-right font-semibold text-orange-700">
-                        {ipa * diasN > 0 ? Math.ceil(pInsp / (ipa * diasN)) : 0}
+                      <td className="px-4 py-3 text-right font-semibold text-orange-700">{tecsNec}</td>
+                      <td className="px-4 py-3 text-right text-gray-500">{cadTecs}</td>
+                      <td className="px-4 py-3 text-right">
+                        {defTec > 0
+                          ? <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">+{defTec}</span>
+                          : <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">✓ {Math.abs(defTec) > 0 ? `+${Math.abs(defTec)}` : "ok"}</span>
+                        }
                       </td>
                     </tr>
                   );
