@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useMemo } from "react";
+import { usePathname } from "next/navigation";
 import {
   FlaskConical,
   Plus,
@@ -8,6 +9,7 @@ import {
   HelpCircle,
   Database,
   FileEdit,
+  Printer,
 } from "lucide-react";
 import SidebarShell, {
   type NavSection,
@@ -18,44 +20,58 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { useRequireModule } from "@/lib/hooks/useRequireModule";
 import { useUserStore } from "@/lib/store";
 
-export default function AnaliseQuimicosLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+const RESERVADAS = new Set(["nova", "historico", "texto-padrao", "ajuda", "base"]);
+
+export default function AnaliseQuimicosLayout({ children }: { children: ReactNode }) {
   useAuth();
   useRequireModule("analise_quimicos");
   const user = useUserStore((s) => s.user);
+  const pathname = usePathname();
+
+  const idRelatorio = useMemo(() => {
+    const m = pathname.match(/^\/analise-quimicos\/([^/]+)(?:\/|$)/);
+    if (!m) return null;
+    const candidato = m[1];
+    return RESERVADAS.has(candidato) ? null : candidato;
+  }, [pathname]);
 
   const sections = useMemo<NavSection[]>(() => {
     const items: NavItem[] = [
-      { href: "/analise-quimicos", label: "Visão geral", icon: FlaskConical },
-      { href: "/analise-quimicos/nova", label: "Nova análise", icon: Plus },
-      { href: "/analise-quimicos/historico", label: "Histórico", icon: History },
-      { href: "/analise-quimicos/ajuda", label: "Ajuda", icon: HelpCircle },
+      { href: "/analise-quimicos",          label: "Visão geral",   icon: FlaskConical },
+      { href: "/analise-quimicos/nova",     label: "Nova análise",  icon: Plus },
+      { href: "/analise-quimicos/historico",label: "Histórico",     icon: History },
+      { href: "/analise-quimicos/ajuda",    label: "Ajuda",         icon: HelpCircle },
     ];
-    // Base de referência: só Admin vê e edita.
     if (user?.perfil === "Admin") {
-      items.push({
-        href: "/analise-quimicos/base",
-        label: "Base de referência",
-        icon: Database,
-      });
+      items.push({ href: "/analise-quimicos/base", label: "Base de referência", icon: Database });
     }
-    return [
+
+    const base: NavSection[] = [
       { label: "Análise de Químicos", items },
       {
         label: "Configuração",
         items: [
-          {
-            href: "/analise-quimicos/texto-padrao",
-            label: "Texto Padrão",
-            icon: FileEdit,
-          },
+          { href: "/analise-quimicos/texto-padrao", label: "Texto Padrão", icon: FileEdit },
         ],
       },
     ];
-  }, [user?.perfil]);
+
+    if (idRelatorio) {
+      base.push({
+        label: "Análise Atual",
+        items: [
+          {
+            href: `/analise-quimicos/${idRelatorio}`,
+            label: "Laudo / Imprimir",
+            icon: Printer,
+            variant: "report" as const,
+          },
+        ],
+      });
+    }
+
+    return base;
+  }, [user?.perfil, idRelatorio]);
 
   return (
     <div className="min-h-screen">
