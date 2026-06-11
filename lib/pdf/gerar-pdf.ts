@@ -76,7 +76,7 @@ export async function gerarPdf(
     ])
     browser = await puppeteer.launch({
       args: chromium.args,
-      defaultViewport: { width: 1920, height: 1080 },
+      defaultViewport: { width: 794, height: 1123 }, // A4 a 96dpi (210mm × 297mm)
       executablePath: await chromium.executablePath(),
       headless: 'shell' as never,
     })
