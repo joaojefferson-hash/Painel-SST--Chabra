@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { createSupabaseServerClient } from "@/lib/supabase/client";
-import AepTemplate from "@/components/pdf/templates/AepTemplate";
 import type { AepRelatorioLocal, AepSetorLocal } from "@/components/pdf/templates/AepTemplate";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
@@ -184,6 +181,14 @@ export async function GET(
 
   const shortId = id.replace(/-/g, "").slice(0, 8);
   const identificadorDocumento = `AEP-${now.getFullYear()}-${shortId}`;
+
+  // Dynamic imports — Next.js 15 bloqueia react-dom/server em import estático no App Router
+  const [{ default: React }, { renderToStaticMarkup }, { default: AepTemplate }] =
+    await Promise.all([
+      import("react"),
+      import("react-dom/server"),
+      import("@/components/pdf/templates/AepTemplate"),
+    ]);
 
   // Renderiza o template React → HTML
   const bodyHtml = renderToStaticMarkup(
