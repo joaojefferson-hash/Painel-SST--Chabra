@@ -2,510 +2,480 @@
 
 import { useState, useMemo } from "react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Info, TrendingUp, Users } from "lucide-react";
 import {
-  useProdUnidades,
-  useProdDocumentos,
-  useProdColaboradores,
-} from "@/lib/hooks/useProdutividade";
+  AlertTriangle, CheckCircle2, ChevronDown, ChevronUp,
+  FileText, Info, Users, Wrench,
+} from "lucide-react";
+import { useProdUnidades } from "@/lib/hooks/useProdutividade";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function InputNum({
-  label,
-  sub,
-  value,
-  onChange,
+function num(v: string, fallback = 0) {
+  return Math.max(0, Number(v) || fallback);
+}
+
+function Field({
+  label, sub, value, onChange, prefix, suffix, small,
 }: {
-  label: string;
-  sub?: string;
-  value: string;
+  label: string; sub?: string; value: string;
   onChange: (v: string) => void;
+  prefix?: string; suffix?: string; small?: boolean;
 }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-semibold text-gray-600">{label}</label>
-      {sub && <p className="mb-1.5 text-[11px] text-gray-400">{sub}</p>}
-      <input
-        type="number"
-        min={0}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
-      />
+      <label className="mb-1 block text-xs font-semibold text-gray-700">{label}</label>
+      {sub && <p className="mb-1.5 text-[11px] text-gray-400 leading-tight">{sub}</p>}
+      <div className="flex items-center gap-1">
+        {prefix && <span className="text-xs text-gray-400">{prefix}</span>}
+        <input
+          type="number" min={0} value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`rounded-lg border border-gray-200 px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${small ? "w-24" : "w-full"}`}
+        />
+        {suffix && <span className="text-xs text-gray-500">{suffix}</span>}
+      </div>
     </div>
   );
 }
 
-function CelulaNum({
-  value,
-  onChange,
+function KpiCard({
+  label, value, sub, color = "text-gray-900", highlight = false,
 }: {
-  value: string;
-  onChange: (v: string) => void;
+  label: string; value: string | number; sub?: string;
+  color?: string; highlight?: boolean;
 }) {
   return (
-    <input
-      type="number"
-      min={0}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-20 rounded border border-teal-200 bg-white px-2 py-1 text-center text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
-    />
-  );
-}
-
-function ResultCard({
-  label,
-  value,
-  sub,
-  colorClass = "text-teal-700",
-  highlight = false,
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  colorClass?: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div className={`rounded-xl p-4 ${highlight ? "bg-teal-50 ring-2 ring-teal-200" : "bg-white ring-1 ring-black/5"} shadow-sm`}>
+    <div className={`rounded-xl p-4 shadow-sm ${highlight ? "ring-2 ring-teal-300 bg-teal-50" : "bg-white ring-1 ring-black/5"}`}>
       <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${colorClass}`}>{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
+      <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
+      {sub && <p className="mt-0.5 text-[11px] text-gray-400">{sub}</p>}
     </div>
   );
 }
 
-// Dados manuais por unidade
+// ── Tipos ──────────────────────────────────────────────────────────────────
+
 interface DadosUnidade {
-  clientes:   string;
-  totalDocs:  string;
-  pendentes:  string;
-  visitasPend: string;
+  totalClientes:  string;
+  pendInspecao:   string;
+  pendDocs:       string;
 }
 
-const DADOS_VAZIOS: DadosUnidade = { clientes: "0", totalDocs: "0", pendentes: "0", visitasPend: "0" };
+const VAZIO: DadosUnidade = { totalClientes: "0", pendInspecao: "0", pendDocs: "0" };
 
 // ── Página ─────────────────────────────────────────────────────────────────
 
 export default function ProjecoesPage() {
   const { data: unidades = [] } = useProdUnidades();
-  const { data: documentos = [] } = useProdDocumentos();
-  const { data: colaboradores = [] } = useProdColaboradores();
 
+  // ── Parâmetros da janela ──────────────────────────────────────────────────
+  const [diasUteis,   setDiasUteis]   = useState("60");
+  // ── Equipe atual ─────────────────────────────────────────────────────────
+  const [admsAtuais,  setAdmsAtuais]  = useState("15");
+  const [tecsAtuais,  setTecsAtuais]  = useState("9");
+  // ── Produtividade diária ──────────────────────────────────────────────────
+  const [docsPorAdm,  setDocsPorAdm]  = useState("5");
+  const [inspPorTec,  setInspPorTec]  = useState("3");
+  // ── Dados por unidade ─────────────────────────────────────────────────────
+  const [dados, setDados] = useState<Record<string, DadosUnidade>>({});
   // ── UI ────────────────────────────────────────────────────────────────────
-  const [modoManual,   setModoManual]   = useState(false);
-  const [showCalcInfo, setShowCalcInfo] = useState(false);
-  // keyed by unidade.id
-  const [dadosManuais, setDadosManuais] = useState<Record<string, DadosUnidade>>({});
+  const [showCalc, setShowCalc] = useState(false);
 
-  function getDados(id: string): DadosUnidade {
-    return dadosManuais[id] ?? DADOS_VAZIOS;
-  }
-  function setDado(id: string, campo: keyof DadosUnidade, val: string) {
-    setDadosManuais((prev) => ({
-      ...prev,
-      [id]: { ...(prev[id] ?? DADOS_VAZIOS), [campo]: val },
-    }));
+  function get(id: string): DadosUnidade { return dados[id] ?? VAZIO; }
+  function set(id: string, campo: keyof DadosUnidade, val: string) {
+    setDados((prev) => ({ ...prev, [id]: { ...(prev[id] ?? VAZIO), [campo]: val } }));
   }
 
-  // ── Simulação ────────────────────────────────────────────────────────────
-  const [colabAtual,    setColabAtual]    = useState("0");
-  const [tecnicoAtual,  setTecnicoAtual]  = useState("0");
-  const [docsPorColab,  setDocsPorColab]  = useState("50");
-  const [visitasPorTec, setVisitasPorTec] = useState("20");
-  const [prazoDesejado, setPrazoDesejado] = useState("3");
-  const [crescClientes, setCrescClientes] = useState("0");
-
-  const n = (v: string, fallback = 0) => Math.max(0, Number(v) || fallback);
-
-  // Totais — banco ou soma das linhas manuais por unidade
-  const totalDocsDB      = documentos.length;
-  const docsPendentesDB  = documentos.filter((d) =>
-    ["vencido", "a_vencer", "pendente_visita", "pendente_informacao",
-     "pendente_ssg", "pendente_revisao", "nao_iniciado"].includes(d.status)
-  ).length;
-  const visitasPendDB    = documentos.filter((d) => d.status === "pendente_visita").length;
-  const clientesUnicosDB = new Set(documentos.map((d) => d.id_empresa)).size;
-
-  const { totalDocs, docsPendentes, visitasPend, clientesUnicos } = useMemo(() => {
-    if (!modoManual) {
-      return {
-        totalDocs:      totalDocsDB,
-        docsPendentes:  docsPendentesDB,
-        visitasPend:    visitasPendDB,
-        clientesUnicos: clientesUnicosDB,
-      };
-    }
-    // Soma de todas as unidades cadastradas
-    const ids = unidades.length > 0
-      ? unidades.map((u) => u.id)
-      : Object.keys(dadosManuais);
+  // ── Totais ────────────────────────────────────────────────────────────────
+  const totais = useMemo(() => {
+    const ids = unidades.length > 0 ? unidades.map((u) => u.id) : Object.keys(dados);
+    const totalClientes = ids.reduce((s, id) => s + num(get(id).totalClientes), 0);
+    const pendInsp      = ids.reduce((s, id) => s + num(get(id).pendInspecao),  0);
+    const pendDocs      = ids.reduce((s, id) => s + num(get(id).pendDocs),      0);
     return {
-      clientesUnicos: ids.reduce((s, id) => s + n(getDados(id).clientes),    0),
-      totalDocs:      ids.reduce((s, id) => s + n(getDados(id).totalDocs),   0),
-      docsPendentes:  ids.reduce((s, id) => s + n(getDados(id).pendentes),   0),
-      visitasPend:    ids.reduce((s, id) => s + n(getDados(id).visitasPend), 0),
+      totalClientes,
+      pendInsp,
+      pendDocs,
+      totalPend: pendInsp + pendDocs,
+      emDia: Math.max(0, totalClientes - pendInsp - pendDocs),
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modoManual, dadosManuais, unidades, totalDocsDB, docsPendentesDB, visitasPendDB, clientesUnicosDB]);
+  }, [dados, unidades]);
 
-  // Capacidade atual (colaboradores cadastrados)
-  const capDocsMes    = colaboradores.reduce((s, c) => s + c.capacidade_docs_mes, 0);
-  const capVisitasMes = colaboradores.reduce((s, c) => s + c.capacidade_visitas_mes, 0);
-
+  // ── Cálculos ──────────────────────────────────────────────────────────────
   const calc = useMemo(() => {
-    const nColab   = n(colabAtual);
-    const nTec     = n(tecnicoAtual);
-    const dpC      = n(docsPorColab, 50);
-    const vpT      = n(visitasPorTec, 20);
-    const prazo    = Math.max(1, n(prazoDesejado, 3));
-    const crescMes = n(crescClientes);
+    const dias = num(diasUteis, 60);
+    const adms = num(admsAtuais);
+    const tecs = num(tecsAtuais);
+    const dpa  = num(docsPorAdm, 5);
+    const ipa  = num(inspPorTec, 3);
 
-    const capDocsEquipe    = nColab * dpC;
-    const capVisitasEquipe = nTec * vpT;
+    // Capacidade da equipe atual na janela
+    const capDocs = adms * dpa * dias;
+    const capInsp = tecs * ipa * dias;
 
-    const meses = [1, 2, 3, 6, 12];
-    const projecoes = meses.map((m) => {
-      const novos       = crescMes * 5;
-      const totalPend   = docsPendentes + novos * m;
-      const capAcum     = capDocsEquipe * m;
-      const saldo       = Math.max(0, totalPend - capAcum);
-      return { mes: `${m}m`, pendentes: Math.round(saldo), processados: Math.round(Math.min(capAcum, totalPend)) };
+    // Quantos são necessários para zerar no prazo
+    const admsNec = dpa * dias > 0 ? Math.ceil(totais.pendDocs / (dpa * dias)) : 0;
+    const tecsNec = ipa * dias > 0 ? Math.ceil(totais.pendInsp / (ipa * dias)) : 0;
+
+    // Quanto falta contratar
+    const admsAdd = Math.max(0, admsNec - adms);
+    const tecsAdd = Math.max(0, tecsNec - tecs);
+
+    // Dias necessários com a equipe atual (sem contratar ninguém)
+    const diasNecDocs = dpa > 0 && adms > 0 ? Math.ceil(totais.pendDocs / (adms * dpa)) : Infinity;
+    const diasNecInsp = ipa > 0 && tecs > 0 ? Math.ceil(totais.pendInsp / (tecs * ipa)) : Infinity;
+
+    // % cobertura com equipe atual
+    const pctDocs = totais.pendDocs > 0 ? Math.min(100, Math.round((capDocs / totais.pendDocs) * 100)) : 100;
+    const pctInsp = totais.pendInsp > 0 ? Math.min(100, Math.round((capInsp / totais.pendInsp) * 100)) : 100;
+
+    // Gráfico: carga semanal acumulada
+    const semanas = [1, 2, 3, 4, 6, 8, 10, 12].filter((s) => s * 5 <= dias + 10);
+    const graficoDocs = semanas.map((s) => {
+      const diasS    = Math.min(s * 5, dias);
+      const capAcum  = adms * dpa * diasS;
+      const restante = Math.max(0, totais.pendDocs - capAcum);
+      return { semana: `S${s}`, restante, processado: Math.min(capAcum, totais.pendDocs) };
     });
 
-    const prazoAtualMeses = capDocsMes > 0 ? Math.ceil(docsPendentes / capDocsMes) : Infinity;
-    const prazoSimMeses   = capDocsEquipe > 0 ? Math.ceil(docsPendentes / capDocsEquipe) : Infinity;
-
-    const docsTotal  = docsPendentes + crescMes * prazo * 5;
-    const colabIdeal = dpC > 0 ? Math.ceil(docsTotal / (prazo * dpC)) : 0;
-    const tecIdeal   = vpT > 0 ? Math.ceil(visitasPend / (prazo * vpT)) : 0;
-
     return {
-      capDocsEquipe, capVisitasEquipe,
-      prazoAtualMeses, prazoSimMeses,
-      colabIdeal, tecIdeal,
-      deficitColab: Math.max(0, colabIdeal - nColab),
-      deficitTec:   Math.max(0, tecIdeal - nTec),
-      projecoes,
+      capDocs, capInsp,
+      admsNec, tecsNec,
+      admsAdd, tecsAdd,
+      diasNecDocs, diasNecInsp,
+      pctDocs, pctInsp,
+      graficoDocs,
+      okDocs: admsAdd === 0,
+      okInsp: tecsAdd === 0,
     };
-  }, [colabAtual, tecnicoAtual, docsPorColab, visitasPorTec, prazoDesejado,
-      crescClientes, docsPendentes, visitasPend, capDocsMes]);
+  }, [totais, diasUteis, admsAtuais, tecsAtuais, docsPorAdm, inspPorTec]);
 
-  const cenarios = [0, 5, 10, 20, 30].map((cresc) => {
-    const novos  = cresc * 5 * n(prazoDesejado, 3);
-    const total  = docsPendentes + novos;
-    const colabN = n(docsPorColab, 50) > 0 ? Math.ceil(total / (n(prazoDesejado, 3) * n(docsPorColab, 50))) : 0;
-    const tecN   = n(visitasPorTec, 20) > 0 ? Math.ceil((visitasPend + cresc * 2) / (n(prazoDesejado, 3) * n(visitasPorTec, 20))) : 0;
-    return { label: `+${cresc} clientes`, colabNecessario: colabN, tecNecessario: tecN, totalDocs: total };
-  });
+  const dias  = num(diasUteis, 60);
+  const semanas = Math.round(dias / 5);
 
   return (
     <div className="space-y-8">
+
+      {/* ── Cabeçalho ──────────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Projeções de Produtividade</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Projeção de Necessidade de Equipe</h1>
         <p className="mt-0.5 text-sm text-gray-500">
-          Simule capacidade de equipe, prazo de regularização e necessidade de contratações
+          Calcule quantos ADMs e técnicos são necessários para zerar as pendências dentro da janela de trabalho
         </p>
       </div>
 
-      {/* ── Estado atual ─────────────────────────────────────────────────────── */}
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Estado Atual</h2>
-          <button
-            type="button"
-            onClick={() => setModoManual((v) => !v)}
-            className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-              modoManual ? "bg-teal-700 text-white hover:bg-teal-800" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            <span className={`size-2 rounded-full ${modoManual ? "bg-teal-300" : "bg-gray-400"}`} />
-            {modoManual ? "Entrada manual ativa" : "Inserir manualmente"}
-          </button>
-        </div>
+      {/* ── STEP 1: Janela + equipe atual + produtividade ───────────────────── */}
+      <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5 space-y-5">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">1. Parâmetros</h2>
 
-        {/* Tabela de entrada manual por unidade */}
-        {modoManual && (
-          <div className="mb-4 overflow-hidden rounded-xl border border-teal-200 bg-teal-50">
-            <div className="border-b border-teal-200 px-4 py-2.5">
-              <p className="text-xs font-semibold text-teal-800">
-                Informe os valores por unidade — os totais são somados automaticamente
-              </p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-teal-100 bg-teal-100/60 text-[11px] uppercase text-teal-700">
-                    <th className="px-4 py-2.5 text-left">Unidade</th>
-                    <th className="px-4 py-2.5 text-center">Clientes</th>
-                    <th className="px-4 py-2.5 text-center">Total Docs</th>
-                    <th className="px-4 py-2.5 text-center">Docs Pendentes</th>
-                    <th className="px-4 py-2.5 text-center">Visitas Pendentes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-teal-100">
-                  {(unidades.length > 0 ? unidades : [{ id: "__geral__", nome: "Geral (sem unidades)" }]).map((u) => (
-                    <tr key={u.id} className="bg-white/70">
-                      <td className="px-4 py-2.5 font-medium text-gray-800">{u.nome}</td>
-                      <td className="px-4 py-2.5 text-center">
-                        <CelulaNum value={getDados(u.id).clientes}    onChange={(v) => setDado(u.id, "clientes",    v)} />
-                      </td>
-                      <td className="px-4 py-2.5 text-center">
-                        <CelulaNum value={getDados(u.id).totalDocs}   onChange={(v) => setDado(u.id, "totalDocs",   v)} />
-                      </td>
-                      <td className="px-4 py-2.5 text-center">
-                        <CelulaNum value={getDados(u.id).pendentes}   onChange={(v) => setDado(u.id, "pendentes",   v)} />
-                      </td>
-                      <td className="px-4 py-2.5 text-center">
-                        <CelulaNum value={getDados(u.id).visitasPend} onChange={(v) => setDado(u.id, "visitasPend", v)} />
-                      </td>
-                    </tr>
-                  ))}
-                  {/* Linha de totais */}
-                  <tr className="border-t-2 border-teal-300 bg-teal-100/80 text-xs font-bold text-teal-900">
-                    <td className="px-4 py-2 uppercase tracking-wide">Total</td>
-                    <td className="px-4 py-2 text-center">{clientesUnicos}</td>
-                    <td className="px-4 py-2 text-center">{totalDocs}</td>
-                    <td className="px-4 py-2 text-center">{docsPendentes}</td>
-                    <td className="px-4 py-2 text-center">{visitasPend}</td>
-                  </tr>
-                </tbody>
-              </table>
+        {/* Janela */}
+        <div>
+          <p className="mb-3 text-xs font-semibold text-gray-600">Janela de trabalho</p>
+          <div className="flex flex-wrap items-end gap-4">
+            <Field label="Dias úteis disponíveis" sub="Padrão: 60 dias úteis ≈ 3 meses" value={diasUteis} onChange={setDiasUteis} small />
+            <div className="rounded-lg bg-gray-50 px-4 py-2 text-xs text-gray-500 ring-1 ring-black/5">
+              ≈ <strong>{semanas} semanas</strong> / <strong>{Math.round(dias / 22)} meses</strong>
             </div>
           </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <ResultCard label="Clientes"          value={clientesUnicos} sub={modoManual ? "entrada manual" : "empresas com docs"} />
-          <ResultCard label="Total Docs"         value={totalDocs}      sub={modoManual ? "entrada manual" : "documentos SST"} />
-          <ResultCard label="Docs Pendentes"     value={docsPendentes}  sub="requerem regularização" colorClass="text-orange-600" />
-          <ResultCard label="Visitas Pendentes"  value={visitasPend}    sub="aguardam técnico"        colorClass="text-blue-600" />
         </div>
-        {capDocsMes > 0 && (
-          <p className="mt-2 text-sm text-gray-500">
-            Capacidade atual (colaboradores cadastrados):{" "}
-            <span className="font-semibold text-teal-700">{capDocsMes} docs/mês</span> ·{" "}
-            <span className="font-semibold text-teal-700">{capVisitasMes} visitas/mês</span>.
-            {calc.prazoAtualMeses !== Infinity && (
-              <> Prazo estimado com equipe atual: <span className="font-semibold">{calc.prazoAtualMeses} mês{calc.prazoAtualMeses !== 1 ? "es" : ""}</span>.</>
-            )}
-          </p>
-        )}
-      </div>
 
-      {/* ── Simulação ────────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
-        <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-gray-800">
-          <TrendingUp className="size-5 text-teal-700" /> Simulação de Equipe
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <InputNum label="Colaboradores disponíveis"         sub="Responsáveis por gerar documentos SST" value={colabAtual}    onChange={setColabAtual} />
-          <InputNum label="Técnicos de campo"                 sub="Responsáveis por visitas técnicas"     value={tecnicoAtual}  onChange={setTecnicoAtual} />
-          <InputNum label="Docs produzidos / colaborador / mês" sub="Média de documentos por pessoa"      value={docsPorColab}  onChange={setDocsPorColab} />
-          <InputNum label="Visitas / técnico / mês"           sub="Média de visitas por técnico"           value={visitasPorTec} onChange={setVisitasPorTec} />
-          <InputNum label="Prazo desejado (meses)"            sub="Para zerar todas as pendências"         value={prazoDesejado} onChange={setPrazoDesejado} />
-          <InputNum label="Crescimento de clientes / mês"     sub="Novos clientes estimados por mês"       value={crescClientes} onChange={setCrescClientes} />
+        {/* Equipe atual */}
+        <div>
+          <p className="mb-3 text-xs font-semibold text-gray-600">Equipe atual</p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="ADMs (geradores de docs)" sub="Fazem documentos SST" value={admsAtuais} onChange={setAdmsAtuais} />
+            <Field label="Técnicos de campo" sub="Realizam inspeções" value={tecsAtuais} onChange={setTecsAtuais} />
+          </div>
+        </div>
+
+        {/* Produtividade */}
+        <div>
+          <p className="mb-3 text-xs font-semibold text-gray-600">Produtividade diária (dias úteis)</p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Docs por ADM por dia" sub="Documentos que um ADM finaliza em 1 dia útil" value={docsPorAdm} onChange={setDocsPorAdm} suffix="docs/dia" />
+            <Field label="Inspeções por técnico por dia" sub="Inspeções que um técnico faz em 1 dia útil" value={inspPorTec} onChange={setInspPorTec} suffix="insp./dia" />
+          </div>
         </div>
       </div>
 
-      {/* ── Como calculamos ─────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-xl bg-blue-50 ring-1 ring-blue-200">
-        <button
-          type="button"
-          onClick={() => setShowCalcInfo((v) => !v)}
-          className="flex w-full items-center justify-between px-5 py-3 text-left"
-        >
-          <span className="flex items-center gap-2 text-sm font-semibold text-blue-800">
-            <Info className="size-4" /> Como os cálculos funcionam
-          </span>
-          {showCalcInfo ? <ChevronUp className="size-4 text-blue-600" /> : <ChevronDown className="size-4 text-blue-600" />}
-        </button>
-
-        {showCalcInfo && (
-          <div className="border-t border-blue-200 px-5 py-4 text-sm text-blue-900 space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-
-              <div className="rounded-lg bg-white/70 p-3">
-                <p className="font-bold text-blue-800 mb-1">📄 Capacidade docs/mês</p>
-                <p className="text-xs text-gray-600 mb-1.5">Quantidade de documentos que a equipe consegue produzir por mês com a configuração informada.</p>
-                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
-                  Colaboradores × Docs/colaborador/mês<br/>
-                  = {n(colabAtual)} × {n(docsPorColab, 50)} = <strong>{calc.capDocsEquipe} docs/mês</strong>
-                </code>
-              </div>
-
-              <div className="rounded-lg bg-white/70 p-3">
-                <p className="font-bold text-blue-800 mb-1">⏱ Prazo estimado</p>
-                <p className="text-xs text-gray-600 mb-1.5">Quantos meses serão necessários para zerar todos os documentos pendentes com a equipe simulada.</p>
-                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
-                  ⌈Docs pendentes ÷ Capacidade/mês⌉<br/>
-                  = ⌈{docsPendentes} ÷ {calc.capDocsEquipe || "—"}⌉ = <strong>{calc.prazoSimMeses === Infinity ? "∞" : `${calc.prazoSimMeses}m`}</strong>
-                </code>
-              </div>
-
-              <div className="rounded-lg bg-white/70 p-3">
-                <p className="font-bold text-blue-800 mb-1">👥 Colaboradores ideais</p>
-                <p className="text-xs text-gray-600 mb-1.5">Mínimo de colaboradores para zerar as pendências no prazo desejado, já considerando o crescimento de clientes.</p>
-                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
-                  ⌈(Pendentes + Cresc×Prazo×5) ÷ (Prazo × Docs/colab)⌉<br/>
-                  = ⌈({docsPendentes} + {n(crescClientes)}×{n(prazoDesejado,3)}×5) ÷ ({n(prazoDesejado,3)} × {n(docsPorColab,50)})⌉<br/>
-                  = <strong>{calc.colabIdeal} colaboradores</strong>
-                </code>
-                <p className="mt-1.5 text-[11px] text-gray-500">* Cada novo cliente gera ~5 documentos SST (estimativa padrão)</p>
-              </div>
-
-              <div className="rounded-lg bg-white/70 p-3">
-                <p className="font-bold text-blue-800 mb-1">🔧 Técnicos ideais</p>
-                <p className="text-xs text-gray-600 mb-1.5">Mínimo de técnicos de campo para cobrir todas as visitas pendentes no prazo desejado.</p>
-                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
-                  ⌈Visitas pendentes ÷ (Prazo × Visitas/técnico)⌉<br/>
-                  = ⌈{visitasPend} ÷ ({n(prazoDesejado,3)} × {n(visitasPorTec,20)})⌉<br/>
-                  = <strong>{calc.tecIdeal} técnicos</strong>
-                </code>
-              </div>
-
-              <div className="rounded-lg bg-white/70 p-3 sm:col-span-2">
-                <p className="font-bold text-blue-800 mb-1">📊 Gráfico — Evolução de pendências</p>
-                <p className="text-xs text-gray-600 mb-1.5">Para cada marco de tempo, compara a capacidade acumulada da equipe com o total de pendências acumuladas (incluindo crescimento).</p>
-                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
-                  Pendentes no mês M = Docs pendentes + (Cresc/mês × 5) × M<br/>
-                  Cap. acumulada     = Capacidade/mês × M<br/>
-                  Saldo pendente     = max(0, Pendentes − Cap. acumulada)
-                </code>
-              </div>
-
-              <div className="rounded-lg bg-white/70 p-3 sm:col-span-2">
-                <p className="font-bold text-blue-800 mb-1">🔢 Cenários de crescimento</p>
-                <p className="text-xs text-gray-600 mb-1.5">Simula quantos colaboradores e técnicos serão necessários se a carteira crescer em diferentes ritmos, mantendo o prazo desejado.</p>
-                <code className="block rounded bg-blue-100 px-3 py-1.5 text-xs font-mono text-blue-900">
-                  Total docs = Pendentes + (Novos clientes × 5 × Prazo)<br/>
-                  Colabs necessários = ⌈Total ÷ (Prazo × Docs/colab)⌉<br/>
-                  Técnicos necessários = ⌈(Visitas pend + Novos×2) ÷ (Prazo × Vis/técnico)⌉
-                </code>
-              </div>
-
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Resultados ───────────────────────────────────────────────────────── */}
-      <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Resultado da Simulação</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <ResultCard label="Capacidade docs/mês"  value={calc.capDocsEquipe}  sub="com a equipe simulada" colorClass="text-teal-700" />
-          <ResultCard
-            label="Prazo estimado"
-            value={calc.prazoSimMeses === Infinity ? "∞" : `${calc.prazoSimMeses}m`}
-            sub="com equipe simulada"
-            colorClass={calc.prazoSimMeses <= n(prazoDesejado, 3) ? "text-green-600" : "text-orange-600"}
-          />
-          <ResultCard label="Colaboradores ideais" value={calc.colabIdeal} sub={`para ${prazoDesejado} meses`} highlight />
-          <ResultCard label="Técnicos ideais"       value={calc.tecIdeal}   sub={`para ${prazoDesejado} meses`} colorClass="text-teal-700" />
-        </div>
-
-        {(calc.deficitColab > 0 || calc.deficitTec > 0) && (
-          <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-4">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-orange-600" />
-              <div>
-                <p className="font-semibold text-orange-800">Déficit de equipe identificado</p>
-                <p className="mt-1 text-sm text-orange-700">
-                  Para regularizar em <strong>{prazoDesejado} mês{n(prazoDesejado, 3) !== 1 ? "es" : ""}</strong>:
-                  {calc.deficitColab > 0 && <> são necessários <strong>+{calc.deficitColab} colaborador{calc.deficitColab !== 1 ? "es" : ""}</strong> adicionais;</>}
-                  {calc.deficitTec > 0   && <> <strong>+{calc.deficitTec} técnico{calc.deficitTec !== 1 ? "s" : ""}</strong> adicionais para visitas.</>}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {calc.deficitColab === 0 && calc.deficitTec === 0 && n(colabAtual) > 0 && (
-          <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="size-5 text-green-600" />
-              <p className="font-semibold text-green-800">A equipe atual é suficiente para regularizar em {prazoDesejado} meses!</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Gráfico ──────────────────────────────────────────────────────────── */}
-      {n(colabAtual) > 0 && (
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-          <h2 className="mb-3 text-sm font-semibold text-gray-700">Evolução de Pendências — Projeção Acumulada</h2>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={calc.projecoes} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
-              <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <ReferenceLine y={0} stroke="#22c55e" strokeWidth={2} label={{ value: "0 pendências", position: "right", fontSize: 10, fill: "#22c55e" }} />
-              <Bar dataKey="processados" name="Processados"    fill="#22c55e" />
-              <Bar dataKey="pendentes"   name="Ainda Pendentes" fill="#f97316" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* ── Cenários ─────────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/5">
-        <div className="border-b border-gray-100 px-5 py-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <Users className="size-4 text-teal-600" /> Cenários de Crescimento — Equipe Necessária
-          </h2>
+      {/* ── STEP 2: Dados por unidade ────────────────────────────────────────── */}
+      <div className="rounded-2xl bg-white shadow-sm ring-1 ring-black/5 overflow-hidden">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">2. Clientes por Unidade</h2>
           <p className="mt-0.5 text-xs text-gray-400">
-            Prazo de {prazoDesejado} meses · {docsPorColab} docs/colab/mês · {visitasPorTec} vis./técnico/mês
+            Informe o total de clientes e quantos estão pendentes de cada tipo em cada unidade
           </p>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50 text-[11px] uppercase text-gray-400">
-                <th className="px-5 py-3 text-left">Cenário</th>
-                <th className="px-5 py-3 text-right">Total Docs Pendentes</th>
-                <th className="px-5 py-3 text-right">Colaboradores Necessários</th>
-                <th className="px-5 py-3 text-right">Técnicos Necessários</th>
+                <th className="px-5 py-3 text-left">Unidade</th>
+                <th className="px-5 py-3 text-center">
+                  <span className="text-gray-600">Total de Clientes</span>
+                </th>
+                <th className="px-5 py-3 text-center">
+                  <span className="flex items-center justify-center gap-1 text-orange-600">
+                    <Wrench className="size-3" /> Pendentes Inspeção
+                  </span>
+                </th>
+                <th className="px-5 py-3 text-center">
+                  <span className="flex items-center justify-center gap-1 text-blue-600">
+                    <FileText className="size-3" /> Pendentes Documentos
+                  </span>
+                </th>
+                <th className="px-5 py-3 text-center text-green-600">Em Dia</th>
+                <th className="px-5 py-3 text-center text-gray-400">% Concluído</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {cenarios.map((c) => (
-                <tr key={c.label} className="hover:bg-gray-50/50">
-                  <td className="px-5 py-3 font-medium text-gray-800">{c.label}</td>
-                  <td className="px-5 py-3 text-right text-gray-600">{c.totalDocs}</td>
-                  <td className="px-5 py-3 text-right">
-                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${c.colabNecessario > n(colabAtual) ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
-                      {c.colabNecessario}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${c.tecNecessario > n(tecnicoAtual) ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
-                      {c.tecNecessario}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {(unidades.length > 0
+                ? unidades
+                : [{ id: "__geral__", nome: "Total (sem unidades)" }]
+              ).map((u) => {
+                const d       = get(u.id);
+                const total   = num(d.totalClientes);
+                const pInsp   = num(d.pendInspecao);
+                const pDocs   = num(d.pendDocs);
+                const emDia   = Math.max(0, total - pInsp - pDocs);
+                const pct     = total > 0 ? Math.round(((emDia) / total) * 100) : 0;
+                return (
+                  <tr key={u.id} className="hover:bg-gray-50/50">
+                    <td className="px-5 py-3 font-semibold text-gray-800">{u.nome}</td>
+                    <td className="px-5 py-3 text-center">
+                      <input
+                        type="number" min={0} value={d.totalClientes}
+                        onChange={(e) => set(u.id, "totalClientes", e.target.value)}
+                        className="w-24 rounded border border-gray-200 px-2 py-1.5 text-center text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <input
+                        type="number" min={0} value={d.pendInspecao}
+                        onChange={(e) => set(u.id, "pendInspecao", e.target.value)}
+                        className="w-24 rounded border border-orange-200 bg-orange-50/50 px-2 py-1.5 text-center text-sm font-mono text-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      />
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <input
+                        type="number" min={0} value={d.pendDocs}
+                        onChange={(e) => set(u.id, "pendDocs", e.target.value)}
+                        className="w-24 rounded border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-center text-sm font-mono text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${emDia > 0 ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                        {emDia}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-gray-100">
+                          <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-mono text-gray-500">{pct}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {/* Linha de totais */}
+              <tr className="border-t-2 border-gray-200 bg-gray-50 text-xs font-bold">
+                <td className="px-5 py-3 uppercase tracking-wide text-gray-500">Total Geral</td>
+                <td className="px-5 py-3 text-center text-gray-900">{totais.totalClientes}</td>
+                <td className="px-5 py-3 text-center text-orange-700">{totais.pendInsp}</td>
+                <td className="px-5 py-3 text-center text-blue-700">{totais.pendDocs}</td>
+                <td className="px-5 py-3 text-center text-green-700">{totais.emDia}</td>
+                <td className="px-5 py-3 text-center text-gray-600">
+                  {totais.totalClientes > 0 ? `${Math.round((totais.emDia / totais.totalClientes) * 100)}%` : "—"}
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* ── Por unidade ──────────────────────────────────────────────────────── */}
+      {/* ── STEP 3: Resultado ───────────────────────────────────────────────── */}
+      <div>
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">3. Resultado — Janela de {diasUteis} dias úteis</h2>
+
+        {/* Situação atual da equipe */}
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <KpiCard label="Total Clientes"       value={totais.totalClientes} sub="carteira total" />
+          <KpiCard label="Em Dia"               value={totais.emDia}         sub="documentos regularizados" color="text-green-600" />
+          <KpiCard label="Pendentes Inspeção"   value={totais.pendInsp}      sub="aguardam técnico"          color="text-orange-600" />
+          <KpiCard label="Pendentes Documentos" value={totais.pendDocs}      sub="aguardam ADM"              color="text-blue-600" />
+        </div>
+
+        {/* Capacidade vs Necessidade */}
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Docs */}
+          <div className={`rounded-xl p-5 shadow-sm ring-1 ${calc.okDocs ? "bg-green-50 ring-green-200" : "bg-white ring-black/5"}`}>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <FileText className="size-3.5 text-blue-600" /> Documentos SST (ADMs)
+                </p>
+                <p className="mt-3 text-3xl font-bold text-blue-700">{totais.pendDocs}</p>
+                <p className="text-xs text-gray-400">pendências de documentos</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-400">Capacidade atual em {diasUteis}d</p>
+                <p className="mt-1 text-xl font-bold text-gray-800">{calc.capDocs.toLocaleString()}</p>
+                <p className="text-xs text-gray-400">docs ({num(admsAtuais)} ADMs × {num(docsPorAdm,5)} docs/dia × {diasUteis}d)</p>
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="mb-1 flex justify-between text-[11px] text-gray-400">
+                <span>Cobertura com equipe atual</span>
+                <span className="font-semibold">{calc.pctDocs}%</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+                <div
+                  className={`h-full rounded-full transition-all ${calc.pctDocs >= 100 ? "bg-green-500" : calc.pctDocs >= 70 ? "bg-yellow-500" : "bg-red-500"}`}
+                  style={{ width: `${Math.min(100, calc.pctDocs)}%` }}
+                />
+              </div>
+            </div>
+            <div className="mt-3 border-t border-gray-100 pt-3">
+              {calc.okDocs ? (
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-green-700">
+                  <CheckCircle2 className="size-4" /> Equipe atual suficiente
+                </p>
+              ) : (
+                <p className="text-sm text-red-700">
+                  Equipe atual leva <strong>{calc.diasNecDocs === Infinity ? "∞" : `${calc.diasNecDocs} dias`}</strong> — são necessários <strong className="text-red-800">{calc.admsNec} ADMs</strong> (+{calc.admsAdd} a contratar)
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Inspeções */}
+          <div className={`rounded-xl p-5 shadow-sm ring-1 ${calc.okInsp ? "bg-green-50 ring-green-200" : "bg-white ring-black/5"}`}>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <Wrench className="size-3.5 text-orange-600" /> Inspeções (Técnicos)
+                </p>
+                <p className="mt-3 text-3xl font-bold text-orange-700">{totais.pendInsp}</p>
+                <p className="text-xs text-gray-400">pendências de inspeção</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-400">Capacidade atual em {diasUteis}d</p>
+                <p className="mt-1 text-xl font-bold text-gray-800">{calc.capInsp.toLocaleString()}</p>
+                <p className="text-xs text-gray-400">inspeções ({num(tecsAtuais)} técs. × {num(inspPorTec,3)} insp./dia × {diasUteis}d)</p>
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="mb-1 flex justify-between text-[11px] text-gray-400">
+                <span>Cobertura com equipe atual</span>
+                <span className="font-semibold">{calc.pctInsp}%</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+                <div
+                  className={`h-full rounded-full transition-all ${calc.pctInsp >= 100 ? "bg-green-500" : calc.pctInsp >= 70 ? "bg-yellow-500" : "bg-red-500"}`}
+                  style={{ width: `${Math.min(100, calc.pctInsp)}%` }}
+                />
+              </div>
+            </div>
+            <div className="mt-3 border-t border-gray-100 pt-3">
+              {calc.okInsp ? (
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-green-700">
+                  <CheckCircle2 className="size-4" /> Equipe atual suficiente
+                </p>
+              ) : (
+                <p className="text-sm text-red-700">
+                  Equipe atual leva <strong>{calc.diasNecInsp === Infinity ? "∞" : `${calc.diasNecInsp} dias`}</strong> — são necessários <strong className="text-red-800">{calc.tecsNec} técnicos</strong> (+{calc.tecsAdd} a contratar)
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Cards de contratação necessária */}
+        {(calc.admsAdd > 0 || calc.tecsAdd > 0) && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-5">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-red-600" />
+              <div className="flex-1">
+                <p className="font-bold text-red-800">Déficit de equipe para zerar em {diasUteis} dias úteis</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {calc.admsAdd > 0 && (
+                    <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+                      <p className="text-xs text-gray-500">ADMs necessários</p>
+                      <p className="mt-0.5 text-2xl font-bold text-blue-700">{calc.admsNec} <span className="text-sm text-gray-500 font-normal">total</span></p>
+                      <p className="mt-0.5 text-sm">
+                        <span className="font-semibold text-gray-700">{num(admsAtuais)} atual</span>
+                        <span className="mx-1 text-gray-400">+</span>
+                        <span className="font-bold text-red-700">{calc.admsAdd} a contratar</span>
+                      </p>
+                    </div>
+                  )}
+                  {calc.tecsAdd > 0 && (
+                    <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+                      <p className="text-xs text-gray-500">Técnicos necessários</p>
+                      <p className="mt-0.5 text-2xl font-bold text-orange-700">{calc.tecsNec} <span className="text-sm text-gray-500 font-normal">total</span></p>
+                      <p className="mt-0.5 text-sm">
+                        <span className="font-semibold text-gray-700">{num(tecsAtuais)} atual</span>
+                        <span className="mx-1 text-gray-400">+</span>
+                        <span className="font-bold text-red-700">{calc.tecsAdd} a contratar</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {calc.admsAdd === 0 && calc.tecsAdd === 0 && totais.totalPend > 0 && (
+          <div className="mb-4 rounded-xl border border-green-200 bg-green-50 p-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="size-5 text-green-600" />
+              <p className="font-semibold text-green-800">
+                Equipe atual suficiente para zerar todas as pendências em {diasUteis} dias úteis!
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Gráfico de progresso semanal ────────────────────────────────────── */}
+      {num(admsAtuais) > 0 && totais.pendDocs > 0 && (
+        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+          <h2 className="mb-1 text-sm font-semibold text-gray-700">Progresso semanal — Documentos pendentes</h2>
+          <p className="mb-4 text-xs text-gray-400">Com {num(admsAtuais)} ADMs fazendo {num(docsPorAdm,5)} docs/dia</p>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={calc.graficoDocs} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
+              <XAxis dataKey="semana" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip />
+              <ReferenceLine y={0} stroke="#22c55e" strokeWidth={2}
+                label={{ value: "0 pendências", position: "insideTopRight", fontSize: 10, fill: "#22c55e" }} />
+              <Bar dataKey="processado" name="Processados"    fill="#22c55e" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="restante"   name="Ainda Pendentes" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* ── Por unidade: detalhado ───────────────────────────────────────────── */}
       {unidades.length > 0 && (
         <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/5">
           <div className="border-b border-gray-100 px-5 py-3">
-            <h2 className="text-sm font-semibold text-gray-700">Distribuição por Unidade</h2>
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <Users className="size-4 text-teal-600" /> Necessidade por Unidade
+            </h2>
+            <p className="mt-0.5 text-xs text-gray-400">
+              ADMs e técnicos necessários por unidade para cobrir em {diasUteis} dias úteis
+            </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -513,45 +483,45 @@ export default function ProjecoesPage() {
                 <tr className="border-b border-gray-100 bg-gray-50 text-[11px] uppercase text-gray-400">
                   <th className="px-5 py-3 text-left">Unidade</th>
                   <th className="px-5 py-3 text-right">Clientes</th>
-                  <th className="px-5 py-3 text-right">Docs Totais</th>
-                  <th className="px-5 py-3 text-right">Docs Pendentes</th>
-                  <th className="px-5 py-3 text-right">Colaboradores</th>
-                  <th className="px-5 py-3 text-right">Cap. docs/mês</th>
-                  <th className="px-5 py-3 text-right">Prazo Estimado</th>
+                  <th className="px-5 py-3 text-right text-orange-600">Pend. Inspeção</th>
+                  <th className="px-5 py-3 text-right text-blue-600">Pend. Docs</th>
+                  <th className="px-5 py-3 text-right text-blue-700">ADMs Nec.</th>
+                  <th className="px-5 py-3 text-right text-orange-700">Técs. Nec.</th>
+                  <th className="px-5 py-3 text-right">Concluído</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {unidades.map((u) => {
-                  const uDocs   = documentos.filter((d) => d.id_unidade === u.id);
-                  const uPendDB = uDocs.filter((d) =>
-                    ["vencido", "a_vencer", "pendente_visita", "pendente_informacao",
-                     "pendente_ssg", "pendente_revisao", "nao_iniciado"].includes(d.status)
-                  ).length;
-                  const uClients = modoManual
-                    ? n(getDados(u.id).clientes)
-                    : new Set(uDocs.map((d) => d.id_empresa)).size;
-                  const uTotalDocs = modoManual ? n(getDados(u.id).totalDocs)  : uDocs.length;
-                  const uPend      = modoManual ? n(getDados(u.id).pendentes)  : uPendDB;
-                  const uColabs    = colaboradores.filter((c) => c.id_unidade === u.id);
-                  const uCapDocs   = uColabs.reduce((s, c) => s + c.capacidade_docs_mes, 0);
-                  const uPrazo     = uCapDocs > 0 ? Math.ceil(uPend / uCapDocs) : null;
+                  const d       = get(u.id);
+                  const total   = num(d.totalClientes);
+                  const pInsp   = num(d.pendInspecao);
+                  const pDocs   = num(d.pendDocs);
+                  const emDia   = Math.max(0, total - pInsp - pDocs);
+                  const pct     = total > 0 ? Math.round((emDia / total) * 100) : 0;
+                  const dpa     = num(docsPorAdm, 5);
+                  const ipa     = num(inspPorTec, 3);
+                  const diasN   = num(diasUteis, 60);
+                  const admsU   = dpa * diasN > 0 ? Math.ceil(pDocs / (dpa * diasN)) : 0;
+                  const tecsU   = ipa * diasN > 0 ? Math.ceil(pInsp / (ipa * diasN)) : 0;
                   return (
                     <tr key={u.id} className="hover:bg-gray-50/50">
                       <td className="px-5 py-3 font-medium text-gray-800">{u.nome}</td>
-                      <td className="px-5 py-3 text-right text-gray-600">{uClients}</td>
-                      <td className="px-5 py-3 text-right text-gray-600">{uTotalDocs}</td>
+                      <td className="px-5 py-3 text-right text-gray-600">{total}</td>
                       <td className="px-5 py-3 text-right">
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${uPend > 0 ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}`}>
-                          {uPend}
-                        </span>
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${pInsp > 0 ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-400"}`}>{pInsp}</span>
                       </td>
-                      <td className="px-5 py-3 text-right text-gray-600">{uColabs.length}</td>
-                      <td className="px-5 py-3 text-right text-gray-600">{uCapDocs}</td>
-                      <td className="px-5 py-3 text-right text-xs">
-                        {uPrazo === null
-                          ? <span className="text-gray-400">—</span>
-                          : <span className={`font-semibold ${uPrazo <= 3 ? "text-green-600" : uPrazo <= 6 ? "text-yellow-600" : "text-red-600"}`}>{uPrazo}m</span>
-                        }
+                      <td className="px-5 py-3 text-right">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${pDocs > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400"}`}>{pDocs}</span>
+                      </td>
+                      <td className="px-5 py-3 text-right font-semibold text-blue-700">{admsU}</td>
+                      <td className="px-5 py-3 text-right font-semibold text-orange-700">{tecsU}</td>
+                      <td className="px-5 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <div className="h-1.5 w-14 overflow-hidden rounded-full bg-gray-100">
+                            <div className="h-full rounded-full bg-green-500" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs font-mono text-gray-500">{pct}%</span>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -561,6 +531,65 @@ export default function ProjecoesPage() {
           </div>
         </div>
       )}
+
+      {/* ── Como calculamos ─────────────────────────────────────────────────── */}
+      <div className="overflow-hidden rounded-xl bg-blue-50 ring-1 ring-blue-200">
+        <button
+          type="button"
+          onClick={() => setShowCalc((v) => !v)}
+          className="flex w-full items-center justify-between px-5 py-3 text-left"
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-blue-800">
+            <Info className="size-4" /> Como os cálculos funcionam
+          </span>
+          {showCalc ? <ChevronUp className="size-4 text-blue-600" /> : <ChevronDown className="size-4 text-blue-600" />}
+        </button>
+
+        {showCalc && (
+          <div className="border-t border-blue-200 px-5 py-4 text-sm text-blue-900 space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+
+              <div className="rounded-lg bg-white/80 p-3">
+                <p className="font-bold text-blue-800 mb-1">📄 ADMs necessários</p>
+                <p className="text-xs text-gray-500 mb-1.5">Mínimo de ADMs para zerar os documentos pendentes no prazo.</p>
+                <code className="block rounded bg-blue-100 px-3 py-2 text-xs font-mono text-blue-900 whitespace-pre">
+{`⌈Pendentes docs ÷ (Docs/ADM/dia × Dias úteis)⌉
+= ⌈${totais.pendDocs} ÷ (${num(docsPorAdm,5)} × ${num(diasUteis,60)})⌉
+= ${calc.admsNec} ADMs`}
+                </code>
+              </div>
+
+              <div className="rounded-lg bg-white/80 p-3">
+                <p className="font-bold text-blue-800 mb-1">🔧 Técnicos necessários</p>
+                <p className="text-xs text-gray-500 mb-1.5">Mínimo de técnicos para cobrir todas as inspeções pendentes.</p>
+                <code className="block rounded bg-blue-100 px-3 py-2 text-xs font-mono text-blue-900 whitespace-pre">
+{`⌈Pendentes inspeção ÷ (Insp/téc/dia × Dias úteis)⌉
+= ⌈${totais.pendInsp} ÷ (${num(inspPorTec,3)} × ${num(diasUteis,60)})⌉
+= ${calc.tecsNec} técnicos`}
+                </code>
+              </div>
+
+              <div className="rounded-lg bg-white/80 p-3">
+                <p className="font-bold text-blue-800 mb-1">📊 Capacidade da equipe atual</p>
+                <code className="block rounded bg-blue-100 px-3 py-2 text-xs font-mono text-blue-900 whitespace-pre">
+{`Docs: ${num(admsAtuais)} ADMs × ${num(docsPorAdm,5)} docs/dia × ${num(diasUteis,60)} dias = ${calc.capDocs}
+Insp: ${num(tecsAtuais)} técs × ${num(inspPorTec,3)} insp/dia × ${num(diasUteis,60)} dias = ${calc.capInsp}`}
+                </code>
+              </div>
+
+              <div className="rounded-lg bg-white/80 p-3">
+                <p className="font-bold text-blue-800 mb-1">➕ Contratações necessárias</p>
+                <code className="block rounded bg-blue-100 px-3 py-2 text-xs font-mono text-blue-900 whitespace-pre">
+{`ADMs a contratar = max(0, ${calc.admsNec} − ${num(admsAtuais)}) = ${calc.admsAdd}
+Técs a contratar = max(0, ${calc.tecsNec} − ${num(tecsAtuais)}) = ${calc.tecsAdd}`}
+                </code>
+              </div>
+
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
