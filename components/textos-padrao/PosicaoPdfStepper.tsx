@@ -63,14 +63,16 @@ export default function PosicaoPdfStepper({
   const lista = posicoes
     ? POSICOES.filter((p) => posicoes.includes(p.valor))
     : POSICOES;
-  const selecionado = lista.find((p) => p.valor === valor) ?? lista[0];
+  const valorEfetivo: PosicaoPdfValor =
+    lista.some((p) => p.valor === valor) ? valor : lista[0].valor;
+  const selecionado = lista.find((p) => p.valor === valorEfetivo) ?? lista[0];
 
   return (
     <div className="space-y-2">
       {/* Trilha horizontal — chips conectados */}
       <div className="flex items-start">
         {lista.map((p, idx) => {
-          const ativo = p.valor === valor;
+          const ativo = p.valor === valorEfetivo;
           const count = contagens?.[p.valor] ?? 0;
           return (
             <Fragment key={p.valor}>
@@ -80,7 +82,7 @@ export default function PosicaoPdfStepper({
                   className={cn(
                     "mt-3.5 h-0.5 flex-1 transition-colors",
                     ativo ||
-                      lista.findIndex((x) => x.valor === valor) > idx - 1
+                      lista.findIndex((x) => x.valor === valorEfetivo) > idx - 1
                       ? "bg-verde-primary/40"
                       : "bg-gray-200"
                   )}

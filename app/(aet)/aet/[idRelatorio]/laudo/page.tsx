@@ -460,6 +460,7 @@ export default function AetLaudoPage({
                   {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
                   Baixar PDF Assinado
                 </button>
+                <BotaoAssinarPdf reAssinatura={true} tabelaNome="aet_relatorios" docId={idRelatorio} onAssinado={recarregar} />
               </>
             ) : (
               <BotaoAssinarPdf tabelaNome="aet_relatorios" docId={idRelatorio} onAssinado={recarregar} />

@@ -112,6 +112,7 @@ export default function LaudoConformidadePage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
+            <BotaoAssinarPdf reAssinatura={true} tabelaNome="relatorios_conformidade" docId={id} onAssinado={recarregar} />
           </>
         ) : (
           <BotaoAssinarPdf tabelaNome="relatorios_conformidade" docId={id} onAssinado={recarregar} />

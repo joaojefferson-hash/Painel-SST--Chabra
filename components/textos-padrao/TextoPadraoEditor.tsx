@@ -487,18 +487,29 @@ function CapituloCard({
   const [dirty, setDirty] = useState(false);
   const [enviandoBg, setEnviandoBg] = useState(false);
   const bgInputRef = useRef<HTMLInputElement | null>(null);
+  const migrated = useRef(false);
 
   useEffect(() => {
     setTitulo(capitulo.titulo);
     setConteudo(capitulo.conteudo ?? "");
     setCaixas(capitulo.caixas_texto ?? []);
     setDirty(false);
+    migrated.current = false;
   }, [
     capitulo.id_capitulo,
     capitulo.titulo,
     capitulo.conteudo,
     capitulo.caixas_texto,
   ]);
+
+  useEffect(() => {
+    if (migrated.current) return;
+    const pos = (capitulo.posicao_pdf ?? "inicio") as PosicaoPdf;
+    if (posicoesMod.length > 0 && !posicoesMod.includes(pos)) {
+      migrated.current = true;
+      onSalvar({ posicao_pdf: posicoesMod[0] });
+    }
+  }, [capitulo.posicao_pdf, posicoesMod, onSalvar]);
 
   async function enviarBg(file: File) {
     if (enviandoBg) return;

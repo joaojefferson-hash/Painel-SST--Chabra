@@ -220,6 +220,7 @@ export default function PsicossocialLaudoPage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
+            <BotaoAssinarPdf reAssinatura={true} tabelaNome="drps_relatorios_analise" docId={idRelatorio} onAssinado={recarregar} />
           </>
         ) : (
           <BotaoAssinarPdf

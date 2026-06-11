@@ -159,6 +159,7 @@ export default function LaudoApreciacaoMaquinasPage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
+            <BotaoAssinarPdf reAssinatura={true} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
           </>
         ) : (
           <BotaoAssinarPdf tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
