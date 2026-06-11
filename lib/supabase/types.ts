@@ -632,6 +632,8 @@ export interface Usuario {
   crm?: string | null;
   /** Registro no MTE — Ministério do Trabalho (técnicos de segurança). */
   registro_mte?: string | null;
+  /** CPF do profissional — exibido sempre mascarado (LGPD). */
+  cpf?: string | null;
 }
 
 export interface Configuracao {
