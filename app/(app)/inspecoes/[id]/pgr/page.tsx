@@ -9,6 +9,8 @@ import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import { useInspecao } from "@/lib/hooks/useInspecao";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
@@ -163,6 +165,19 @@ export default function PgrPage({ params }: Props) {
           .pgr-table th, .pgr-table td { padding: 4px 6px !important; }
         }
       `}</style>
+
+      <TextosPadraoPrint
+        modulo="sst"
+        valores={{
+          ...montarValoresEmpresa(empresa ?? null),
+          data_inspecao: formatarDataBR(inspecao.data_inspecao),
+          revisao: String(inspecao.revisao ?? ""),
+          responsavel: inspecao.responsavel ?? "",
+          carimbo: inspecao.responsavel ?? "",
+          importado: formatarDataBR(inspecao.created_at),
+        }}
+        posicao="antes"
+      />
 
       <article className="space-y-5 rounded-xl border border-gray-200 bg-white p-6 print:border-0 print:p-0 print:shadow-none">
         {/* HEADER PGR */}
