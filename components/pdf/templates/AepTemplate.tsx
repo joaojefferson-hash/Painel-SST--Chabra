@@ -177,11 +177,7 @@ function labelResposta(v: RespostaChecklist) {
 const STYLE_BLOCK = `
 @page {
   size: A4 portrait;
-  margin: 2.5cm 2cm 2.5cm 3cm;
-}
-@page textopadrao-retrato {
-  size: A4 portrait;
-  margin: 3cm 2cm 2cm 3cm;
+  margin: 0;
 }
 @page textopadrao-paisagem {
   size: A4 landscape;
@@ -204,7 +200,6 @@ body {
 }
 .textos-padrao-capitulo--nova-pagina { page-break-before: always; }
 .textos-padrao-capitulo--continua    { page-break-before: auto; margin-top: 16pt; }
-.textos-padrao-capitulo--retrato  { page: textopadrao-retrato; }
 .textos-padrao-capitulo--paisagem { page: textopadrao-paisagem; }
 .textos-padrao-capitulo:last-child { page-break-after: always; }
 .textos-padrao-capitulo--capa {

@@ -221,7 +221,7 @@ ${bodyHtml}
   // Gera o PDF — margens via @page CSS no template (0 aqui evita soma dupla)
   const { gerarPdf } = await import("@/lib/pdf/gerar-pdf");
   const pdfBuffer = await gerarPdf(fullHtml, {
-    margens: { top: "0", bottom: "0", left: "0", right: "0" },
+    margens: { top: "25mm", bottom: "25mm", left: "30mm", right: "20mm" },
   });
 
   return new NextResponse(new Uint8Array(pdfBuffer), {
