@@ -277,13 +277,20 @@ export default function AepLaudoPage({
                 {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
                 Baixar PDF Assinado
               </button>
-              <BotaoAssinarPdf reAssinatura={true} tabelaNome="aep_relatorios" docId={idRelatorio} onAssinado={recarregar} />
+              <BotaoAssinarPdf
+                reAssinatura={true}
+                tabelaNome="aep_relatorios"
+                docId={idRelatorio}
+                onAssinado={recarregar}
+                apiPdfUrl={`/api/pdf/aep/${idRelatorio}`}
+              />
             </>
           ) : (
             <BotaoAssinarPdf
               tabelaNome="aep_relatorios"
               docId={idRelatorio}
               onAssinado={recarregar}
+              apiPdfUrl={`/api/pdf/aep/${idRelatorio}`}
             />
           )}
           <BotaoGerarPdf

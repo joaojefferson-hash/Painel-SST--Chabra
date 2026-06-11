@@ -16,6 +16,12 @@ interface Props {
   onAssinado?: () => void;
   /** Quando true, indica que o documento já foi assinado — exibe como ação secundária "Re-assinar". */
   reAssinatura?: boolean;
+  /**
+   * URL de API que retorna o PDF pronto (Content-Type: application/pdf).
+   * Quando fornecida, substitui gerarHtmlParaPdf() pela chamada fetch à API.
+   * Ideal para laudos com template Puppeteer (ex: /api/pdf/aep/[id]).
+   */
+  apiPdfUrl?: string;
 }
 
 export default function BotaoAssinarPdf({
@@ -24,23 +30,36 @@ export default function BotaoAssinarPdf({
   docId,
   onAssinado,
   reAssinatura = false,
+  apiPdfUrl,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [capturando, setCapturando] = useState(false);
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | undefined>();
 
   async function handleClick() {
-    // Captura o PDF ANTES de abrir o modal para evitar que o overlay
-    // do modal interfira com o html-to-image (toPng usa SVG foreignObject
-    // que renderiza o DOM e falha quando há um modal por cima).
     setCapturando(true);
     try {
-      const { gerarHtmlParaPdf } = await import("@/lib/gerarHtmlParaPdf");
-      const bytes = await gerarHtmlParaPdf({ forSigning: true });
+      let bytes: ArrayBuffer;
+      if (apiPdfUrl) {
+        // Template Puppeteer: a API gera o PDF server-side e retorna o buffer.
+        const res = await fetch(apiPdfUrl);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Erro ao gerar PDF" }));
+          throw new Error((err as { error?: string }).error ?? "Erro ao gerar PDF");
+        }
+        bytes = await res.arrayBuffer();
+      } else {
+        // Legado: captura o DOM via html-to-image (executa antes de abrir o
+        // modal para evitar que o overlay interfira com o SVG foreignObject).
+        const { gerarHtmlParaPdf } = await import("@/lib/gerarHtmlParaPdf");
+        bytes = await gerarHtmlParaPdf({ forSigning: true });
+      }
       setPdfBytes(bytes);
       setOpen(true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao capturar o documento. Tente novamente.");
+      toast.error(
+        err instanceof Error ? err.message : "Erro ao capturar o documento. Tente novamente.",
+      );
     } finally {
       setCapturando(false);
     }
@@ -57,19 +76,26 @@ export default function BotaoAssinarPdf({
             ? "inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-60 print:hidden"
             : "inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-white px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-60 print:hidden"
         }
-        title={reAssinatura ? "Substituir a assinatura existente" : "Assinar este PDF com certificado A1 ICP-Brasil"}
+        title={
+          reAssinatura
+            ? "Substituir a assinatura existente"
+            : "Assinar este PDF com certificado A1 ICP-Brasil"
+        }
       >
         {capturando ? (
           <Loader2 className={reAssinatura ? "size-3.5 animate-spin" : "size-4 animate-spin"} />
         ) : (
           <BadgeCheck className={reAssinatura ? "size-3.5" : "size-4"} />
         )}
-        {capturando ? "Capturando..." : reAssinatura ? "Re-assinar" : "Assinar PDF A1"}
+        {capturando ? "Gerando PDF..." : reAssinatura ? "Re-assinar" : "Assinar PDF A1"}
       </button>
 
       <AssinarPdfModal
         open={open}
-        onClose={() => { setOpen(false); setPdfBytes(undefined); }}
+        onClose={() => {
+          setOpen(false);
+          setPdfBytes(undefined);
+        }}
         defaultSignatoryEmail={defaultSignatoryEmail}
         tabelaNome={tabelaNome}
         docId={docId}
