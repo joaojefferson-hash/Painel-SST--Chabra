@@ -177,14 +177,13 @@ function labelResposta(v: RespostaChecklist) {
 const STYLE_BLOCK = `
 @page {
   size: A4 portrait;
-  margin: 0;
+  margin: 25mm 0 25mm 0;
 }
 @page textopadrao-paisagem {
   size: A4 landscape;
   margin: 2cm 3cm 3cm 2cm;
 }
 * { box-sizing: border-box; }
-html { width: 210mm; }
 body {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 12px;
@@ -192,8 +191,7 @@ body {
   color: #111827;
   background: #fff;
   margin: 0;
-  padding: 25mm 20mm 25mm 30mm;
-  width: 210mm;
+  padding: 0;
 }
 /* ABNT — textos padrão */
 .textos-padrao-capitulo {
@@ -731,6 +729,7 @@ export default function AepTemplate({
     <>
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: STYLE_BLOCK }} />
+      <div style={{ marginLeft: "30mm", marginRight: "20mm" }}>
 
       {/* Capa */}
       <div
@@ -927,6 +926,7 @@ export default function AepTemplate({
         dataHoraAssinatura={dataHoraAssinatura}
         identificadorDocumento={identificadorDocumento}
       />
+      </div>
     </>
   );
 }
