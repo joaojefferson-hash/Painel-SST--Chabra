@@ -887,36 +887,6 @@ export default function AepTemplate({
         </div>
       )}
 
-      {/* Rodapé de assinatura manual (pre-digital) */}
-      <div
-        style={{
-          marginTop: 40,
-          paddingTop: 16,
-          borderTop: "1px solid #e5e7eb",
-          fontSize: 11,
-          color: "#374151",
-        }}
-      >
-        <p style={{ margin: "0 0 4px", fontWeight: 600 }}>
-          {rel.responsavel_elaboracao}
-        </p>
-        {rel.titulo_profissional && (
-          <p style={{ margin: "0 0 4px", color: "#6b7280" }}>
-            {rel.titulo_profissional}
-          </p>
-        )}
-        {rel.registro_profissional && (
-          <p style={{ margin: "0 0 4px", color: "#6b7280" }}>
-            {rel.registro_profissional}
-          </p>
-        )}
-        {rel.data_elaboracao && (
-          <p style={{ margin: 0, color: "#6b7280" }}>
-            {formatarDataBR(rel.data_elaboracao)}
-          </p>
-        )}
-      </div>
-
       {/* Folha de assinaturas digital (ICP-Brasil) */}
       <FolhaAssinaturas
         signatarios={signatarios}
