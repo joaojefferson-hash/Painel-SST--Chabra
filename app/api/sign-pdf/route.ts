@@ -164,10 +164,15 @@ export async function POST(req: NextRequest) {
   try {
     const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
 
-    // Carrega o PDF gerado pelo cliente
+    // Carrega e normaliza o PDF — PDFs do Chromium são linearizados; pdf-lib
+    // deslineariza ao re-salvar, o que é obrigatório para @signpdf funcionar
+    // corretamente (ByteRange calculado sobre estrutura canônica).
     let pdfDoc;
     try {
-      pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+      pdfDoc = await PDFDocument.load(pdfBuffer, {
+        ignoreEncryption: true,
+        updateMetadata: false,
+      });
     } catch {
       return NextResponse.json(
         { error: "Falha ao processar o PDF. Recarregue a página e tente novamente." },
@@ -175,10 +180,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Re-salva primeiro para garantir estrutura não-linearizada antes do placeholder.
+    // Sem isso, @signpdf pode calcular ByteRange incorreto e gerar assinatura inválida.
+    const pdfNormalizado = Buffer.from(
+      await pdfDoc.save({ useObjectStreams: false, addDefaultPage: false })
+    );
+    let pdfDocNorm;
+    try {
+      pdfDocNorm = await PDFDocument.load(pdfNormalizado, {
+        ignoreEncryption: true,
+        updateMetadata: false,
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Falha ao normalizar o PDF. Tente novamente." },
+        { status: 400 }
+      );
+    }
+
     // signatureLength: 65536 (64 KB) — cobre certificados ICP-Brasil com cadeia completa
-    // Raiz AC + AC Política + AC Emissora + leaf cert + OCSP pode chegar a ~50 KB
     pdflibAddPlaceholder({
-      pdfDoc,
+      pdfDoc: pdfDocNorm,
       reason: "Assinatura digital ICP-Brasil A1",
       name: usuario.nome ?? usuario.email ?? "",
       location: "Brasil",
@@ -186,7 +208,9 @@ export async function POST(req: NextRequest) {
       signatureLength: 65536,
     });
 
-    const pdfComPlaceholder = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
+    const pdfComPlaceholder = Buffer.from(
+      await pdfDocNorm.save({ useObjectStreams: false, addDefaultPage: false })
+    );
 
     const signer = new P12Signer(p12Buffer, { passphrase: password });
     const pdfAssinado = await signpdf.sign(pdfComPlaceholder, signer);

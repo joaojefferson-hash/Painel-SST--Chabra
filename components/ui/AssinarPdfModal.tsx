@@ -110,7 +110,7 @@ export default function AssinarPdfModal({
       } else {
         setStep("gerando");
         const { gerarHtmlParaPdf } = await import("@/lib/gerarHtmlParaPdf");
-        pdfBytes = await gerarHtmlParaPdf();
+        pdfBytes = await gerarHtmlParaPdf({ forSigning: true });
       }
 
       setStep("assinando");
