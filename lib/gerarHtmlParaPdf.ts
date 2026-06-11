@@ -64,18 +64,38 @@ export async function gerarHtmlParaPdf(opts?: { forSigning?: boolean }): Promise
   }
 
   // ── CSS inline ────────────────────────────────────────────────────
-  // Puppeteer não consegue carregar /_next/static/css/*.css via setContent().
-  // Extraímos todas as regras CSS carregadas e as injetamos como <style>.
-  let cssText = ''
-  for (const sheet of Array.from(document.styleSheets)) {
-    try {
-      for (const rule of Array.from(sheet.cssRules)) {
-        cssText += rule.cssText + '\n'
+  // Puppeteer via setContent() não carrega /_next/static/css/*.css do Vercel.
+  // Estratégia: fetch() direto das URLs dos <link rel="stylesheet"> (mesmo
+  // origem, sem CORS) para obter o texto CSS bruto e injetar como <style>.
+  // Isso é mais confiável do que sheet.cssRules, que pode serializar as regras
+  // de forma diferente do original (ex.: @layer, @import, custom properties).
+  const linkEls = Array.from(
+    document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'),
+  )
+  const cssFragments = await Promise.all(
+    linkEls.map(async (link) => {
+      if (!link.href) return ''
+      try {
+        const res = await fetch(link.href)
+        return res.ok ? await res.text() : ''
+      } catch {
+        return ''
       }
-    } catch {
-      // Cross-origin ou sheet ainda não carregada — ignora
+    }),
+  )
+  let cssText = cssFragments.filter(Boolean).join('\n')
+
+  // Fallback: cssRules (funciona localmente quando o fetch é do mesmo processo)
+  if (!cssText) {
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        for (const rule of Array.from(sheet.cssRules)) {
+          cssText += rule.cssText + '\n'
+        }
+      } catch { /* cross-origin */ }
     }
   }
+
   if (cssText) {
     clone.querySelectorAll('link[rel="stylesheet"]').forEach((el) => el.remove())
     const styleEl = document.createElement('style')
