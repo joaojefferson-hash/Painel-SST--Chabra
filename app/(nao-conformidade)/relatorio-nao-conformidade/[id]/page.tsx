@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Printer,
   Trash2,
   Lock,
   Loader2,
@@ -17,12 +16,8 @@ import {
   ShieldAlert,
   ListChecks,
   Check,
-  BadgeCheck,
-  Download,
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
-import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import toast from "react-hot-toast";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
@@ -52,7 +47,6 @@ import type {
   StatusTratativaNC,
 } from "@/lib/supabase/types";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
-import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
 
 const MAX_FOTO_MB = 8;
@@ -80,24 +74,6 @@ export default function DetalheNaoConformidadePage({
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [pickerAberto, setPickerAberto] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ title: string; desc?: string; fn: () => void } | null>(null);
-
-  const { pdfAssinado, recarregar } = usePdfAssinado("relatorios_nao_conformidade", id);
-  const [baixando, setBaixando] = useState(false);
-
-  async function handleBaixarPdf() {
-    if (!pdfAssinado) return;
-    setBaixando(true);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
-      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch { toast.error("Erro ao baixar o PDF."); }
-    finally { setBaixando(false); }
-  }
 
   if (isLoading) {
     return (
@@ -242,36 +218,6 @@ export default function DetalheNaoConformidadePage({
           <ArrowLeft className="size-3.5" /> Voltar
         </Link>
         <div className="flex items-center gap-2">
-          {pdfAssinado ? (
-            <>
-              <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
-                <BadgeCheck className="size-3.5 shrink-0" />
-                Assinado em {new Date(pdfAssinado.assinado_em).toLocaleDateString("pt-BR")}
-              </div>
-              <button type="button" onClick={handleBaixarPdf} disabled={baixando}
-                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500 bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
-                {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-                Baixar PDF Assinado
-              </button>
-            </>
-          ) : (
-            <BotaoAssinarPdf tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
-          )}
-          <BotaoGerarPdf
-            tabelaNome="relatorios_nao_conformidade"
-            docId={id}
-            disabled={atualizarRelatorio.isPending}
-            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-            registrarPdf={{
-              modulo: "nao_conformidade",
-              tipoDocumento: "Relatório de Não Conformidade",
-              idRelatorio: id,
-              empresaId: relatorio.id_empresa ?? undefined,
-              empresaNome: empresa?.nome_empresa ?? undefined,
-              empresaCnpj: empresa?.cnpj ?? undefined,
-              responsavelTecnico: relatorio.responsavel ?? undefined,
-            }}
-          />
           {canEdit && finalizado && (
             <button
               type="button"

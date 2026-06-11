@@ -20,7 +20,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { useRequireModule } from "@/lib/hooks/useRequireModule";
 import { useUserStore } from "@/lib/store";
 
-const RESERVADAS = new Set(["nova", "historico", "texto-padrao", "ajuda", "base"]);
+const RESERVADAS = new Set(["nova", "historico", "texto-padrao", "ajuda", "base", "laudo"]);
 
 export default function AnaliseQuimicosLayout({ children }: { children: ReactNode }) {
   useAuth();
@@ -61,7 +61,7 @@ export default function AnaliseQuimicosLayout({ children }: { children: ReactNod
         label: "Análise Atual",
         items: [
           {
-            href: `/analise-quimicos/${idRelatorio}`,
+            href: `/analise-quimicos/${idRelatorio}/laudo`,
             label: "Laudo / Imprimir",
             icon: Printer,
             variant: "report" as const,

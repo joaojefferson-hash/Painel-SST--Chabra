@@ -15,17 +15,11 @@ import {
   ClipboardList,
   FileText,
   Plus,
-  Printer,
   Sparkles,
   Wand2,
   ListTodo,
   X as IconX,
-  BadgeCheck,
-  Download,
 } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
-import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import toast from "react-hot-toast";
 import {
   useApreciacaoMaquina,
@@ -47,7 +41,6 @@ import ItemApreciacaoCard from "@/components/apreciacao-maquinas/ItemApreciacaoC
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import { cn } from "@/lib/utils";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
-import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
 import {
   CATEGORIAS_NR12_LABELS,
@@ -165,24 +158,6 @@ export default function DetalheApreciacaoPage() {
     });
     return r;
   }, [itens]);
-
-  const { pdfAssinado, recarregar } = usePdfAssinado("apreciacoes_maquinas", id ?? "");
-  const [baixando, setBaixando] = useState(false);
-
-  async function handleBaixarPdf() {
-    if (!pdfAssinado) return;
-    setBaixando(true);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
-      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch { toast.error("Erro ao baixar o PDF."); }
-    finally { setBaixando(false); }
-  }
 
   const totalAvaliados = itens.length - resumo.PENDENTE;
   const totalItens = itens.length;
@@ -425,37 +400,6 @@ export default function DetalheApreciacaoPage() {
           <ArrowLeft className="size-3.5" /> Voltar
         </Link>
         <div className="flex items-center gap-2">
-          {pdfAssinado ? (
-            <>
-              <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
-                <BadgeCheck className="size-3.5 shrink-0" />
-                Assinado em {new Date(pdfAssinado.assinado_em).toLocaleDateString("pt-BR")}
-              </div>
-              <button type="button" onClick={handleBaixarPdf} disabled={baixando}
-                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500 bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
-                {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-                Baixar PDF Assinado
-              </button>
-            </>
-          ) : (
-            <BotaoAssinarPdf tabelaNome="apreciacoes_maquinas" docId={id ?? ""} onAssinado={recarregar} />
-          )}
-          <BotaoGerarPdf
-            tabelaNome="apreciacoes_maquinas"
-            docId={id}
-            disabled={dirty || atualizar.isPending}
-            title={dirty ? "Salve as alterações antes de gerar o PDF" : undefined}
-            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-            registrarPdf={{
-              modulo: "apreciacao_maquinas",
-              tipoDocumento: "Apreciação de Máquinas NR-12",
-              idRelatorio: id,
-              empresaId: apreciacao?.id_empresa ?? undefined,
-              empresaNome: empresa?.nome_empresa ?? undefined,
-              empresaCnpj: empresa?.cnpj ?? undefined,
-              responsavelTecnico: responsavel || undefined,
-            }}
-          />
           <span
             className={`rounded-full px-3 py-1 text-xs font-bold ${
               finalizada

@@ -8,7 +8,7 @@ import ModuleTopbar from "@/components/layout/ModuleTopbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRequireModule } from "@/lib/hooks/useRequireModule";
 
-const RESERVADAS = new Set(["novo", "historico", "texto-padrao", "ajuda"]);
+const RESERVADAS = new Set(["novo", "historico", "texto-padrao", "ajuda", "laudo"]);
 
 export default function NaoConformidadeLayout({ children }: { children: ReactNode }) {
   useAuth();
@@ -46,7 +46,7 @@ export default function NaoConformidadeLayout({ children }: { children: ReactNod
         label: "Relatório Atual",
         items: [
           {
-            href: `/relatorio-nao-conformidade/${idRelatorio}`,
+            href: `/relatorio-nao-conformidade/${idRelatorio}/laudo`,
             label: "Laudo / Imprimir",
             icon: Printer,
             variant: "report" as const,

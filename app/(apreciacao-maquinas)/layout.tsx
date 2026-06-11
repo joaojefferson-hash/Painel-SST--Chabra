@@ -8,7 +8,7 @@ import ModuleTopbar from "@/components/layout/ModuleTopbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRequireModule } from "@/lib/hooks/useRequireModule";
 
-const RESERVADAS = new Set(["relacao-maquinas", "texto-padrao", "ajuda"]);
+const RESERVADAS = new Set(["relacao-maquinas", "texto-padrao", "ajuda", "laudo"]);
 
 export default function ApreciacaoMaquinasLayout({ children }: { children: ReactNode }) {
   useAuth();
@@ -40,7 +40,7 @@ export default function ApreciacaoMaquinasLayout({ children }: { children: React
         label: "Apreciação Atual",
         items: [
           {
-            href: `/apreciacao-maquinas/${idRelatorio}`,
+            href: `/apreciacao-maquinas/${idRelatorio}/laudo`,
             label: "Laudo / Imprimir",
             icon: Printer,
             variant: "report" as const,

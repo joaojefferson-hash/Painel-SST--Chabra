@@ -1,0 +1,323 @@
+"use client";
+
+import { use, useMemo, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, BadgeCheck, Download, Loader2, AlertTriangle, Cog } from "lucide-react";
+import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
+import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import toast from "react-hot-toast";
+import { useEmpresas } from "@/lib/hooks/useEmpresas";
+import { useMaquina } from "@/lib/hooks/useInventarioMaquinas";
+import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
+import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
+import { useApreciacaoMaquina } from "@/lib/hooks/useApreciacoesMaquinas";
+import ItemApreciacaoCard from "@/components/apreciacao-maquinas/ItemApreciacaoCard";
+import PlanoAcaoTable from "@/components/apreciacao-maquinas/PlanoAcaoTable";
+import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  CATEGORIAS_NR12_LABELS,
+  CATEGORIAS_NR12_ORDEM,
+  type CategoriaNR12,
+} from "@/lib/apreciacao-maquinas/catalogo-nr12";
+import type { ApreciacaoMaquinaItem } from "@/lib/supabase/types";
+
+export default function LaudoApreciacaoMaquinasPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const { data, isLoading, error } = useApreciacaoMaquina(id);
+  const { data: empresas = [] } = useEmpresas();
+  const { data: maquinaVinculada } = useMaquina(data?.apreciacao.id_maquina ?? null);
+
+  const apreciacao = data?.apreciacao;
+  const itens = data?.itens ?? [];
+
+  const { pdfAssinado, recarregar } = usePdfAssinado("apreciacoes_maquinas", id);
+  const [baixando, setBaixando] = useState(false);
+
+  async function handleBaixarPdf() {
+    if (!pdfAssinado) return;
+    setBaixando(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
+      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch { toast.error("Erro ao baixar o PDF."); }
+    finally { setBaixando(false); }
+  }
+
+  const empresa = useMemo(() => {
+    if (!apreciacao) return null;
+    return empresas.find((e) => e.id_empresa === apreciacao.id_empresa) ?? null;
+  }, [empresas, apreciacao]);
+
+  const empresaNome = empresa?.nome_empresa ?? "—";
+
+  const maquinaNome =
+    maquinaVinculada?.nome ?? apreciacao?.maquina_descricao ?? "Máquina";
+
+  const itensPorCategoria = useMemo(() => {
+    const grupos: Record<string, ApreciacaoMaquinaItem[]> = {};
+    itens.forEach((i) => {
+      const cat = i.item_categoria;
+      if (!grupos[cat]) grupos[cat] = [];
+      grupos[cat].push(i);
+    });
+    return CATEGORIAS_NR12_ORDEM.map((cat) => ({
+      categoria: cat as CategoriaNR12,
+      label: CATEGORIAS_NR12_LABELS[cat as CategoriaNR12],
+      itens: grupos[cat] ?? [],
+    })).filter((g) => g.itens.length > 0);
+  }, [itens]);
+
+  const valoresTextosPadrao = useMemo((): Record<string, string> => {
+    if (!apreciacao) return {};
+    return {
+      ...montarValoresEmpresa(empresa),
+      titulo: apreciacao.titulo ?? "",
+      maquina_nome: maquinaNome,
+      setor: apreciacao.setor ?? "",
+      responsavel: apreciacao.responsavel ?? "",
+      responsavel_empresa: apreciacao.responsavel_empresa ?? "",
+      cidade: apreciacao.cidade ?? "",
+      data_apreciacao: formatarDataBR(apreciacao.data_apreciacao),
+      data_atual: new Date().toLocaleDateString("pt-BR"),
+      total_itens: String(itens.length),
+      total_nao_conforme: String(itens.filter((i) => i.situacao === "NAO_CONFORME").length),
+      risco_residual: apreciacao.risco_residual ?? "",
+      carimbo: apreciacao.responsavel ?? "",
+      importado: formatarDataBR(apreciacao.created_at),
+    };
+  }, [apreciacao, empresa, maquinaNome, itens]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-gray-500">
+        <Loader2 className="size-5 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !apreciacao) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-4">
+        <Link
+          href="/apreciacao-maquinas"
+          className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-verde-primary"
+        >
+          <ArrowLeft className="size-3.5" /> Voltar
+        </Link>
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <AlertTriangle className="size-4" />
+          Apreciação não encontrada.
+        </div>
+      </div>
+    );
+  }
+
+  const finalizada = apreciacao.status === "FINALIZADO";
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-6 print:max-w-none print:space-y-3">
+      {/* CSS de impressão */}
+      <style>{`
+        @media print {
+          @page { size: A4; margin: 3cm 2cm 2cm 3cm; }
+          body { font-size: 12pt; line-height: 1.5; }
+        }
+      `}</style>
+
+      {/* Toolbar — não imprime */}
+      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+        <Link
+          href={`/apreciacao-maquinas/${id}`}
+          className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-verde-primary"
+        >
+          <ArrowLeft className="size-3.5" /> Editar apreciação
+        </Link>
+      </div>
+
+      {/* Botões PDF — sticky, não imprime */}
+      <div className="sticky top-0 z-20 flex flex-wrap items-center justify-end gap-2 border-b border-gray-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur print:hidden">
+        {pdfAssinado ? (
+          <>
+            <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+              <BadgeCheck className="size-3.5 shrink-0" />
+              Assinado em {new Date(pdfAssinado.assinado_em).toLocaleDateString("pt-BR")}
+            </div>
+            <button type="button" onClick={handleBaixarPdf} disabled={baixando}
+              className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500 bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+              {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              Baixar PDF Assinado
+            </button>
+          </>
+        ) : (
+          <BotaoAssinarPdf tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
+        )}
+        <BotaoGerarPdf
+          tabelaNome="apreciacoes_maquinas"
+          docId={id}
+          className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          registrarPdf={{
+            modulo: "apreciacao_maquinas",
+            tipoDocumento: "Apreciação de Máquinas NR-12",
+            idRelatorio: id,
+            empresaId: apreciacao.id_empresa ?? undefined,
+            empresaNome: empresa?.nome_empresa ?? undefined,
+            empresaCnpj: empresa?.cnpj ?? undefined,
+            responsavelTecnico: apreciacao.responsavel ?? undefined,
+          }}
+        />
+      </div>
+
+      {/* Logo Chabra */}
+      <RelatorioPrintHeader
+        titulo={`Apreciação NR-12 — ${maquinaNome}`}
+        subtitulo={empresaNome}
+        terciario={
+          apreciacao.data_apreciacao
+            ? new Date(apreciacao.data_apreciacao + "T00:00").toLocaleDateString("pt-BR")
+            : null
+        }
+      />
+
+      {/* Título */}
+      <div>
+        <h1 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+          <Cog className="size-5 text-orange-600" />
+          {apreciacao.titulo || `Apreciação ${maquinaNome}`}
+        </h1>
+        <p className="text-xs text-gray-500">
+          {empresaNome}
+          {apreciacao.setor ? ` · ${apreciacao.setor}` : ""} · Criada{" "}
+          {new Date(apreciacao.created_at).toLocaleDateString("pt-BR")}
+          {apreciacao.finalizado_em
+            ? ` · Finalizada ${new Date(apreciacao.finalizado_em).toLocaleDateString("pt-BR")}`
+            : ""}
+        </p>
+        <span
+          className={`mt-1 inline-block rounded-full px-3 py-1 text-xs font-bold print:hidden ${
+            finalizada ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+          }`}
+        >
+          {finalizada ? "Finalizada" : "Rascunho"}
+        </span>
+      </div>
+
+      {/* Textos Padrão inicio */}
+      <TextosPadraoPrint modulo="apreciacao_maquinas" valores={valoresTextosPadrao} posicao="inicio" />
+
+      {/* Dados gerais — somente leitura */}
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">Dados Gerais</h2>
+        <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+          <DataItem label="Empresa" value={empresaNome} />
+          <DataItem label="Máquina" value={maquinaNome} />
+          <DataItem label="Setor" value={apreciacao.setor ?? "—"} />
+          <DataItem label="Cidade" value={apreciacao.cidade ?? "—"} />
+          <DataItem label="Responsável técnico (Chabra)" value={apreciacao.responsavel ?? "—"} />
+          <DataItem label="Responsável da empresa" value={apreciacao.responsavel_empresa ?? "—"} />
+          <DataItem
+            label="Data da apreciação"
+            value={
+              apreciacao.data_apreciacao
+                ? new Date(apreciacao.data_apreciacao + "T00:00").toLocaleDateString("pt-BR")
+                : "—"
+            }
+          />
+          {apreciacao.risco_residual && (
+            <DataItem label="Risco Residual" value={apreciacao.risco_residual} />
+          )}
+        </div>
+        {apreciacao.observacoes_gerais && (
+          <div className="mt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Observações Gerais</p>
+            <p className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap">{apreciacao.observacoes_gerais}</p>
+          </div>
+        )}
+      </section>
+
+      {/* Checklist NR-12 — somente leitura */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700">Checklist NR-12</h2>
+        {itensPorCategoria.map((grupo) => (
+          <div key={grupo.categoria} className="space-y-2 print:break-inside-avoid">
+            <h3 className="rounded-md bg-orange-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-orange-700 print:bg-transparent print:border-b print:border-orange-300 print:rounded-none print:text-orange-900">
+              {grupo.label}{" "}
+              <span className="text-orange-500/70">({grupo.itens.length})</span>
+            </h3>
+            <div className="space-y-2">
+              {grupo.itens.map((it) => (
+                <ItemApreciacaoCard key={it.id_item} item={it} disabled={true} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* Conclusão Técnica */}
+      {(apreciacao.conclusao_tecnica || apreciacao.recomendacoes) && (
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">Conclusão Técnica</h2>
+          {apreciacao.conclusao_tecnica && (
+            <div className="mb-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Parecer técnico</p>
+              <p className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap">{apreciacao.conclusao_tecnica}</p>
+            </div>
+          )}
+          {apreciacao.recomendacoes && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Recomendações finais</p>
+              <p className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap">{apreciacao.recomendacoes}</p>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Plano de Ação */}
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">Plano de Ação</h2>
+        <PlanoAcaoTable
+          idApreciacao={apreciacao.id_apreciacao}
+          apreciacao={apreciacao}
+          itens={itens}
+          readOnly={true}
+        />
+      </section>
+
+      {/* Textos Padrão depois */}
+      <TextosPadraoPrint modulo="apreciacao_maquinas" valores={valoresTextosPadrao} posicao="depois" />
+
+      {/* Assinatura */}
+      <div className="print:break-inside-avoid">
+        <AssinaturaRelatorio
+          nomeResponsavel={apreciacao.responsavel ?? undefined}
+          dataRelatorio={formatarDataBR(apreciacao.data_apreciacao) || undefined}
+          tabelaNome="apreciacoes_maquinas"
+          docId={id}
+          hideAcoes
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Subcomponentes ───────────────────────────────────────────────────────────
+
+function DataItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">{label}</span>
+      <span className="text-sm text-gray-900">{value}</span>
+    </div>
+  );
+}

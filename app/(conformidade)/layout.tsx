@@ -8,7 +8,7 @@ import ModuleTopbar from "@/components/layout/ModuleTopbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRequireModule } from "@/lib/hooks/useRequireModule";
 
-const RESERVADAS = new Set(["novo", "historico", "texto-padrao", "ajuda"]);
+const RESERVADAS = new Set(["novo", "historico", "texto-padrao", "ajuda", "laudo"]);
 
 export default function ConformidadeLayout({ children }: { children: ReactNode }) {
   useAuth();
@@ -46,7 +46,7 @@ export default function ConformidadeLayout({ children }: { children: ReactNode }
         label: "Relatório Atual",
         items: [
           {
-            href: `/relatorio-conformidade/${idRelatorio}`,
+            href: `/relatorio-conformidade/${idRelatorio}/laudo`,
             label: "Laudo / Imprimir",
             icon: Printer,
             variant: "report" as const,

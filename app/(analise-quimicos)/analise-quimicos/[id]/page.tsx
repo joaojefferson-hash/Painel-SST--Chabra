@@ -5,21 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Printer,
   Trash2,
   FlaskConical,
   Loader2,
   FileText,
   Pencil,
-  BadgeCheck,
-  Download,
 } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
-import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import toast from "react-hot-toast";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
-import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import {
   useAnaliseQuimico,
@@ -45,24 +38,6 @@ export default function AnaliseDetalhePage({
   const { data: empresa } = useEmpresa(analise?.id_empresa ?? null);
   const excluir = useExcluirAnaliseQuimico();
   const [confirmExcluirOpen, setConfirmExcluirOpen] = useState(false);
-
-  const { pdfAssinado, recarregar } = usePdfAssinado("analises_quimicos", id);
-  const [baixando, setBaixando] = useState(false);
-
-  async function handleBaixarPdf() {
-    if (!pdfAssinado) return;
-    setBaixando(true);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
-      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch { toast.error("Erro ao baixar o PDF."); }
-    finally { setBaixando(false); }
-  }
 
   if (isLoading) {
     return (
@@ -104,35 +79,6 @@ export default function AnaliseDetalhePage({
           <ArrowLeft className="size-3.5" /> Voltar ao histórico
         </Link>
         <div className="flex items-center gap-2">
-          {pdfAssinado ? (
-            <>
-              <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
-                <BadgeCheck className="size-3.5 shrink-0" />
-                Assinado em {new Date(pdfAssinado.assinado_em).toLocaleDateString("pt-BR")}
-              </div>
-              <button type="button" onClick={handleBaixarPdf} disabled={baixando}
-                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500 bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
-                {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-                Baixar PDF Assinado
-              </button>
-            </>
-          ) : (
-            <BotaoAssinarPdf tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />
-          )}
-          <BotaoGerarPdf
-            tabelaNome="analises_quimicos"
-            docId={id}
-            className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-verde-accent"
-            registrarPdf={{
-              modulo: "analises_quimicos",
-              tipoDocumento: "Análise de Agente Químico",
-              idRelatorio: id,
-              empresaId: analise?.id_empresa ?? undefined,
-              empresaNome: empresa?.nome_empresa ?? undefined,
-              empresaCnpj: empresa?.cnpj ?? undefined,
-              responsavelTecnico: analise?.usuario_nome ?? undefined,
-            }}
-          />
           {canDelete && (
             <button
               type="button"
