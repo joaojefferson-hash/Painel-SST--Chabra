@@ -331,3 +331,82 @@ export function useSaveRegistro() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["prod", "registros"] }),
   });
 }
+
+// ── Projeções Salvas ─────────────────────────────────────────────────────────
+
+export interface ProdProjecaoSalva {
+  id: string;
+  titulo: string;
+  tipo: "geral" | "por_unidade";
+  id_unidade: string | null;
+  nome_unidade: string | null;
+  dias_uteis: number;
+  adms_atuais: number;
+  tecnicos_atuais: number;
+  docs_por_adm_dia: number;
+  insp_por_tec_dia: number;
+  dados_unidades: Record<string, { totalClientes: string; pendInspecao: string; pendDocs: string }>;
+  observacao: string | null;
+  comentarios: string | null;
+  total_clientes: number | null;
+  pend_inspecao: number | null;
+  pend_docs: number | null;
+  adms_necessarios: number | null;
+  tecs_necessarios: number | null;
+  adms_adicionais: number | null;
+  tecs_adicionais: number | null;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export function useProdProjecoesSalvas() {
+  return useQuery({
+    queryKey: ["prod", "projecoes-salvas"],
+    staleTime: 2 * 60_000,
+    queryFn: async (): Promise<ProdProjecaoSalva[]> => {
+      const sb = createSupabaseBrowserClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (sb as any)
+        .from("prod_projecoes_salvas")
+        .select("*")
+        .order("criado_em", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useSalvarProjecao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Omit<ProdProjecaoSalva, "id" | "criado_em" | "atualizado_em"> & { id?: string }) => {
+      const sb = createSupabaseBrowserClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const any = sb as any;
+      if (payload.id) {
+        const { error } = await any
+          .from("prod_projecoes_salvas")
+          .update({ ...payload, atualizado_em: new Date().toISOString() })
+          .eq("id", payload.id);
+        if (error) throw error;
+      } else {
+        const { error } = await any.from("prod_projecoes_salvas").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["prod", "projecoes-salvas"] }),
+  });
+}
+
+export function useDeleteProjecao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const sb = createSupabaseBrowserClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (sb as any).from("prod_projecoes_salvas").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["prod", "projecoes-salvas"] }),
+  });
+}

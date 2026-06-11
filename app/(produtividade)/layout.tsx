@@ -2,6 +2,7 @@
 
 import { type ReactNode, useMemo } from "react";
 import {
+  BookMarked,
   Building2,
   ClipboardList,
   FileText,
@@ -24,8 +25,9 @@ export default function ProdutividadeLayout({ children }: { children: ReactNode 
         { href: "/produtividade",            label: "Dashboard",        icon: LayoutDashboard, variant: "dashboard" },
         { href: "/produtividade/unidades",   label: "Unidades e Equipe", icon: Building2 },
         { href: "/produtividade/documentos", label: "Documentos SST",   icon: FileText },
-        { href: "/produtividade/projecoes",  label: "Projeções",        icon: TrendingUp, variant: "report" },
-        { href: "/produtividade/registros",  label: "Registros Mensais", icon: ClipboardList },
+        { href: "/produtividade/projecoes",        label: "Projeções",        icon: TrendingUp, variant: "report" },
+        { href: "/produtividade/projecoes-salvas", label: "Projeções Salvas", icon: BookMarked },
+        { href: "/produtividade/registros",        label: "Registros Mensais", icon: ClipboardList },
       ],
     },
   ], []);
