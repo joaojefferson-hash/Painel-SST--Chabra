@@ -295,7 +295,7 @@ export default function LaudoApreciacaoMaquinasPage({
       </section>
 
       {/* Textos Padrão depois */}
-      <TextosPadraoPrint modulo="apreciacao_maquinas" valores={valoresTextosPadrao} posicao="depois" />
+      <TextosPadraoPrint modulo="apreciacao_maquinas" valores={valoresTextosPadrao} posicao="fim" />
 
       {/* Assinatura */}
       <div className="print:break-inside-avoid">

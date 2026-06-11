@@ -917,7 +917,7 @@ export default function DetalheApreciacaoPage() {
           carimbo: apreciacao.responsavel ?? "",
           importado: formatarDataBR(apreciacao.created_at),
         }}
-        posicao="depois"
+        posicao="fim"
       />
 
       {/* Bloco de assinatura */}

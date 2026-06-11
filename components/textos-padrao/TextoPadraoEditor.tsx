@@ -300,6 +300,7 @@ export default function TextoPadraoEditor({ modulo }: Props) {
                       salvando={salvar.isPending}
                       storagePrefix={`textos-padrao/${modulo}`}
                       contagensPorPosicao={contagensPorPosicao}
+                      posicoesMod={config.posicoesDisponiveis}
                       onSalvar={(patch) =>
                         salvar.mutate({ id_capitulo: cap.id_capitulo, ...patch })
                       }
@@ -451,6 +452,7 @@ function CapituloCard({
   salvando,
   storagePrefix,
   contagensPorPosicao,
+  posicoesMod,
   onSalvar,
   onMover,
   onExcluir,
@@ -462,6 +464,7 @@ function CapituloCard({
   salvando: boolean;
   storagePrefix: string;
   contagensPorPosicao: Partial<Record<PosicaoPdf, number>>;
+  posicoesMod: PosicaoPdf[];
   onSalvar: (patch: {
     titulo?: string;
     conteudo?: string | null;
@@ -715,6 +718,7 @@ function CapituloCard({
             }
             contagens={contagensPorPosicao}
             disabled={salvando}
+            posicoes={posicoesMod}
           />
         </div>
       </div>

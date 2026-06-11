@@ -207,7 +207,7 @@ export default function LaudoAnaliseQuimicoPage({
       </section>
 
       {/* Textos Padrão antes */}
-      <TextosPadraoPrint modulo="analise_quimicos" valores={valoresTextosPadrao} posicao="antes" />
+      <TextosPadraoPrint modulo="analise_quimicos" valores={valoresTextosPadrao} posicao="inicio" />
 
       {/* Relatório técnico estruturado */}
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border-0 print:shadow-none print:p-2">

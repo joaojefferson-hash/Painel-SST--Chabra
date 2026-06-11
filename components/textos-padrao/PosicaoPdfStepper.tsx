@@ -36,6 +36,8 @@ interface Props {
   contagens?: Partial<Record<PosicaoPdfValor, number>>;
   /** Desabilita interação (durante save). */
   disabled?: boolean;
+  /** Subset de posições a exibir. Se omitido, exibe todas as 6. */
+  posicoes?: PosicaoPdfValor[];
 }
 
 /**
@@ -56,14 +58,18 @@ export default function PosicaoPdfStepper({
   onChange,
   contagens,
   disabled = false,
+  posicoes,
 }: Props) {
-  const selecionado = POSICOES.find((p) => p.valor === valor) ?? POSICOES[0];
+  const lista = posicoes
+    ? POSICOES.filter((p) => posicoes.includes(p.valor))
+    : POSICOES;
+  const selecionado = lista.find((p) => p.valor === valor) ?? lista[0];
 
   return (
     <div className="space-y-2">
-      {/* Trilha horizontal — 6 chips conectados */}
+      {/* Trilha horizontal — chips conectados */}
       <div className="flex items-start">
-        {POSICOES.map((p, idx) => {
+        {lista.map((p, idx) => {
           const ativo = p.valor === valor;
           const count = contagens?.[p.valor] ?? 0;
           return (
@@ -74,7 +80,7 @@ export default function PosicaoPdfStepper({
                   className={cn(
                     "mt-3.5 h-0.5 flex-1 transition-colors",
                     ativo ||
-                      POSICOES.findIndex((x) => x.valor === valor) > idx - 1
+                      lista.findIndex((x) => x.valor === valor) > idx - 1
                       ? "bg-verde-primary/40"
                       : "bg-gray-200"
                   )}

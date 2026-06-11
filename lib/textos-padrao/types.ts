@@ -79,6 +79,10 @@ export interface ModuloConfig {
   descricao: string;
   destino: string;
   fixos: FixoCapitulo[];
+  /** Posições efetivamente renderizadas no laudo deste módulo.
+   *  O PosicaoPdfStepper mostra só essas — evita o usuário mover
+   *  um capítulo para uma posição que nunca aparece no PDF. */
+  posicoesDisponiveis: PosicaoPdf[];
 }
 
 export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
@@ -88,6 +92,7 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     descricao:
       "Capítulos reutilizáveis para os relatórios de Inspeção e PGR. Use as variáveis abaixo pra preencher empresa, CNPJ, datas etc. na hora da geração do PDF.",
     destino: "Aparecem nos relatórios de inspeção, ficha NR-01 e PGR.",
+    posicoesDisponiveis: ["inicio", "fim"],
     fixos: [
       { titulo: "Itens Inspecionados",               slug_fixo: "sst_itens",             descricao: "Checklist de todos os itens avaliados na inspeção — gerado automaticamente.", ordem_base: 2000 },
       { titulo: "Não Conformidades Identificadas",   slug_fixo: "sst_nao_conformidades", descricao: "Lista de não conformidades com nível de risco — gerada automaticamente.", ordem_base: 3000 },
@@ -102,6 +107,7 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     descricao:
       "Capítulos reutilizáveis para os Relatórios de Conformidade NR. Inclua introdução, fundamentação legal, considerações finais — com variáveis dinâmicas.",
     destino: "Aparecem nos Relatórios de Conformidade (NR-24, NR-17 etc).",
+    posicoesDisponiveis: ["inicio", "fim"],
     fixos: [
       { titulo: "Itens de Conformidade Avaliados",   slug_fixo: "conformidade_itens",      descricao: "Tabela de itens por NR avaliados — gerada automaticamente.", ordem_base: 2000 },
       { titulo: "Resultado Geral de Conformidade",   slug_fixo: "conformidade_resultado",  descricao: "Percentual de conformidade por NR — gerado automaticamente.", ordem_base: 3000 },
@@ -114,6 +120,7 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     descricao:
       "Capítulos reutilizáveis para os Relatórios de Não Conformidade (RNC). Inclua introdução, base metodológica e considerações sobre o plano de ação.",
     destino: "Aparecem nos Relatórios de Não Conformidade.",
+    posicoesDisponiveis: ["inicio", "fim"],
     fixos: [
       { titulo: "Descrição da Não Conformidade",     slug_fixo: "nc_descricao",  descricao: "Dados da NC: título, data, setor e evidências — gerados automaticamente.", ordem_base: 2000 },
       { titulo: "Plano de Ação Corretiva",           slug_fixo: "nc_plano",      descricao: "Ações corretivas com responsáveis e prazos — geradas automaticamente.", ordem_base: 3000 },
@@ -126,6 +133,7 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     descricao:
       "Capítulos reutilizáveis para as análises de produtos químicos. Pode incluir disclaimers, metodologia, normas aplicáveis.",
     destino: "Aparecem no relatório de Análise de Químicos.",
+    posicoesDisponiveis: ["inicio", "fim"],
     fixos: [
       { titulo: "Inventário de Substâncias Químicas",  slug_fixo: "quimicos_inventario", descricao: "Inventário com CAS, quantidade e armazenamento — gerado automaticamente.", ordem_base: 2000 },
       { titulo: "Fichas de Dados de Segurança (FDS)",  slug_fixo: "quimicos_fds",        descricao: "Resumo de riscos por produto — gerado automaticamente.", ordem_base: 3000 },
@@ -139,6 +147,7 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     descricao:
       "Capítulos reutilizáveis para os laudos de Apreciação NR-12: introdução, fundamentação legal (ISOs 12100/13849), metodologia, considerações finais.",
     destino: "Aparecem no PDF do laudo da Apreciação NR-12, após a conclusão técnica.",
+    posicoesDisponiveis: ["inicio", "fim"],
     fixos: [
       { titulo: "Identificação da Máquina/Equipamento",  slug_fixo: "apreciacao_identificacao", descricao: "Dados de identificação: fabricante, modelo, ano, função — gerados automaticamente.", ordem_base: 2000 },
       { titulo: "Checklist NR-12",                       slug_fixo: "apreciacao_checklist",     descricao: "Resultado do checklist NR-12 por item e zona — gerado automaticamente.", ordem_base: 2500 },
@@ -153,6 +162,7 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     descricao:
       "Capítulos editáveis para os Laudos AEP: capa, introdução, metodologia, considerações finais. Use variáveis dinâmicas para empresa, responsável técnico, data etc.",
     destino: "Aparecem no Laudo AEP antes (posição 'início') e após (posição 'fim') a análise por setor.",
+    posicoesDisponiveis: ["inicio", "fim"],
     fixos: [],
   },
   aet: {
@@ -161,6 +171,7 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     descricao:
       "Capítulos editáveis para os Laudos AET: capa, introdução, metodologia, considerações finais. Use variáveis dinâmicas para empresa, responsável técnico, data etc.",
     destino: "Aparecem no Laudo AET antes e após as seções analíticas.",
+    posicoesDisponiveis: ["inicio", "fim"],
     fixos: [],
   },
   psicossocial: {
@@ -169,6 +180,7 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     descricao:
       "Capítulos editáveis para os Relatórios DRPS. Suporta todas as 6 posições no PDF: início, após sumário, após setores, após conclusão, após medidas e fim.",
     destino: "Aparecem no Relatório DRPS na posição configurada em cada capítulo.",
+    posicoesDisponiveis: ["inicio", "apos_sumario", "apos_setores", "apos_conclusao", "apos_medidas", "fim"],
     fixos: [],
   },
 };

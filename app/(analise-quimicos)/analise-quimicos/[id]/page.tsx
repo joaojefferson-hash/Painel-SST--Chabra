@@ -208,7 +208,7 @@ export default function AnaliseDetalhePage({
           carimbo: analise.usuario_nome ?? "",
           importado: formatarDataBR(analise.created_at),
         }}
-        posicao="antes"
+        posicao="inicio"
       />
 
       {/* Relatório técnico estruturado (gerado pelo programa a partir dos
