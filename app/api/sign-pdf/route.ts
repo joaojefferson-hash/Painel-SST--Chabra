@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { PDFDocument } from "pdf-lib";
-import { pdflibAddPlaceholder } from "@signpdf/placeholder-pdf-lib";
-import { P12Signer } from "@signpdf/signer-p12";
-import signpdf from "@signpdf/signpdf";
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
 const forge: any = require("node-forge");
 import { createSupabaseServerClient } from "@/lib/supabase/client";
 import type { Usuario } from "@/lib/supabase/types";
+import { assinarPdf } from "@/lib/pdf/assinar-pdf";
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
@@ -164,14 +161,15 @@ export async function POST(req: NextRequest) {
   try {
     const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
 
-    // Carrega e normaliza o PDF — PDFs do Chromium são linearizados; pdf-lib
-    // deslineariza ao re-salvar, o que é obrigatório para @signpdf funcionar
-    // corretamente (ByteRange calculado sobre estrutura canônica).
-    let pdfDoc;
+    let pdfAssinado: Buffer;
     try {
-      pdfDoc = await PDFDocument.load(pdfBuffer, {
-        ignoreEncryption: true,
-        updateMetadata: false,
+      pdfAssinado = await assinarPdf(pdfBuffer, {
+        pfxBuffer: p12Buffer,
+        passphrase: password,
+        signatoryName: usuario.nome ?? usuario.email ?? "",
+        signatoryEmail: usuario.email ?? "",
+        reason: "Assinatura digital ICP-Brasil A1",
+        location: "Brasil",
       });
     } catch {
       return NextResponse.json(
@@ -179,41 +177,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Re-salva primeiro para garantir estrutura não-linearizada antes do placeholder.
-    // Sem isso, @signpdf pode calcular ByteRange incorreto e gerar assinatura inválida.
-    const pdfNormalizado = Buffer.from(
-      await pdfDoc.save({ useObjectStreams: false, addDefaultPage: false })
-    );
-    let pdfDocNorm;
-    try {
-      pdfDocNorm = await PDFDocument.load(pdfNormalizado, {
-        ignoreEncryption: true,
-        updateMetadata: false,
-      });
-    } catch {
-      return NextResponse.json(
-        { error: "Falha ao normalizar o PDF. Tente novamente." },
-        { status: 400 }
-      );
-    }
-
-    // signatureLength: 65536 (64 KB) — cobre certificados ICP-Brasil com cadeia completa
-    pdflibAddPlaceholder({
-      pdfDoc: pdfDocNorm,
-      reason: "Assinatura digital ICP-Brasil A1",
-      name: usuario.nome ?? usuario.email ?? "",
-      location: "Brasil",
-      contactInfo: usuario.email ?? "",
-      signatureLength: 65536,
-    });
-
-    const pdfComPlaceholder = Buffer.from(
-      await pdfDocNorm.save({ useObjectStreams: false, addDefaultPage: false })
-    );
-
-    const signer = new P12Signer(p12Buffer, { passphrase: password });
-    const pdfAssinado = await signpdf.sign(pdfComPlaceholder, signer);
 
     // Se tabelaNome + docId fornecidos: salva no Storage e registra no banco
     if (tabelaNome && docId) {
