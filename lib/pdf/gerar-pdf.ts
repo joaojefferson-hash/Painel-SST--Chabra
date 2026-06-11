@@ -2,9 +2,12 @@
  * Wrapper centralizado de geração de PDF via Puppeteer.
  *
  * Vercel serverless:    puppeteer-core + @sparticuz/chromium
- * Dev local:            puppeteer completo (Chromium próprio do pacote)
- * Electron / prod local: puppeteer-core + Chrome/Edge instalado no sistema
+ * Dev local / Electron: puppeteer-core + Chrome ou Edge do sistema
+ *
+ * Usar apenas em route handlers Node.js (nunca em Client Components ou Edge).
  */
+
+import { existsSync } from 'fs'
 
 export interface GerarPdfOpts {
   /** Margens da página. Padrão: 20mm topo/base, 15mm laterais. */
@@ -25,26 +28,24 @@ const MARGENS_PADRAO: NonNullable<GerarPdfOpts['margens']> = {
   right: '15mm',
 }
 
-/** Busca Chrome ou Edge instalado no sistema (Electron prod / Windows). */
-async function findSystemChrome(): Promise<string> {
-  const { existsSync } = await import('fs')
+/** Caminhos comuns do Chrome/Edge por plataforma. */
+const SYSTEM_CHROME_PATHS: string[] =
+  process.platform === 'win32'
+    ? [
+        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+        'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+      ]
+    : [
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      ]
 
-  const paths =
-    process.platform === 'win32'
-      ? [
-          'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-          'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-          'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-          'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-        ]
-      : [
-          '/usr/bin/google-chrome',
-          '/usr/bin/chromium-browser',
-          '/usr/bin/chromium',
-          '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-        ]
-
-  const found = paths.find((p) => existsSync(p))
+function findSystemChrome(): string {
+  const found = SYSTEM_CHROME_PATHS.find((p) => existsSync(p))
   if (!found) {
     throw new Error(
       'Nenhum browser compatível encontrado no sistema. ' +
@@ -68,27 +69,20 @@ export async function gerarPdf(
   let browser: { newPage(): Promise<any>; close(): Promise<void> }
 
   if (process.env.VERCEL) {
-    // Vercel serverless: @sparticuz/chromium (binário baixado no build)
+    // Vercel serverless: @sparticuz/chromium (binário baixado no build via camada)
     const [{ default: chromium }, { default: puppeteer }] = await Promise.all([
       import('@sparticuz/chromium'),
       import('puppeteer-core'),
     ])
     browser = await puppeteer.launch({
       args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
+      defaultViewport: { width: 1920, height: 1080 },
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless as never,
-    })
-  } else if (process.env.NODE_ENV !== 'production') {
-    // Dev: puppeteer completo (Chromium gerenciado pelo próprio pacote)
-    const { default: puppeteer } = await import('puppeteer')
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: 'shell' as never,
     })
   } else {
-    // Electron / prod local: puppeteer-core + Chrome ou Edge do sistema
-    const executablePath = await findSystemChrome()
+    // Dev local / Electron prod: puppeteer-core + Chrome ou Edge do sistema
+    const executablePath = findSystemChrome()
     const { default: puppeteer } = await import('puppeteer-core')
     browser = await puppeteer.launch({
       executablePath,
