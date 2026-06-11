@@ -271,7 +271,7 @@ export default function AepLaudoPage({
           <p className="text-sm text-gray-500">{empresa?.nome_empresa}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {pdfAssinado && (
+          {pdfAssinado ? (
             <>
               <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
                 <BadgeCheck className="size-3.5 shrink-0" />
@@ -286,14 +286,13 @@ export default function AepLaudoPage({
                 {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
                 Baixar PDF Assinado
               </button>
-              <BotaoAssinarPdf
-                defaultSignatoryEmail={pdfAssinado.assinado_por}
-                tabelaNome="aep_relatorios"
-                docId={idRelatorio}
-                onAssinado={recarregar}
-                reAssinatura
-              />
             </>
+          ) : (
+            <BotaoAssinarPdf
+              tabelaNome="aep_relatorios"
+              docId={idRelatorio}
+              onAssinado={recarregar}
+            />
           )}
           <BotaoGerarPdf
             tabelaNome="aep_relatorios"
