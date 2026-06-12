@@ -10,6 +10,7 @@ import type {
   ApreciacaoMaquina,
   ApreciacaoMaquinaItem,
   ApreciacaoAcao,
+  Acao5W2H,
   SituacaoApreciacaoItem,
   StatusApreciacao,
   StatusAcaoApreciacao,
@@ -876,5 +877,101 @@ export function useRemoverFotoItemApreciacao() {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_apreciacao) });
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+// ============================================================
+// "Enviar para Plano de Ação" (v67) — copia ações do plano de
+// adequação da apreciação pro Plano de Ação central (acoes_5w2h)
+// ============================================================
+
+export interface ResultadoEnvioPlanoAcao {
+  enviadas: number;
+  ignoradas: number;
+}
+
+/**
+ * Copia ações de apreciacao_acoes pra acoes_5w2h, marcando a origem em
+ * id_apreciacao_acao (índice único parcial no banco impede duplicar) e
+ * id_apreciacao_item (v49) quando a ação veio de item NAO_CONFORME.
+ * Ações canceladas não são enviadas.
+ */
+export function useEnviarAcoesParaPlanoAcao() {
+  const qc = useQueryClient();
+  const user = useUserStore((s) => s.user);
+
+  return useMutation({
+    mutationFn: async (params: {
+      apreciacao: ApreciacaoMaquina;
+      acoes: ApreciacaoAcao[];
+    }): Promise<ResultadoEnvioPlanoAcao> => {
+      const supabase = createSupabaseBrowserClient();
+      const { apreciacao } = params;
+      const candidatas = params.acoes.filter((a) => a.status !== "Cancelada");
+      if (candidatas.length === 0) return { enviadas: 0, ignoradas: 0 };
+
+      // Quais já foram enviadas? (dedupe pela origem)
+      const { data: exist, error: exErr } = await supabase
+        .from("acoes_5w2h")
+        .select("id_apreciacao_acao")
+        .in("id_apreciacao_acao", candidatas.map((a) => a.id_acao));
+      if (exErr) throw exErr;
+      const jaEnviadas = new Set(
+        ((exist ?? []) as { id_apreciacao_acao: string | null }[])
+          .map((r) => r.id_apreciacao_acao)
+          .filter(Boolean) as string[]
+      );
+
+      const referencia =
+        apreciacao.titulo ||
+        apreciacao.maquina_descricao ||
+        apreciacao.id_apreciacao;
+
+      const novas: Acao5W2H[] = candidatas
+        .filter((a) => !jaEnviadas.has(a.id_acao))
+        .map((a) => ({
+          id_acao: gerarId("ACA"),
+          id_empresa: apreciacao.id_empresa,
+          id_setor: null,
+          id_risco: null,
+          id_inspecao: apreciacao.id_inspecao ?? null,
+          id_apreciacao_item: a.id_item,
+          id_apreciacao_acao: a.id_acao,
+          what_acao: a.what_acao,
+          why_justificativa: a.why_justificativa,
+          where_local: a.where_local ?? apreciacao.setor,
+          when_prazo: a.when_prazo,
+          who_responsavel: a.who_responsavel,
+          how_metodo: a.how_metodo,
+          how_much_custo: a.how_much_custo,
+          status: a.status,
+          prioridade: a.prioridade,
+          data_conclusao: a.data_conclusao,
+          observacoes: [
+            `Origem: Apreciação de Máquinas NR-12 — ${referencia}`,
+            a.observacoes,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+          created_by: user?.email ?? null,
+        }));
+
+      if (novas.length > 0) {
+        const { error } = await supabase
+          .from("acoes_5w2h")
+          .insert(novas as never);
+        if (error) throw error;
+      }
+
+      return {
+        enviadas: novas.length,
+        ignoradas: candidatas.length - novas.length,
+      };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["acoes-5w2h"] });
+    },
+    onError: (e: Error) =>
+      toast.error(`Erro ao enviar pro Plano de Ação: ${e.message}`),
   });
 }

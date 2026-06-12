@@ -558,6 +558,9 @@ export interface Acao5W2H {
   id_inspecao: string | null;
   /** V49: FK opcional pro item da Apreciação NR-12 que originou a ação. */
   id_apreciacao_item: string | null;
+  /** V67: ação do plano de adequação (apreciacao_acoes) que originou esta —
+   *  índice único parcial garante envio único por ação da apreciação. */
+  id_apreciacao_acao: string | null;
   what_acao: string;
   why_justificativa: string | null;
   where_local: string | null;
