@@ -232,6 +232,10 @@ export default function MaquinaForm({
       toast.error("Informe o nome da máquina.");
       return;
     }
+    if (!form.setor?.trim()) {
+      toast.error("Informe o setor — toda máquina pertence a um setor.");
+      return;
+    }
     setSalvando(true);
     try {
       await onSubmit({ ...form, nome: form.nome.trim() });
@@ -383,7 +387,7 @@ export default function MaquinaForm({
           <Campo label="Unidade">
             <input type="text" value={form.unidade ?? ""} onChange={(e) => setF("unidade", e.target.value || null)} disabled={disabled} placeholder="Ex: Planta I, Filial SP" className={inputClass} />
           </Campo>
-          <Campo label="Setor">
+          <Campo label="Setor *">
             <input type="text" value={form.setor ?? ""} onChange={(e) => setF("setor", e.target.value || null)} disabled={disabled} placeholder="Ex: Estamparia, Montagem" className={inputClass} />
           </Campo>
           <Campo label="Linha / Processo">

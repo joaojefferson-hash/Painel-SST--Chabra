@@ -265,6 +265,7 @@ export default function MaquinasTab({
 
   async function handleSave() {
     if (!form.nome.trim()) { toast.error("Nome da máquina é obrigatório"); return; }
+    if (!form.id_setor) { toast.error("Setor é obrigatório — toda máquina pertence a um setor"); return; }
     setSaving(true);
     try {
       // monta lista de fotos existentes (as que ficaram no preview com URL https)
@@ -786,19 +787,28 @@ export default function MaquinasTab({
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">Setor</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Setor <span className="text-red-500">*</span>
+                  </label>
                   <select
                     value={form.id_setor}
                     onChange={(e) => f("id_setor", e.target.value)}
                     className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none"
                   >
-                    <option value="">— sem setor —</option>
+                    <option value="" disabled>
+                      Selecione o setor…
+                    </option>
                     {setores.map((s) => (
                       <option key={s.id_setor} value={s.id_setor}>
                         {s.setor_ghe}
                       </option>
                     ))}
                   </select>
+                  {setores.length === 0 && (
+                    <p className="mt-1 text-xs text-amber-600">
+                      Cadastre os setores na aba Setores antes de adicionar máquinas.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-700">Potência</label>
