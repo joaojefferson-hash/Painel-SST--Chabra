@@ -117,7 +117,7 @@ export default function NovaApreciacaoPage() {
             <option value="">Selecione...</option>
             {empresas.map((e) => (
               <option key={e.id_empresa} value={e.id_empresa}>
-                {e.nome_empresa}
+                {e.nome_empresa}{e.cnpj ? ` — ${formatCNPJ(e.cnpj)}` : ""}
               </option>
             ))}
           </select>
