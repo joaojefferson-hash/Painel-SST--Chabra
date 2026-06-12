@@ -169,6 +169,7 @@ export function useCriarApreciacaoMaquina() {
         id_matriz: null,
         foto_urls: [],
         foto_storage_paths: [],
+        foto_legendas: [],
         created_at: new Date().toISOString(),
         updated_at: null,
       }));
@@ -348,6 +349,13 @@ export function useAtualizarItemApreciacao() {
 
 export const MAX_FOTOS_POR_ITEM_APR = 6;
 
+/** Garante que o array de legendas tenha exatamente `tamanho` posições. */
+function padLegendas(legendas: string[] | null | undefined, tamanho: number): string[] {
+  const base = [...(legendas ?? [])].slice(0, tamanho);
+  while (base.length < tamanho) base.push("");
+  return base;
+}
+
 export function useUploadFotoItemApreciacao() {
   const qc = useQueryClient();
   return useMutation({
@@ -357,6 +365,7 @@ export function useUploadFotoItemApreciacao() {
       file: File;
       fotos_urls_atuais: string[];
       fotos_paths_atuais: string[];
+      fotos_legendas_atuais?: string[];
     }) => {
       const supabase = createSupabaseBrowserClient();
 
@@ -382,18 +391,55 @@ export function useUploadFotoItemApreciacao() {
 
       const novasUrls = [...params.fotos_urls_atuais, pub.publicUrl];
       const novosPaths = [...params.fotos_paths_atuais, path];
+      const novasLegendas = [
+        ...padLegendas(params.fotos_legendas_atuais, params.fotos_urls_atuais.length),
+        "",
+      ];
 
       const { error: updateErr } = await supabase
         .from("apreciacoes_maquinas_itens")
         .update({
           foto_urls: novasUrls,
           foto_storage_paths: novosPaths,
+          foto_legendas: novasLegendas,
           updated_at: new Date().toISOString(),
         } as never)
         .eq("id_item", params.id_item);
       if (updateErr) throw updateErr;
 
       return { foto_url: pub.publicUrl, path };
+    },
+    onSuccess: (_d, params) => {
+      qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_apreciacao) });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+/** Atualiza a legenda de UMA foto do item (pareada por índice). */
+export function useAtualizarLegendaFotoItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      id_apreciacao: string;
+      id_item: string;
+      indice: number;
+      legenda: string;
+      legendas_atuais: string[];
+      total_fotos: number;
+    }) => {
+      const supabase = createSupabaseBrowserClient();
+      const legendas = padLegendas(params.legendas_atuais, params.total_fotos);
+      legendas[params.indice] = params.legenda;
+      const { error } = await supabase
+        .from("apreciacoes_maquinas_itens")
+        .update({
+          foto_legendas: legendas,
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq("id_item", params.id_item);
+      if (error) throw error;
+      return params;
     },
     onSuccess: (_d, params) => {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_apreciacao) });
@@ -441,6 +487,7 @@ export function useAdicionarItemLivreApreciacao() {
         id_matriz: null,
         foto_urls: [],
         foto_storage_paths: [],
+        foto_legendas: [],
         created_at: new Date().toISOString(),
         updated_at: null,
       };
@@ -862,6 +909,7 @@ export function useRemoverFotoItemApreciacao() {
       foto_storage_path: string;
       fotos_urls_atuais: string[];
       fotos_paths_atuais: string[];
+      fotos_legendas_atuais?: string[];
     }) => {
       const supabase = createSupabaseBrowserClient();
       // Storage: best-effort
@@ -870,12 +918,17 @@ export function useRemoverFotoItemApreciacao() {
       const idx = params.fotos_paths_atuais.indexOf(params.foto_storage_path);
       const novasUrls = params.fotos_urls_atuais.filter((_, i) => i !== idx);
       const novosPaths = params.fotos_paths_atuais.filter((_, i) => i !== idx);
+      const novasLegendas = padLegendas(
+        params.fotos_legendas_atuais,
+        params.fotos_urls_atuais.length
+      ).filter((_, i) => i !== idx);
 
       const { error } = await supabase
         .from("apreciacoes_maquinas_itens")
         .update({
           foto_urls: novasUrls,
           foto_storage_paths: novosPaths,
+          foto_legendas: novasLegendas,
           updated_at: new Date().toISOString(),
         } as never)
         .eq("id_item", params.id_item);

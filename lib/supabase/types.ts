@@ -1037,6 +1037,8 @@ export interface ApreciacaoMaquinaItem {
   id_matriz: string | null;
   foto_urls: string[];
   foto_storage_paths: string[];
+  /** Legenda por foto (v68) — pareado 1:1 com foto_urls; "" = sem legenda. */
+  foto_legendas: string[];
   created_at: string;
   updated_at: string | null;
 }

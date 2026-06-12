@@ -18,6 +18,7 @@ import {
   useAtualizarItemApreciacao,
   useUploadFotoItemApreciacao,
   useRemoverFotoItemApreciacao,
+  useAtualizarLegendaFotoItem,
   useExcluirItemApreciacao,
   useAnalisarFotoApreciacaoIA,
   MAX_FOTOS_POR_ITEM_APR,
@@ -82,6 +83,7 @@ export default function ItemApreciacaoCard({
   const atualizar = useAtualizarItemApreciacao();
   const uploadFoto = useUploadFotoItemApreciacao();
   const removerFoto = useRemoverFotoItemApreciacao();
+  const atualizarLegenda = useAtualizarLegendaFotoItem();
   const excluirItem = useExcluirItemApreciacao();
   const analisarFoto = useAnalisarFotoApreciacaoIA();
   const { data: matrizAtiva } = useMatrizAtiva();
@@ -158,6 +160,7 @@ export default function ItemApreciacaoCard({
         file,
         fotos_urls_atuais: item.foto_urls,
         fotos_paths_atuais: item.foto_storage_paths,
+        fotos_legendas_atuais: item.foto_legendas ?? [],
       });
     } catch (err) {
       console.error(err);
@@ -177,11 +180,23 @@ export default function ItemApreciacaoCard({
         foto_storage_path: path,
         fotos_urls_atuais: item.foto_urls,
         fotos_paths_atuais: item.foto_storage_paths,
+        fotos_legendas_atuais: item.foto_legendas ?? [],
       });
     } catch (err) {
       console.error(err);
       toast.error("Falha ao remover foto");
     }
+  }
+
+  function handleSalvarLegenda(indice: number, legenda: string) {
+    atualizarLegenda.mutate({
+      id_apreciacao: item.id_apreciacao,
+      id_item: item.id_item,
+      indice,
+      legenda,
+      legendas_atuais: item.foto_legendas ?? [],
+      total_fotos: item.foto_urls.length,
+    });
   }
 
   async function handleExcluirItem() {
@@ -482,28 +497,39 @@ export default function ItemApreciacaoCard({
         {item.foto_urls.length > 0 && (
           <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
             {item.foto_urls.map((url, idx) => (
-              <div
-                key={idx}
-                className="relative aspect-square overflow-hidden rounded-md border border-gray-200 bg-gray-50"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={url}
-                  alt={`Evidência ${idx + 1}`}
-                  className="size-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-                {!disabled && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleRemoverFoto(item.foto_storage_paths[idx])
-                    }
-                    disabled={removerFoto.isPending}
-                    className="absolute right-0.5 top-0.5 rounded-full bg-red-600/80 p-0.5 text-white hover:bg-red-700 disabled:opacity-50 print:hidden"
-                  >
-                    <X className="size-3" />
-                  </button>
+              <div key={idx} className="space-y-0.5">
+                <div className="relative aspect-square overflow-hidden rounded-md border border-gray-200 bg-gray-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={item.foto_legendas?.[idx] || `Evidência ${idx + 1}`}
+                    className="size-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                  {!disabled && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleRemoverFoto(item.foto_storage_paths[idx])
+                      }
+                      disabled={removerFoto.isPending}
+                      className="absolute right-0.5 top-0.5 rounded-full bg-red-600/80 p-0.5 text-white hover:bg-red-700 disabled:opacity-50 print:hidden"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </div>
+                {disabled ? (
+                  (item.foto_legendas?.[idx] ?? "") !== "" && (
+                    <p className="text-center text-[9px] leading-tight text-gray-500">
+                      {item.foto_legendas[idx]}
+                    </p>
+                  )
+                ) : (
+                  <LegendaFotoInput
+                    valor={item.foto_legendas?.[idx] ?? ""}
+                    onSalvar={(legenda) => handleSalvarLegenda(idx, legenda)}
+                  />
                 )}
               </div>
             ))}
@@ -572,5 +598,29 @@ export default function ItemApreciacaoCard({
         />
       )}
     </div>
+  );
+}
+
+/** Input de legenda sob a foto — salva no blur quando o texto mudou. */
+function LegendaFotoInput({
+  valor,
+  onSalvar,
+}: {
+  valor: string;
+  onSalvar: (legenda: string) => void;
+}) {
+  const [texto, setTexto] = useState(valor);
+  useEffect(() => setTexto(valor), [valor]);
+  return (
+    <input
+      type="text"
+      value={texto}
+      onChange={(e) => setTexto(e.target.value)}
+      onBlur={() => {
+        if (texto.trim() !== valor.trim()) onSalvar(texto.trim());
+      }}
+      placeholder="Legenda..."
+      className="w-full rounded border border-gray-200 bg-white px-1 py-0.5 text-[9px] text-gray-600 placeholder:text-gray-300 focus:border-orange-400 focus:outline-none print:hidden"
+    />
   );
 }
