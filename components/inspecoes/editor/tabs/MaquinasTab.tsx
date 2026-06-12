@@ -146,6 +146,9 @@ export default function MaquinasTab({
     campos: CampoRevisaoIA[];
   } | null>(null);
   const [aplicandoIA, setAplicandoIA] = useState(false);
+  // IA dentro do form: lê as fotos e sugere os campos (revisão antes de aplicar)
+  const [analisandoForm, setAnalisandoForm] = useState(false);
+  const [revisaoForm, setRevisaoForm] = useState<CampoRevisaoIA[] | null>(null);
 
   // foto upload
   const fileRef = useRef<HTMLInputElement>(null);
@@ -453,6 +456,125 @@ export default function MaquinasTab({
     } finally {
       setAplicandoIA(false);
     }
+  }
+
+  /**
+   * IA dentro do form: lê TODAS as fotos anexadas (novas e já salvas) e
+   * sugere identificação + campos NR-12 visíveis. O que a IA não conseguir
+   * identificar fica de fora (preenchimento manual). Nada é aplicado sem
+   * confirmação no modal de revisão.
+   */
+  async function handleAnalisarFotosForm() {
+    if (fotosPreview.length === 0) {
+      toast("Adicione ao menos uma foto da máquina (de preferência da plaqueta)", { icon: "ℹ️" });
+      return;
+    }
+    setAnalisandoForm(true);
+    try {
+      const images: { b64: string; mime: string }[] = [];
+      for (const file of fotosUpload.slice(0, 4)) {
+        images.push({ b64: await resizeAndBase64(file), mime: "image/jpeg" });
+      }
+      // fotos já salvas (edição): baixa do storage e redimensiona
+      for (const url of fotosPreview.filter((u) => u.startsWith("http"))) {
+        if (images.length >= 4) break;
+        const blob = await fetch(url).then((r) => r.blob());
+        const file = new File([blob], "foto.jpg", { type: blob.type || "image/jpeg" });
+        images.push({ b64: await resizeAndBase64(file), mime: "image/jpeg" });
+      }
+
+      const res = await fetch("/api/maquina/analisar-foto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
+      }
+      const { data } = (await res.json()) as { data: Record<string, unknown> };
+
+      const boolParaTexto = (v: unknown) =>
+        v === true ? "Sim" : v === false ? "Não" : "";
+      const SIM_NAO = [
+        { value: "Sim", label: "Sim" },
+        { value: "Não", label: "Não" },
+      ];
+      const TEXTOS: { key: keyof FormState & string; label: string; ia?: string; multiline?: boolean }[] = [
+        { key: "nome", label: "Nome / Descrição" },
+        { key: "tipo", label: "Tipo" },
+        { key: "marca", label: "Fabricante / Marca" },
+        { key: "modelo", label: "Modelo" },
+        { key: "numero_serie", label: "Nº de Série" },
+        { key: "tag", label: "TAG / Patrimônio" },
+        { key: "ano_fabricacao", label: "Ano de Fabricação" },
+        { key: "potencia", label: "Potência" },
+        { key: "tensao", label: "Tensão" },
+        { key: "observacoes", label: "Observações técnicas", ia: "descricao_tecnica", multiline: true },
+      ];
+      const BOOLS: { key: keyof FormState & string; label: string }[] = [
+        { key: "protecao_fixa", label: "Proteção fixa" },
+        { key: "protecao_movel", label: "Proteção móvel" },
+        { key: "intertravamento", label: "Intertravamento" },
+        { key: "botao_emergencia", label: "Botão emergência" },
+        { key: "sistema_bloqueio", label: "Sistema de bloqueio/LOTO" },
+        { key: "aterramento", label: "Aterramento elétrico" },
+        { key: "sinalizacao", label: "Sinalização de segurança" },
+      ];
+
+      const campos: CampoRevisaoIA[] = [];
+      for (const t of TEXTOS) {
+        const val = data[t.ia ?? t.key];
+        if (val === null || val === undefined || val === "") continue;
+        campos.push({
+          key: t.key,
+          label: t.label,
+          valorSugerido: String(val),
+          valorAtual: (form[t.key] as string) || null,
+          multiline: t.multiline,
+        });
+      }
+      for (const b of BOOLS) {
+        const v = data[b.key];
+        if (v !== true && v !== false) continue;
+        campos.push({
+          key: b.key,
+          label: b.label,
+          valorSugerido: boolParaTexto(v),
+          valorAtual: boolParaTexto(form[b.key]) || null,
+          options: SIM_NAO,
+        });
+      }
+      if (campos.length === 0) {
+        toast("A IA não identificou dados nas fotos. Preencha manualmente.", { icon: "ℹ️" });
+        return;
+      }
+      setRevisaoForm(campos);
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Falha na análise IA");
+    } finally {
+      setAnalisandoForm(false);
+    }
+  }
+
+  /** Aplica no form os campos aceitos na revisão (nada vai pro banco aqui). */
+  function aplicarRevisaoForm(valores: Record<string, string>) {
+    setForm((p) => {
+      const next = { ...p };
+      for (const [key, valor] of Object.entries(valores)) {
+        const k = key as keyof FormState;
+        if (typeof p[k] === "boolean" || p[k] === null) {
+          (next as Record<string, unknown>)[key] =
+            valor === "Sim" ? true : valor === "Não" ? false : null;
+        } else {
+          (next as Record<string, unknown>)[key] = valor;
+        }
+      }
+      return next;
+    });
+    setRevisaoForm(null);
+    toast.success("Sugestões aplicadas — revise e salve");
   }
 
   function gerarRelatorio() {
@@ -898,9 +1020,25 @@ export default function MaquinasTab({
 
             {/* fotos */}
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Fotos da Máquina (máx. 4 — usadas pela IA)
-              </p>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Fotos da Máquina (máx. 4 — usadas pela IA)
+                </p>
+                <button
+                  type="button"
+                  onClick={handleAnalisarFotosForm}
+                  disabled={analisandoForm || fotosPreview.length === 0}
+                  title="A IA lê as fotos e sugere os dados da máquina (identificação + segurança NR-12). Você revisa antes de aplicar."
+                  className="inline-flex items-center gap-1.5 rounded-md border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+                >
+                  {analisandoForm ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Bot className="size-3.5" />
+                  )}
+                  Preencher com IA
+                </button>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {fotosPreview.map((url, i) => (
                   <div key={i} className="relative">
@@ -1041,11 +1179,45 @@ export default function MaquinasTab({
           aplicando={aplicandoIA}
         />
       )}
+
+      {/* Revisão das sugestões da IA lidas das fotos do FORM */}
+      {revisaoForm && (
+        <RevisaoIAModal
+          titulo="Sugestões da IA — dados da máquina"
+          descricao="Extraído das fotos anexadas. O que a IA não identificou ficou de fora — preencha manualmente."
+          campos={revisaoForm}
+          onAplicar={aplicarRevisaoForm}
+          onClose={() => setRevisaoForm(null)}
+        />
+      )}
     </div>
   );
 }
 
 // ─── relatório HTML ────────────────────────────────────────────────────────
+
+/** Redimensiona e converte pra base64 (sem prefixo data:) — reduz custo de tokens. */
+async function resizeAndBase64(file: File, maxPx = 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      resolve(dataUrl.split(",")[1]);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 
 function buildRelatorioHTML(
   maquinas: InspecaoMaquina[],

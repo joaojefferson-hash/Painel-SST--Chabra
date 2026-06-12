@@ -20,10 +20,19 @@ Responda APENAS com JSON válido (sem markdown, sem cercas, sem texto fora do JS
   "capacidade_operacional": "capacidade ou produtividade se visível (ex: 80 kg/h, 5 KG/MIN) — string ou null",
   "tensao": "tensão elétrica se visível (ex: 220V, 380V, 220/380V) — string ou null",
   "potencia": "potência se visível (ex: 5 CV, 3.7 kW, 1.5 HP) — string ou null",
-  "descricao_tecnica": "breve descrição técnica da máquina com base no que é visível (1-2 frases) — string ou null"
+  "tag": "TAG ou número de patrimônio se visível em etiqueta/plaqueta — string ou null",
+  "descricao_tecnica": "breve descrição técnica da máquina com base no que é visível (1-2 frases) — string ou null",
+  "protecao_fixa": "true se proteções fixas (grades, carenagens parafusadas) são claramente visíveis, false se claramente ausentes em zona de risco exposta, null se não dá pra avaliar — boolean ou null",
+  "protecao_movel": "true se proteções móveis (portas, tampas articuladas) são claramente visíveis — boolean ou null",
+  "intertravamento": "true se dispositivos de intertravamento (chaves de segurança em portas/proteções) são claramente visíveis — boolean ou null",
+  "botao_emergencia": "true se botão de emergência (cogumelo vermelho) é claramente visível — boolean ou null",
+  "sistema_bloqueio": "true se sistema de bloqueio/LOTO (cadeado, seccionadora bloqueável) é claramente visível — boolean ou null",
+  "aterramento": "true se aterramento elétrico (cabo terra, ponto de aterramento) é claramente visível — boolean ou null",
+  "sinalizacao": "true se sinalização de segurança (placas, pictogramas, faixas) é claramente visível na máquina ou em volta — boolean ou null"
 }
 
-Se não conseguir identificar um campo, use null. Não invente dados que não aparecem na imagem.`;
+Se não conseguir identificar um campo, use null. Não invente dados que não aparecem na imagem.
+Para os campos booleanos de segurança NR-12, seja conservador: só responda true/false com evidência visual clara; na dúvida, null.`;
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
@@ -34,18 +43,22 @@ export async function POST(req: NextRequest) {
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
   if (!GROQ_API_KEY) return NextResponse.json({ error: "GROQ_API_KEY não configurada." }, { status: 500 });
 
-  let imageBase64: string;
-  let mimeType: string;
+  // Aceita 1 imagem (legado: imageBase64/mimeType) ou várias (images[])
+  let dataUrls: string[];
   try {
     const body = await req.json();
-    imageBase64 = body.imageBase64;
-    mimeType = body.mimeType ?? "image/jpeg";
-    if (!imageBase64) throw new Error("imageBase64 ausente");
+    const images: { b64: string; mime?: string }[] = Array.isArray(body.images)
+      ? body.images
+      : body.imageBase64
+        ? [{ b64: body.imageBase64, mime: body.mimeType }]
+        : [];
+    if (images.length === 0) throw new Error("Nenhuma imagem enviada");
+    dataUrls = images
+      .slice(0, 4)
+      .map((i) => `data:${i.mime ?? "image/jpeg"};base64,${i.b64}`);
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Payload inválido" }, { status: 400 });
   }
-
-  const dataUrl = `data:${mimeType};base64,${imageBase64}`;
 
   try {
     const groqRes = await fetch(GROQ_URL, {
@@ -58,14 +71,14 @@ export async function POST(req: NextRequest) {
           {
             role: "user",
             content: [
-              { type: "image_url", image_url: { url: dataUrl } },
-              { type: "text", text: "Analise esta imagem e retorne os dados técnicos da máquina no formato JSON definido." },
+              ...dataUrls.map((url) => ({ type: "image_url", image_url: { url } })),
+              { type: "text", text: `Analise ${dataUrls.length > 1 ? "estas imagens (mesma máquina, ângulos diferentes)" : "esta imagem"} e retorne os dados técnicos da máquina no formato JSON definido.` },
             ],
           },
         ],
         response_format: { type: "json_object" },
         temperature: 0.1,
-        max_tokens: 600,
+        max_tokens: 900,
       }),
     });
 
