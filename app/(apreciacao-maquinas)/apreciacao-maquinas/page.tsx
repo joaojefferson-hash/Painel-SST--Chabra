@@ -81,9 +81,11 @@ export default function ApreciacaoMaquinasPage() {
         </h1>
         <p className="text-sm text-gray-600">
           Apreciação de risco de máquinas e equipamentos em conformidade com o
-          item 12.1.9 da NR-12 e norma ABNT NBR 12100:2013. Avalia checklist
-          regulatório por categoria, gera Plano de Adequação com prazos e
-          mantém relação atualizada do parque de máquinas.
+          item 12.1.9 da NR-12 e normas ABNT NBR 12100, 14009, 14154 e ABNT
+          ISO/TR 14121-2:2018. Avalia checklist regulatório por categoria,
+          realiza análise de riscos pelo método HRN (POD × FEP × GPD), gera
+          Plano de Adequação com prazos e mantém relação atualizada do parque
+          de máquinas.
         </p>
       </div>
 

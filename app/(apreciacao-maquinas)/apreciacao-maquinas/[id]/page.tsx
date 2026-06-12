@@ -18,6 +18,8 @@ import {
   Sparkles,
   Wand2,
   ListTodo,
+  Activity,
+  ShieldCheck,
   X as IconX,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -29,6 +31,7 @@ import {
   useGerarParecerApreciacaoIA,
 } from "@/lib/hooks/useApreciacoesMaquinas";
 import PlanoAcaoTable from "@/components/apreciacao-maquinas/PlanoAcaoTable";
+import RiscoHrnTable from "@/components/apreciacao-maquinas/RiscoHrnTable";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import {
   montarValoresEmpresa,
@@ -49,9 +52,13 @@ import {
 } from "@/lib/apreciacao-maquinas/catalogo-nr12";
 import {
   RISCO_RESIDUAL_LABELS,
+  COMPONENTES_MAQUINA_NR12,
+  SISTEMAS_SEGURANCA_NR12,
+  NPE_HRN_LABELS,
   type RiscoResidual,
   type ApreciacaoMaquinaItem,
   type NivelRisco,
+  type NpeHrn,
 } from "@/lib/supabase/types";
 
 /** Mapeia NivelRisco (matriz Painel SST) pra RiscoResidual (Apreciação). */
@@ -104,6 +111,16 @@ export default function DetalheApreciacaoPage() {
 
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
 
+  // Identificação dos componentes / limites / sistemas (NR-12 HRN)
+  const [componentes, setComponentes] = useState<string[]>([]);
+  const [limiteUso, setLimiteUso] = useState("");
+  const [limiteEspaco, setLimiteEspaco] = useState("");
+  const [limiteTempo, setLimiteTempo] = useState("");
+  const [limiteProdutividade, setLimiteProdutividade] = useState("");
+  const [npe, setNpe] = useState<NpeHrn | "">("");
+  const [sistemasAtual, setSistemasAtual] = useState<string[]>([]);
+  const [sistemasNecessario, setSistemasNecessario] = useState<string[]>([]);
+
   // Form "Adicionar item livre"
   const [livreOpen, setLivreOpen] = useState(false);
   const [livreCategoria, setLivreCategoria] = useState<CategoriaNR12>(
@@ -125,6 +142,15 @@ export default function DetalheApreciacaoPage() {
     setRecomendacoes(apreciacao.recomendacoes ?? "");
     setRiscoResidual(apreciacao.risco_residual ?? "");
     setObservacoes(apreciacao.observacoes_gerais ?? "");
+    // HRN
+    setComponentes(apreciacao.componentes_maquina ?? []);
+    setLimiteUso(apreciacao.limite_uso ?? "");
+    setLimiteEspaco(apreciacao.limite_espaco ?? "");
+    setLimiteTempo(apreciacao.limite_tempo ?? "");
+    setLimiteProdutividade(apreciacao.limite_produtividade ?? "");
+    setNpe((apreciacao.npe as NpeHrn) ?? "");
+    setSistemasAtual(apreciacao.sistemas_atual ?? []);
+    setSistemasNecessario(apreciacao.sistemas_necessario ?? []);
   }, [apreciacao]);
 
   const empresa = useMemo(() => {
@@ -210,6 +236,26 @@ export default function DetalheApreciacaoPage() {
     } catch (err) {
       console.error(err);
       toast.error("Falha ao salvar conclusão");
+    }
+  }
+
+  async function handleSalvarAnalise() {
+    if (!id) return;
+    try {
+      await atualizar.mutateAsync({
+        id_apreciacao: id,
+        componentes_maquina: componentes.length ? componentes : null,
+        limite_uso: limiteUso.trim() || null,
+        limite_espaco: limiteEspaco.trim() || null,
+        limite_tempo: limiteTempo.trim() || null,
+        limite_produtividade: limiteProdutividade.trim() || null,
+        npe: npe || null,
+        sistemas_atual: sistemasAtual.length ? sistemasAtual : null,
+        sistemas_necessario: sistemasNecessario.length ? sistemasNecessario : null,
+      });
+      toast.success("Análise salva");
+    } catch {
+      toast.error("Falha ao salvar análise");
     }
   }
 
@@ -645,6 +691,127 @@ export default function DetalheApreciacaoPage() {
             </button>
           </div>
         )}
+      </section>
+
+      {/* ── SEÇÃO: Identificação dos Componentes + Limites ──────────────────── */}
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4 print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
+        <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-700">
+          <Cog className="size-4 text-orange-600" /> Identificação dos Componentes da Máquina
+        </h2>
+        <p className="text-[11px] text-gray-500">
+          Marque os tipos de componentes presentes nesta máquina (ABNT ISO/TR 14121-2:2018).
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {COMPONENTES_MAQUINA_NR12.map((comp) => {
+            const checked = componentes.includes(comp);
+            return (
+              <label key={comp} className={cn("flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition-colors", checked ? "border-orange-300 bg-orange-50 text-orange-800" : "border-gray-200 text-gray-700 hover:bg-gray-50", readOnly && "cursor-default")}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={readOnly}
+                  onChange={() => !readOnly && setComponentes((prev) => checked ? prev.filter((c) => c !== comp) : [...prev, comp])}
+                  className="accent-orange-600"
+                />
+                <span>{comp}</span>
+              </label>
+            );
+          })}
+        </div>
+        {/* Limites */}
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-600">Limites</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {([
+              ["limiteUso", limiteUso, setLimiteUso, "De Uso", "Ex: Alimentos, panificação"],
+              ["limiteEspaco", limiteEspaco, setLimiteEspaco, "De Espaço", "Ex: Interior da padaria, 2º andar"],
+              ["limiteTempo", limiteTempo, setLimiteTempo, "De Tempo", "Ex: Vida útil 15 anos"],
+              ["limiteProdutividade", limiteProdutividade, setLimiteProdutividade, "De Produtividade", "Ex: 80 kg/h"],
+            ] as [string, string, (v: string) => void, string, string][]).map(([, val, setter, label, placeholder]) => (
+              <label key={label} className="block">
+                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-gray-600">{label}</span>
+                <input type="text" value={val} onChange={(e) => setter(e.target.value)} disabled={readOnly}
+                  placeholder={placeholder}
+                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:bg-gray-50 disabled:text-gray-500"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+        {/* NPE padrão */}
+        <div className="w-full sm:w-1/2">
+          <label className="block">
+            <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-gray-600">NPE — Número de Pessoas Expostas</span>
+            <select value={npe} onChange={(e) => setNpe(e.target.value as NpeHrn | "")} disabled={readOnly}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:bg-gray-50 disabled:text-gray-500">
+              <option value="">— Não informado —</option>
+              {(Object.entries(NPE_HRN_LABELS) as [NpeHrn, string][]).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </label>
+        </div>
+
+        {/* ── Sistemas de Segurança Analisados ─── */}
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-600">
+            <ShieldCheck className="mr-1 inline size-3.5 text-blue-600" />
+            Sistemas de Segurança Analisados
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="bg-gray-100 text-gray-700">
+                  <th className="border border-gray-200 px-2 py-1 text-left font-semibold">Sistema</th>
+                  <th className="border border-gray-200 px-2 py-1 text-center font-semibold w-24">Sistema Atual</th>
+                  <th className="border border-gray-200 px-2 py-1 text-center font-semibold w-28">Sistema Necessário</th>
+                </tr>
+              </thead>
+              <tbody>
+                {SISTEMAS_SEGURANCA_NR12.map((sis) => {
+                  const temAtual = sistemasAtual.includes(sis);
+                  const temNecessario = sistemasNecessario.includes(sis);
+                  return (
+                    <tr key={sis} className="hover:bg-gray-50">
+                      <td className="border border-gray-200 px-2 py-1">{sis}</td>
+                      <td className="border border-gray-200 px-2 py-1 text-center">
+                        <input type="checkbox" checked={temAtual} disabled={readOnly}
+                          onChange={() => !readOnly && setSistemasAtual((prev) => temAtual ? prev.filter((s) => s !== sis) : [...prev, sis])}
+                          className="accent-emerald-600 size-3.5"
+                        />
+                      </td>
+                      <td className="border border-gray-200 px-2 py-1 text-center">
+                        <input type="checkbox" checked={temNecessario} disabled={readOnly}
+                          onChange={() => !readOnly && setSistemasNecessario((prev) => temNecessario ? prev.filter((s) => s !== sis) : [...prev, sis])}
+                          className="accent-orange-600 size-3.5"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {!readOnly && (
+          <div className="flex justify-end print:hidden">
+            <button type="button" onClick={handleSalvarAnalise} disabled={atualizar.isPending}
+              className="inline-flex items-center gap-1.5 rounded-md bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">
+              {atualizar.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              Salvar componentes e sistemas
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* ── SEÇÃO: Análise de Riscos HRN ──────────────────────────────────── */}
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-3 print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
+        <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-700">
+          <Activity className="size-4 text-orange-600" /> Análise de Riscos — HRN
+        </h2>
+        <p className="text-[11px] text-gray-500">
+          Avaliação por tipo de perigo: POD (Probabilidade) × FEP (Frequência) × GPD (Gravidade) conforme ABNT ISO/TR 14121-2:2018.
+        </p>
+        <RiscoHrnTable idApreciacao={apreciacao.id_apreciacao} disabled={readOnly} />
       </section>
 
       {/* Seção: Checklist NR-12 agrupado por categoria */}

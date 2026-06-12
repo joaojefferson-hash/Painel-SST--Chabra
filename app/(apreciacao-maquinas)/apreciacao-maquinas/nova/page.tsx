@@ -124,9 +124,10 @@ export default function NovaApreciacaoPage() {
         </h1>
         <p className="text-sm text-gray-600">
           Apreciação de risco em conformidade com o item 12.1.9 da NR-12 e
-          norma ABNT NBR 12100:2013. Ao criar, o checklist é gerado
-          automaticamente com <strong>{CATALOGO_NR12.length}</strong> itens
-          agrupados por categoria, prontos para avaliação.
+          normas ABNT NBR 12100, 14009, 14154 e ABNT ISO/TR 14121-2:2018.
+          Ao criar, o checklist é gerado automaticamente com{" "}
+          <strong>{CATALOGO_NR12.length}</strong> itens por categoria, além
+          da análise de riscos HRN (POD × FEP × GPD), prontos para avaliação.
         </p>
       </div>
 

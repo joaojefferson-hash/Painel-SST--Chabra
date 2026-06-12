@@ -783,7 +783,10 @@ export interface Maquina {
 
   // ── Segurança e Conformidade ───────────────────────────────
   protecao_fixa: boolean | null;
+  descricao_protecao_fixa: string | null;   // texto descritivo (NR-12 inventário)
   protecao_movel: boolean | null;
+  descricao_protecao_movel: string | null;  // texto descritivo (NR-12 inventário)
+  dispositivos_seguranca: string | null;    // ex: "Botões de parada de emergência, proteção lateral"
   intertravamento: boolean | null;
   botao_emergencia: boolean | null;
   sistema_bloqueio: boolean | null;
@@ -848,11 +851,129 @@ export interface ApreciacaoMaquina {
   status: StatusApreciacao;
   finalizado_em: string | null;
   observacoes_gerais: string | null;
+
+  // ── Identificação dos Componentes (ABNT ISO/TR 14121-2:2018) ──────────────
+  componentes_maquina: string[] | null;   // tipos de componentes presentes
+  limite_uso: string | null;
+  limite_espaco: string | null;
+  limite_tempo: string | null;
+  limite_produtividade: string | null;
+  npe: string | null;                     // Número de Pessoas Expostas (padrão)
+  sistemas_atual: string[] | null;        // sistemas de segurança existentes
+  sistemas_necessario: string[] | null;   // sistemas de segurança necessários
+
   usuario_email: string | null;
   usuario_nome: string | null;
   created_at: string;
   updated_at: string | null;
 }
+
+// ── Análise de Riscos HRN (ABNT ISO/TR 14121-2:2018) ──────────────────────
+export type PodHrn = "MUITO_PROVAVEL" | "PROVAVEL" | "IMPROVAVEL" | "REMOTA";
+export type FepHrn = "DIARIAMENTE" | "SEMANALMENTE" | "MENSALMENTE" | "ANUALMENTE";
+export type GpdHrn = "CATASTROFICA" | "GRAVE" | "MODERADA" | "BAIXA";
+export type NpeHrn = "ACIMA_50" | "DE_16_50" | "DE_8_15" | "DE_3_7" | "DE_1_2";
+export type ClassificacaoRiscoHrn = "ALTO" | "MEDIO" | "BAIXO" | "DESPREZIVEL";
+
+export const POD_HRN_LABELS: Record<PodHrn, string> = {
+  MUITO_PROVAVEL: "Muito Provável",
+  PROVAVEL: "Provável",
+  IMPROVAVEL: "Improvável",
+  REMOTA: "Remota",
+};
+export const FEP_HRN_LABELS: Record<FepHrn, string> = {
+  DIARIAMENTE: "Diariamente",
+  SEMANALMENTE: "Semanalmente",
+  MENSALMENTE: "Mensalmente",
+  ANUALMENTE: "Anualmente",
+};
+export const GPD_HRN_LABELS: Record<GpdHrn, string> = {
+  CATASTROFICA: "Catastrófica",
+  GRAVE: "Grave",
+  MODERADA: "Moderada",
+  BAIXA: "Baixa",
+};
+export const NPE_HRN_LABELS: Record<NpeHrn, string> = {
+  ACIMA_50: ">50 pessoas",
+  DE_16_50: "16–50 pessoas",
+  DE_8_15: "8–15 pessoas",
+  DE_3_7: "3–7 pessoas",
+  DE_1_2: "1–2 pessoas",
+};
+export const CLASSIFICACAO_HRN_LABELS: Record<ClassificacaoRiscoHrn, string> = {
+  ALTO: "Alto",
+  MEDIO: "Médio",
+  BAIXO: "Baixo",
+  DESPREZIVEL: "Desprezível",
+};
+
+/** Pontuações para cálculo automático: POD × FEP × GPD → score */
+const _POD_SCORE: Record<PodHrn, number> = { MUITO_PROVAVEL: 4, PROVAVEL: 3, IMPROVAVEL: 2, REMOTA: 1 };
+const _FEP_SCORE: Record<FepHrn, number> = { DIARIAMENTE: 4, SEMANALMENTE: 3, MENSALMENTE: 2, ANUALMENTE: 1 };
+const _GPD_SCORE: Record<GpdHrn, number> = { CATASTROFICA: 4, GRAVE: 3, MODERADA: 2, BAIXA: 1 };
+
+export function calcularClassificacaoHrn(
+  pod: string | null,
+  fep: string | null,
+  gpd: string | null
+): ClassificacaoRiscoHrn | null {
+  const p = _POD_SCORE[pod as PodHrn];
+  const f = _FEP_SCORE[fep as FepHrn];
+  const g = _GPD_SCORE[gpd as GpdHrn];
+  if (!p || !f || !g) return null;
+  const score = p * f * g;
+  if (score <= 4) return "DESPREZIVEL";
+  if (score <= 12) return "BAIXO";
+  if (score <= 32) return "MEDIO";
+  return "ALTO";
+}
+
+export interface RiscoHrn {
+  id_risco: string;
+  id_apreciacao: string;
+  tipo_perigo: string;
+  origem: string | null;
+  potenciais_consequencias: string | null;
+  pod: PodHrn | null;
+  fep: FepHrn | null;
+  gpd: GpdHrn | null;
+  npe_item: NpeHrn | null;
+  classificacao_risco: ClassificacaoRiscoHrn | null;
+  nivel_acoes: string | null;
+  medidas_preventivas: string | null;
+  ordem: number;
+  created_at: string;
+}
+
+// ── Tipos de componentes de máquina (Identificação NR-12) ─────────────────
+export const COMPONENTES_MAQUINA_NR12 = [
+  "Transmissão por Engrenagens",
+  "Superfície Rotativa",
+  "Esteira",
+  "Equip. Móvel/Corte das Partes Superiores",
+  "Facas, Punções e Lâminas",
+  "Equipamento Fixo Horizontal",
+  "Impacto ou Prensamento",
+  "Lâmina Rotativa",
+  "Equipamento Rotativo",
+  "Transmissões por Corrente",
+  "Roletes Tracionados",
+  "Máquina Automática",
+] as const;
+
+// ── Sistemas de segurança analisados (NR-12 / ABNT NBR 14153) ────────────
+export const SISTEMAS_SEGURANCA_NR12 = [
+  "Sistema de Emergência",
+  "Borda de Segurança/Bumper",
+  "Seccionadora",
+  "Inercial",
+  "Monit. Proteções Físicas Móveis",
+  "Proteções Físicas",
+  "Rearme/Reset Manual",
+  "Treinamentos Específicos",
+  "Autorização para Utilização",
+  "Desligamento Seguro",
+] as const;
 
 export type StatusAcaoApreciacao =
   | "Pendente"
@@ -1204,6 +1325,7 @@ export interface Database {
       apreciacoes_maquinas: TableShape<ApreciacaoMaquina>;
       apreciacoes_maquinas_itens: TableShape<ApreciacaoMaquinaItem>;
       apreciacao_acoes: TableShape<ApreciacaoAcao>;
+      apreciacao_riscos_hrn: TableShape<RiscoHrn>;
       aet_relatorios: TableShape<AetRelatorio>;
       aet_textos_padrao: TableShape<AetTextoPadraoCapitulo>;
       aep_relatorios: TableShape<AepRelatorio>;

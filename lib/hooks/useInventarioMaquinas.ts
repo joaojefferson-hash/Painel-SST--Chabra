@@ -100,7 +100,10 @@ export interface MaquinaInput {
   descricao_tecnica: string | null;
   // Segurança
   protecao_fixa: boolean | null;
+  descricao_protecao_fixa: string | null;
   protecao_movel: boolean | null;
+  descricao_protecao_movel: string | null;
+  dispositivos_seguranca: string | null;
   intertravamento: boolean | null;
   botao_emergencia: boolean | null;
   sistema_bloqueio: boolean | null;

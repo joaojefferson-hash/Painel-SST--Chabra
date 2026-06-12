@@ -127,6 +127,14 @@ export function useCriarApreciacaoMaquina() {
         status: "RASCUNHO",
         finalizado_em: null,
         observacoes_gerais: null,
+        componentes_maquina: null,
+        limite_uso: null,
+        limite_espaco: null,
+        limite_tempo: null,
+        limite_produtividade: null,
+        npe: null,
+        sistemas_atual: null,
+        sistemas_necessario: null,
         usuario_email: user?.email ?? null,
         usuario_nome: user?.nome ?? null,
         created_at: new Date().toISOString(),
@@ -193,6 +201,15 @@ export function useAtualizarApreciacaoMaquina() {
       risco_residual?: RiscoResidual | null;
       observacoes_gerais?: string | null;
       status?: StatusApreciacao;
+      // Identificação dos componentes / limites / sistemas (NR-12 HRN)
+      componentes_maquina?: string[] | null;
+      limite_uso?: string | null;
+      limite_espaco?: string | null;
+      limite_tempo?: string | null;
+      limite_produtividade?: string | null;
+      npe?: string | null;
+      sistemas_atual?: string[] | null;
+      sistemas_necessario?: string[] | null;
     }) => {
       const supabase = createSupabaseBrowserClient();
       const patch: Partial<ApreciacaoMaquina> = {
@@ -218,6 +235,14 @@ export function useAtualizarApreciacaoMaquina() {
         patch.risco_residual = params.risco_residual;
       if (params.observacoes_gerais !== undefined)
         patch.observacoes_gerais = params.observacoes_gerais;
+      if (params.componentes_maquina !== undefined) patch.componentes_maquina = params.componentes_maquina;
+      if (params.limite_uso !== undefined) patch.limite_uso = params.limite_uso;
+      if (params.limite_espaco !== undefined) patch.limite_espaco = params.limite_espaco;
+      if (params.limite_tempo !== undefined) patch.limite_tempo = params.limite_tempo;
+      if (params.limite_produtividade !== undefined) patch.limite_produtividade = params.limite_produtividade;
+      if (params.npe !== undefined) patch.npe = params.npe;
+      if (params.sistemas_atual !== undefined) patch.sistemas_atual = params.sistemas_atual;
+      if (params.sistemas_necessario !== undefined) patch.sistemas_necessario = params.sistemas_necessario;
       if (params.status !== undefined) {
         patch.status = params.status;
         if (params.status === "FINALIZADO") {

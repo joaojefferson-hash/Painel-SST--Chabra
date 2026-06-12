@@ -62,7 +62,10 @@ function initialForm(m?: Maquina): MaquinaInput {
     finalidade: m?.finalidade ?? null,
     descricao_tecnica: m?.descricao_tecnica ?? null,
     protecao_fixa: m?.protecao_fixa ?? null,
+    descricao_protecao_fixa: m?.descricao_protecao_fixa ?? null,
     protecao_movel: m?.protecao_movel ?? null,
+    descricao_protecao_movel: m?.descricao_protecao_movel ?? null,
+    dispositivos_seguranca: m?.dispositivos_seguranca ?? null,
     intertravamento: m?.intertravamento ?? null,
     botao_emergencia: m?.botao_emergencia ?? null,
     sistema_bloqueio: m?.sistema_bloqueio ?? null,
@@ -382,6 +385,18 @@ export default function MaquinaForm({
                   </select>
                 </Campo>
               ))}
+            </div>
+            {/* Campos de texto para inventário NR-12 */}
+            <div className="mt-3 grid grid-cols-1 gap-3">
+              <Campo label="Proteções fixas — descrição (NR-12)">
+                <input type="text" value={form.descricao_protecao_fixa ?? ""} onChange={(e) => setF("descricao_protecao_fixa", e.target.value || null)} disabled={disabled} placeholder="Ex: Proteção fixa nas correntes de transmissão" className={inputClass} />
+              </Campo>
+              <Campo label="Proteções móveis — descrição (NR-12)">
+                <input type="text" value={form.descricao_protecao_movel ?? ""} onChange={(e) => setF("descricao_protecao_movel", e.target.value || null)} disabled={disabled} placeholder="Ex: Proteção móvel no cabeçote, enclausuramento" className={inputClass} />
+              </Campo>
+              <Campo label="Dispositivos de segurança (NR-12)">
+                <input type="text" value={form.dispositivos_seguranca ?? ""} onChange={(e) => setF("dispositivos_seguranca", e.target.value || null)} disabled={disabled} placeholder="Ex: Botões de parada de emergência, proteção lateral" className={inputClass} />
+              </Campo>
             </div>
           </div>
 
