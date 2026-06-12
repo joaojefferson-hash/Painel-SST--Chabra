@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Save, Upload, X, ImageOff, Loader2 } from "lucide-react";
+import { Save, Upload, X, ImageOff, Loader2, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
 import {
@@ -106,6 +106,8 @@ export default function MaquinaForm({
   const [abaAtiva, setAbaAtiva] = useState<0 | 1 | 2 | 3>(0);
   const [uploading, setUploading] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [analisando, setAnalisando] = useState(false);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (inicial) setForm(initialForm(inicial));
@@ -118,13 +120,14 @@ export default function MaquinaForm({
   async function handleFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Foto maior que 5 MB. Reduza antes de enviar.");
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Foto maior que 10 MB. Reduza antes de enviar.");
       return;
     }
+    setFotoFile(file);
     setUploading(true);
     try {
-      if (form.foto_storage_path && !form.foto_storage_path.endsWith(file.name)) {
+      if (form.foto_storage_path) {
         await removerFotoMaquinaStorage(form.foto_storage_path);
       }
       const { publicUrl, storagePath } = await uploadFotoMaquina(idMaquina, file);
@@ -136,6 +139,48 @@ export default function MaquinaForm({
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function handleAnalisarIA() {
+    if (!fotoFile) return;
+    setAnalisando(true);
+    try {
+      // Redimensiona para max 1024px antes de enviar (reduz custo de tokens)
+      const base64 = await resizeAndBase64(fotoFile, 1024);
+      const res = await fetch("/api/maquina/analisar-foto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mimeType: fotoFile.type || "image/jpeg" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
+      }
+      const { data } = await res.json() as { data: Record<string, unknown> };
+      // Preenche apenas campos vazios (não sobrescreve o que o usuário já digitou)
+      const fill = (key: keyof typeof form, val: unknown) => {
+        if (val !== null && val !== undefined && val !== "" && !form[key]) {
+          setF(key, val);
+        }
+      };
+      fill("nome", data.nome);
+      fill("tipo", data.tipo);
+      fill("categoria", data.categoria);
+      fill("marca", data.marca);
+      fill("modelo", data.modelo);
+      fill("numero_serie", data.numero_serie);
+      fill("ano_fabricacao", typeof data.ano_fabricacao === "number" ? data.ano_fabricacao : null);
+      fill("capacidade_operacional", data.capacidade_operacional);
+      fill("tensao", data.tensao);
+      fill("potencia", data.potencia);
+      fill("descricao_tecnica", data.descricao_tecnica);
+      toast.success("Campos preenchidos pela IA — revise antes de salvar");
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Falha na análise IA");
+    } finally {
+      setAnalisando(false);
     }
   }
 
@@ -190,6 +235,18 @@ export default function MaquinaForm({
               {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
               {form.foto_url ? "Trocar foto" : "Enviar foto"}
             </button>
+            {/* Analisar com IA — aparece após enviar a foto */}
+            {fotoFile && !disabled && (
+              <button
+                type="button"
+                onClick={handleAnalisarIA}
+                disabled={analisando || uploading}
+                className="inline-flex items-center gap-1.5 rounded-md border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+              >
+                {analisando ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+                {analisando ? "Analisando..." : "Analisar com IA"}
+              </button>
+            )}
             {form.foto_url && !disabled && (
               <button
                 type="button"
@@ -199,7 +256,7 @@ export default function MaquinaForm({
                 <X className="size-3" /> Remover
               </button>
             )}
-            <p className="text-[11px] text-gray-400">Até 5 MB · JPG/PNG/WebP</p>
+            <p className="text-[11px] text-gray-400">Até 10 MB · JPG/PNG/WebP</p>
           </div>
         </div>
 
@@ -470,6 +527,29 @@ export default function MaquinaForm({
 
 const inputClass =
   "w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
+
+/** Redimensiona e converte para base64 (sem prefixo data:) para envio ao servidor. */
+async function resizeAndBase64(file: File, maxPx = 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      resolve(dataUrl.split(",")[1]); // remove prefixo "data:image/jpeg;base64,"
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
