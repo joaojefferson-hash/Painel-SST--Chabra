@@ -741,6 +741,46 @@ export default function MaquinasTab({
           </div>
 
           <div className="space-y-4">
+            {/* setor primeiro — toda máquina pertence a um setor */}
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Setor
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Setor da máquina <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={form.id_setor}
+                    onChange={(e) => f("id_setor", e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none"
+                  >
+                    <option value="" disabled>
+                      Selecione o setor…
+                    </option>
+                    {setores.map((s) => (
+                      <option key={s.id_setor} value={s.id_setor}>
+                        {s.setor_ghe}
+                      </option>
+                    ))}
+                  </select>
+                  {setores.length === 0 && (
+                    <p className="mt-1 text-xs text-amber-600">
+                      Cadastre os setores na aba Setores antes de adicionar máquinas.
+                    </p>
+                  )}
+                  {!form.id_setor && setores.length > 0 && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Escolha o setor pra liberar os dados da máquina.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {form.id_setor && (
+            <>
             {/* identificação */}
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -780,36 +820,12 @@ export default function MaquinasTab({
               </div>
             </div>
 
-            {/* setor + capacidade */}
+            {/* capacidade */}
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Localização e Capacidade
+                Capacidade
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Setor <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={form.id_setor}
-                    onChange={(e) => f("id_setor", e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none"
-                  >
-                    <option value="" disabled>
-                      Selecione o setor…
-                    </option>
-                    {setores.map((s) => (
-                      <option key={s.id_setor} value={s.id_setor}>
-                        {s.setor_ghe}
-                      </option>
-                    ))}
-                  </select>
-                  {setores.length === 0 && (
-                    <p className="mt-1 text-xs text-amber-600">
-                      Cadastre os setores na aba Setores antes de adicionar máquinas.
-                    </p>
-                  )}
-                </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-700">Potência</label>
                   <input
@@ -922,6 +938,8 @@ export default function MaquinasTab({
                 onChange={(e) => handleFotoSelect(e.target.files)}
               />
             </div>
+            </>
+            )}
           </div>
 
           <div className="mt-4 flex justify-end gap-2">
@@ -935,7 +953,7 @@ export default function MaquinasTab({
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || !form.id_setor}
               className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-4 py-2 text-sm font-semibold text-white hover:bg-verde-accent disabled:opacity-60"
             >
               {saving && <Loader2 className="size-4 animate-spin" />}
