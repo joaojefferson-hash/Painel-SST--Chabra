@@ -23,32 +23,59 @@ export default function NovaApreciacaoPage() {
   const criar = useCriarApreciacaoMaquina();
 
   const [idEmpresa, setIdEmpresa] = useState<string>("");
-  const [idMaquina, setIdMaquina] = useState<string>(""); // "" = sem inventário
+  const [filtroSetor, setFiltroSetor] = useState<string>("");
+  const [idMaquina, setIdMaquina] = useState<string>("");
   const [maquinaDescricao, setMaquinaDescricao] = useState("");
   const [titulo, setTitulo] = useState("");
   const [setor, setSetor] = useState("");
   const [responsavel, setResponsavel] = useState(user?.nome ?? "");
   const [responsavelEmpresa, setResponsavelEmpresa] = useState("");
   const [cidade, setCidade] = useState("");
-  const [dataApreciacao, setDataApreciacao] = useState(() => {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
-  });
+  const [dataApreciacao, setDataApreciacao] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
 
   const empresaSelecionada = empresas.find((e) => e.id_empresa === idEmpresa) ?? null;
 
-  // Filtra máquinas pela empresa selecionada (mais máquinas Chabra sem empresa).
-  const maquinasFiltradas = useMemo(() => {
-    if (!idEmpresa) return [] as typeof maquinas;
-    return maquinas.filter(
-      (m) => m.id_empresa === idEmpresa || m.id_empresa === null
-    );
+  // Setores únicos das máquinas da empresa selecionada
+  const setoresDisponiveis = useMemo(() => {
+    if (!idEmpresa) return [] as string[];
+    const s = new Set<string>();
+    maquinas
+      .filter((m) => m.id_empresa === idEmpresa || m.id_empresa === null)
+      .forEach((m) => { if (m.setor) s.add(m.setor); });
+    return Array.from(s).sort();
   }, [maquinas, idEmpresa]);
 
-  // Reset máquina se trocar empresa
+  // Máquinas filtradas por empresa + setor
+  const maquinasFiltradas = useMemo(() => {
+    if (!idEmpresa) return [] as typeof maquinas;
+    return maquinas.filter((m) => {
+      if (m.id_empresa !== idEmpresa && m.id_empresa !== null) return false;
+      if (filtroSetor && m.setor !== filtroSetor) return false;
+      return true;
+    });
+  }, [maquinas, idEmpresa, filtroSetor]);
+
   function handleEmpresaChange(v: string) {
     setIdEmpresa(v);
+    setFiltroSetor("");
     setIdMaquina("");
+    setSetor("");
+  }
+
+  function handleSetorFiltroChange(v: string) {
+    setFiltroSetor(v);
+    setIdMaquina("");
+    setSetor(v); // auto-preenche o setor da apreciação
+  }
+
+  function handleMaquinaChange(v: string) {
+    setIdMaquina(v);
+    if (v) {
+      const maq = maquinas.find((m) => m.id_maquina === v);
+      if (maq?.setor) setSetor(maq.setor);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -107,6 +134,7 @@ export default function NovaApreciacaoPage() {
         onSubmit={handleSubmit}
         className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
       >
+        {/* 1 — Empresa */}
         <Campo label="Empresa *" htmlFor="empresa">
           <select
             id="empresa"
@@ -129,15 +157,35 @@ export default function NovaApreciacaoPage() {
           )}
         </Campo>
 
+        {/* 2 — Máquina (empresa → setor → máquina) */}
         <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-600">
             Máquina avaliada *
           </p>
+
+          {/* 2a — Setor (cascata: só aparece após empresa selecionada com setores no inventário) */}
+          {idEmpresa && setoresDisponiveis.length > 0 && (
+            <Campo label="Setor" htmlFor="filtro-setor">
+              <select
+                id="filtro-setor"
+                value={filtroSetor}
+                onChange={(e) => handleSetorFiltroChange(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">— Todos os setores —</option>
+                {setoresDisponiveis.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </Campo>
+          )}
+
+          {/* 2b — Máquina do inventário */}
           <Campo label="Vincular do inventário" htmlFor="maquina">
             <select
               id="maquina"
               value={idMaquina}
-              onChange={(e) => setIdMaquina(e.target.value)}
+              onChange={(e) => handleMaquinaChange(e.target.value)}
               disabled={!idEmpresa}
               className={inputClass}
             >
@@ -150,11 +198,14 @@ export default function NovaApreciacaoPage() {
                 <option key={m.id_maquina} value={m.id_maquina}>
                   {m.nome}
                   {m.modelo ? ` (${m.modelo})` : ""}
+                  {m.setor && !filtroSetor ? ` · ${m.setor}` : ""}
                   {m.id_empresa === null ? " — Chabra" : ""}
                 </option>
               ))}
             </select>
           </Campo>
+
+          {/* 2c — Descrição manual */}
           <Campo label="Ou descreva a máquina" htmlFor="desc">
             <input
               id="desc"
@@ -172,6 +223,7 @@ export default function NovaApreciacaoPage() {
           </Campo>
         </div>
 
+        {/* 3 — Demais dados */}
         <Campo label="Título do laudo" htmlFor="titulo">
           <input
             id="titulo"
@@ -190,7 +242,7 @@ export default function NovaApreciacaoPage() {
               type="text"
               value={setor}
               onChange={(e) => setSetor(e.target.value)}
-              placeholder="Ex: Produção, Manutenção"
+              placeholder="Auto-preenchido ao selecionar máquina"
               className={inputClass}
             />
           </Campo>
