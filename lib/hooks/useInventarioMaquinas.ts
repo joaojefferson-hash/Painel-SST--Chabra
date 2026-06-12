@@ -5,7 +5,12 @@ import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useUserStore } from "@/lib/store";
 import { gerarId } from "@/lib/utils";
-import type { Maquina, StatusMaquina, GrauRiscoMaquina } from "@/lib/supabase/types";
+import type {
+  Maquina,
+  StatusMaquina,
+  GrauRiscoMaquina,
+  InspecaoMaquina,
+} from "@/lib/supabase/types";
 
 const KEY_LISTA = (vinculos: string[] | null) =>
   ["inventario-maquinas", vinculos] as const;
@@ -135,6 +140,8 @@ export function useCriarMaquina() {
       const id_maquina = params.idMaquina ?? gerarId("MAQ");
       const row: Maquina = {
         id_maquina,
+        id_inspecao: null,
+        id_maquina_inspecao: null,
         ...params.input,
         usuario_email: user?.email ?? null,
         usuario_nome: user?.nome ?? null,
@@ -236,4 +243,258 @@ export async function uploadFotoMaquina(
 export async function removerFotoMaquinaStorage(storagePath: string) {
   const supabase = createSupabaseBrowserClient();
   await supabase.storage.from("fotos").remove([storagePath]);
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Importação de máquinas registradas em INSPEÇÕES (v66)
+//
+// Máquinas da aba "Máquinas/NR-12" de uma inspeção (inspecao_maquinas) podem
+// ser importadas pro inventário, ficando disponíveis pra Apreciação NR-12.
+// Dedupe: id_maquina_inspecao (marcador de origem) → numero_serie na mesma
+// empresa → nome+setor na mesma inspeção (regra NR-12 do prompt).
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Máquinas de inspeções da empresa que ainda NÃO foram importadas pro
+ * inventário. Alimenta o banner da nova apreciação e o modal de importação.
+ */
+export function useMaquinasInspecaoPendentes(idEmpresa: string | null | undefined) {
+  return useQuery({
+    queryKey: ["inspecao-maquinas-pendentes", idEmpresa],
+    enabled: !!idEmpresa,
+    queryFn: async () => {
+      const supabase = createSupabaseBrowserClient();
+      const [maqRes, invRes] = await Promise.all([
+        supabase
+          .from("inspecao_maquinas")
+          .select("*")
+          .eq("id_empresa", idEmpresa!)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("inventario_maquinas")
+          .select("id_maquina_inspecao, numero_serie")
+          .eq("id_empresa", idEmpresa!),
+      ]);
+      if (maqRes.error) throw maqRes.error;
+      if (invRes.error) throw invRes.error;
+
+      const todas = (maqRes.data ?? []) as unknown as InspecaoMaquina[];
+      const inventario = (invRes.data ?? []) as {
+        id_maquina_inspecao: string | null;
+        numero_serie: string | null;
+      }[];
+      const importadas = new Set(
+        inventario.map((r) => r.id_maquina_inspecao).filter(Boolean) as string[]
+      );
+      const seriesExistentes = new Set(
+        inventario
+          .map((r) => r.numero_serie?.trim().toLowerCase())
+          .filter(Boolean) as string[]
+      );
+
+      const pendentes = todas.filter((m) => {
+        if (importadas.has(m.id_maquina_inspecao)) return false;
+        const serie = m.numero_serie?.trim().toLowerCase();
+        if (serie && seriesExistentes.has(serie)) return false;
+        return true;
+      });
+      return { todas, pendentes, importadas };
+    },
+  });
+}
+
+export interface ResultadoImportacaoMaquinas {
+  criadas: number;
+  ignoradas: number;
+}
+
+/**
+ * Importa máquinas de inspeção pro inventário. Idempotente: re-verifica o
+ * dedupe no banco na hora do insert (id_maquina_inspecao + numero_serie +
+ * nome/setor/inspeção), então pode receber a lista completa sem duplicar.
+ * A 1ª foto da máquina é COPIADA no storage (não compartilhada), pra exclusão
+ * no inventário nunca apagar a foto original da inspeção.
+ */
+export function useImportarMaquinasInspecao() {
+  const qc = useQueryClient();
+  const user = useUserStore((s) => s.user);
+
+  return useMutation({
+    mutationFn: async (
+      maquinasInspecao: InspecaoMaquina[]
+    ): Promise<ResultadoImportacaoMaquinas> => {
+      const supabase = createSupabaseBrowserClient();
+      if (maquinasInspecao.length === 0) return { criadas: 0, ignoradas: 0 };
+
+      // ── Resolve nomes dos setores (inspecao_maquinas.id_setor → setores) ──
+      const idsSetor = Array.from(
+        new Set(maquinasInspecao.map((m) => m.id_setor).filter(Boolean))
+      ) as string[];
+      const setorNome = new Map<string, string>();
+      if (idsSetor.length > 0) {
+        const { data } = await supabase
+          .from("setores")
+          .select("id_setor, setor_ghe")
+          .in("id_setor", idsSetor);
+        (data as { id_setor: string; setor_ghe: string }[] | null)?.forEach((s) =>
+          setorNome.set(s.id_setor, s.setor_ghe)
+        );
+      }
+
+      // ── Dedupe contra o inventário atual das empresas envolvidas ──────────
+      const idsEmpresa = Array.from(
+        new Set(maquinasInspecao.map((m) => m.id_empresa).filter(Boolean))
+      ) as string[];
+      let invQ = supabase
+        .from("inventario_maquinas")
+        .select("id_maquina_inspecao, numero_serie, nome, setor, id_inspecao, id_empresa");
+      if (idsEmpresa.length > 0) invQ = invQ.in("id_empresa", idsEmpresa);
+      const { data: invData, error: invErr } = await invQ;
+      if (invErr) throw invErr;
+      const inventario = (invData ?? []) as {
+        id_maquina_inspecao: string | null;
+        numero_serie: string | null;
+        nome: string;
+        setor: string | null;
+        id_inspecao: string | null;
+        id_empresa: string | null;
+      }[];
+
+      const jaImportadas = new Set(
+        inventario.map((r) => r.id_maquina_inspecao).filter(Boolean) as string[]
+      );
+      const chaveSerie = (emp: string | null, serie: string | null | undefined) =>
+        serie?.trim() ? `${emp ?? ""}::${serie.trim().toLowerCase()}` : null;
+      const chaveNome = (
+        emp: string | null,
+        nome: string,
+        setor: string | null,
+        insp: string | null
+      ) => `${emp ?? ""}::${nome.trim().toLowerCase()}::${(setor ?? "").trim().toLowerCase()}::${insp ?? ""}`;
+
+      const seriesExistentes = new Set(
+        inventario
+          .map((r) => chaveSerie(r.id_empresa, r.numero_serie))
+          .filter(Boolean) as string[]
+      );
+      const nomesExistentes = new Set(
+        inventario.map((r) =>
+          chaveNome(r.id_empresa, r.nome, r.setor, r.id_inspecao)
+        )
+      );
+
+      let criadas = 0;
+      let ignoradas = 0;
+
+      for (const m of maquinasInspecao) {
+        const setor = m.id_setor ? setorNome.get(m.id_setor) ?? null : null;
+        const kSerie = chaveSerie(m.id_empresa, m.numero_serie);
+        const kNome = chaveNome(m.id_empresa, m.nome, setor, m.id_inspecao);
+        if (
+          jaImportadas.has(m.id_maquina_inspecao) ||
+          (kSerie && seriesExistentes.has(kSerie)) ||
+          nomesExistentes.has(kNome)
+        ) {
+          ignoradas++;
+          continue;
+        }
+
+        const id_maquina = gerarId("MAQ");
+
+        // Copia a 1ª foto no storage — best-effort, importação não falha por foto.
+        let foto_url: string | null = null;
+        let foto_storage_path: string | null = null;
+        const srcPath = m.foto_storage_paths?.[0];
+        if (srcPath) {
+          const ext = (srcPath.split(".").pop() ?? "jpg").toLowerCase();
+          const destPath = `inventario-maquinas/${id_maquina}.${ext}`;
+          const { error: copyErr } = await supabase.storage
+            .from("fotos")
+            .copy(srcPath, destPath);
+          if (!copyErr) {
+            const { data: pub } = supabase.storage
+              .from("fotos")
+              .getPublicUrl(destPath);
+            foto_url = pub.publicUrl;
+            foto_storage_path = destPath;
+          }
+        }
+
+        const row: Maquina = {
+          id_maquina,
+          id_empresa: m.id_empresa,
+          id_inspecao: m.id_inspecao,
+          id_maquina_inspecao: m.id_maquina_inspecao,
+          nome: m.nome,
+          tipo: m.tipo,
+          categoria: null,
+          codigo_interno: null,
+          tag: m.tag,
+          marca: m.marca,
+          modelo: m.modelo,
+          numero_serie: m.numero_serie,
+          ano_fabricacao: m.ano_fabricacao,
+          numero_patrimonio: null,
+          status: "OPERANTE",
+          unidade: null,
+          setor,
+          linha_processo: null,
+          area: null,
+          responsavel_setor: null,
+          operacao_executada: null,
+          localizacao: null,
+          capacidade_operacional: null,
+          producao_estimada: null,
+          potencia: m.potencia,
+          tensao: m.tensao,
+          pressao: null,
+          capacidade_carga: null,
+          velocidade: null,
+          dimensoes: null,
+          finalidade: null,
+          descricao_tecnica: null,
+          protecao_fixa: m.protecao_fixa,
+          descricao_protecao_fixa: null,
+          protecao_movel: m.protecao_movel,
+          descricao_protecao_movel: null,
+          dispositivos_seguranca: null,
+          intertravamento: m.intertravamento,
+          botao_emergencia: m.botao_emergencia,
+          sistema_bloqueio: m.sistema_bloqueio,
+          possui_manual: m.possui_manual,
+          possui_diagrama_eletrico: null,
+          aterramento: m.aterramento,
+          sinalizacao: m.sinalizacao,
+          necessita_adequacao_nr12: m.necessita_adequacao_nr12,
+          grau_risco: m.grau_risco,
+          observacoes_tecnicas: null,
+          observacoes: m.observacoes,
+          foto_url,
+          foto_storage_path,
+          usuario_email: user?.email ?? null,
+          usuario_nome: user?.nome ?? null,
+          created_at: new Date().toISOString(),
+          updated_at: null,
+        };
+
+        const { error } = await supabase
+          .from("inventario_maquinas")
+          .insert(row as never);
+        if (error) throw error;
+
+        // marca como existente pra dedupe dentro do próprio lote
+        jaImportadas.add(m.id_maquina_inspecao);
+        if (kSerie) seriesExistentes.add(kSerie);
+        nomesExistentes.add(kNome);
+        criadas++;
+      }
+
+      return { criadas, ignoradas };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inventario-maquinas"] });
+      qc.invalidateQueries({ queryKey: ["inspecao-maquinas-pendentes"] });
+    },
+    onError: (e: Error) => toast.error(`Erro ao importar: ${e.message}`),
+  });
 }

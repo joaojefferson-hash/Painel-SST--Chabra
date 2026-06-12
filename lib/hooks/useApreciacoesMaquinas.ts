@@ -88,6 +88,8 @@ export function useApreciacaoMaquina(id: string | null | undefined) {
 export interface CriarApreciacaoInput {
   id_empresa: string;
   id_maquina: string | null;
+  /** Inspeção de origem da máquina (v66) — rastreia inspeção → apreciação. */
+  id_inspecao?: string | null;
   maquina_descricao: string | null;
   titulo: string | null;
   setor: string | null;
@@ -114,6 +116,7 @@ export function useCriarApreciacaoMaquina() {
         id_apreciacao,
         id_empresa: input.id_empresa,
         id_maquina: input.id_maquina,
+        id_inspecao: input.id_inspecao ?? null,
         maquina_descricao: input.maquina_descricao,
         titulo: input.titulo,
         setor: input.setor,

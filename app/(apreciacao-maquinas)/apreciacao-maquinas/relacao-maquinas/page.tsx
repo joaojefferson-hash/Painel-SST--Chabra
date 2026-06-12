@@ -12,6 +12,7 @@ import {
   Save,
   Loader2,
   Copy,
+  Download,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -24,6 +25,7 @@ import {
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
 import { useCanCreate, useCanEdit, useCanDelete } from "@/lib/hooks/useUsuario";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
+import ImportarMaquinasInspecaoModal from "@/components/inventario-maquinas/ImportarMaquinasInspecaoModal";
 import { cn } from "@/lib/utils";
 import {
   STATUS_MAQUINA_LABELS,
@@ -148,6 +150,9 @@ export default function RelacaoMaquinasPage() {
   // Exclusão
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null);
+
+  // Importação de inspeção
+  const [importarOpen, setImportarOpen] = useState(false);
 
   const empresaMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -299,13 +304,22 @@ export default function RelacaoMaquinasPage() {
             <Printer className="size-4" /> Imprimir / PDF
           </button>
           {canCreate && (
-            <button
-              type="button"
-              onClick={abrirNova}
-              className="inline-flex items-center gap-1.5 rounded-md bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-700"
-            >
-              <Plus className="size-4" /> Cadastrar máquina
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setImportarOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-orange-300 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-700 hover:bg-orange-100"
+              >
+                <Download className="size-4" /> Importar de inspeção
+              </button>
+              <button
+                type="button"
+                onClick={abrirNova}
+                className="inline-flex items-center gap-1.5 rounded-md bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-700"
+              >
+                <Plus className="size-4" /> Cadastrar máquina
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -512,6 +526,16 @@ export default function RelacaoMaquinasPage() {
       <div className="relacao-maquinas-footer-print mt-6 text-center text-[9px] text-gray-500 border-t border-gray-200 pt-3">
         Relação de Máquinas e Equipamentos — NR-12 item 1.7 alínea &quot;a&quot; · Gerado por Chabra SST · {new Date().toLocaleDateString("pt-BR")}
       </div>
+
+      {/* Modal de importação de máquinas de inspeção (montado só quando aberto,
+          pra empresa inicial acompanhar o filtro atual) */}
+      {importarOpen && (
+        <ImportarMaquinasInspecaoModal
+          aberto
+          onClose={() => setImportarOpen(false)}
+          idEmpresaInicial={filtroEmpresa || null}
+        />
+      )}
 
       {/* Modal de cadastro/edição */}
       {modalOpen && (

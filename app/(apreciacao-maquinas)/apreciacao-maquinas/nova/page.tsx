@@ -3,10 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Cog, Loader2 } from "lucide-react";
+import { ArrowLeft, Cog, Download, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
-import { useInventarioMaquinas } from "@/lib/hooks/useInventarioMaquinas";
+import {
+  useInventarioMaquinas,
+  useMaquinasInspecaoPendentes,
+  useImportarMaquinasInspecao,
+} from "@/lib/hooks/useInventarioMaquinas";
 import { useCriarApreciacaoMaquina } from "@/lib/hooks/useApreciacoesMaquinas";
 import { useRequireCreate } from "@/lib/hooks/useUsuario";
 import { useUserStore } from "@/lib/store";
@@ -21,6 +25,7 @@ export default function NovaApreciacaoPage() {
   const { data: empresas = [] } = useEmpresas();
   const { data: maquinas = [] } = useInventarioMaquinas();
   const criar = useCriarApreciacaoMaquina();
+  const importar = useImportarMaquinasInspecao();
 
   const [idEmpresa, setIdEmpresa] = useState<string>("");
   const [filtroSetor, setFiltroSetor] = useState<string>("");
@@ -36,6 +41,23 @@ export default function NovaApreciacaoPage() {
   );
 
   const empresaSelecionada = empresas.find((e) => e.id_empresa === idEmpresa) ?? null;
+
+  // Máquinas registradas em inspeções da empresa que ainda não estão no inventário
+  const { data: pend } = useMaquinasInspecaoPendentes(idEmpresa || null);
+  const pendentes = pend?.pendentes ?? [];
+
+  async function handleImportarPendentes() {
+    try {
+      const r = await importar.mutateAsync(pendentes);
+      toast.success(
+        r.criadas > 0
+          ? `${r.criadas} máquina${r.criadas > 1 ? "s" : ""} importada${r.criadas > 1 ? "s" : ""} — já disponíveis na lista abaixo`
+          : "Nenhuma nova máquina pra importar."
+      );
+    } catch {
+      // toast de erro já emitido pelo hook
+    }
+  }
 
   // Setores únicos das máquinas da empresa selecionada
   const setoresDisponiveis = useMemo(() => {
@@ -89,9 +111,13 @@ export default function NovaApreciacaoPage() {
       return;
     }
     try {
+      const maquinaSel = idMaquina
+        ? maquinas.find((m) => m.id_maquina === idMaquina)
+        : null;
       const row = await criar.mutateAsync({
         id_empresa: idEmpresa,
         id_maquina: idMaquina || null,
+        id_inspecao: maquinaSel?.id_inspecao ?? null,
         maquina_descricao: idMaquina ? null : maquinaDescricao.trim(),
         titulo: titulo.trim() || null,
         setor: setor.trim() || null,
@@ -157,6 +183,29 @@ export default function NovaApreciacaoPage() {
             </p>
           )}
         </Campo>
+
+        {/* Banner: máquinas de inspeções ainda não importadas (v66) */}
+        {idEmpresa && pendentes.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2.5">
+            <p className="text-xs text-blue-800">
+              <strong>{pendentes.length}</strong> máquina{pendentes.length > 1 ? "s" : ""} registrada{pendentes.length > 1 ? "s" : ""} em
+              inspeções desta empresa ainda não {pendentes.length > 1 ? "estão" : "está"} no inventário.
+            </p>
+            <button
+              type="button"
+              onClick={handleImportarPendentes}
+              disabled={importar.isPending}
+              className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {importar.isPending ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Download className="size-3" />
+              )}
+              Importar agora
+            </button>
+          </div>
+        )}
 
         {/* 2 — Máquina (empresa → setor → máquina) */}
         <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-3">

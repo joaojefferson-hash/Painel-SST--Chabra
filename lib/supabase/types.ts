@@ -746,6 +746,10 @@ export interface Maquina {
   id_maquina: string;
   /** NULL = patrimônio interno da Chabra; preenchido = máquina de cliente. */
   id_empresa: string | null;
+  /** Origem da importação (v66): inspeção de onde a máquina veio, se importada. */
+  id_inspecao: string | null;
+  /** Origem da importação (v66): registro original em inspecao_maquinas (dedupe). */
+  id_maquina_inspecao: string | null;
 
   // ── Identificação ──────────────────────────────────────────
   nome: string;
@@ -838,6 +842,8 @@ export interface ApreciacaoMaquina {
   id_apreciacao: string;
   id_empresa: string;
   id_maquina: string | null;
+  /** Inspeção de origem (v66) — preenchido quando a máquina veio de uma inspeção. */
+  id_inspecao: string | null;
   maquina_descricao: string | null;
   titulo: string | null;
   setor: string | null;
