@@ -12,6 +12,7 @@ import { useRequireCreate } from "@/lib/hooks/useUsuario";
 import { useUserStore } from "@/lib/store";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
 import { CATALOGO_NR12 } from "@/lib/apreciacao-maquinas/catalogo-nr12";
+import { formatCNPJ } from "@/lib/utils";
 
 export default function NovaApreciacaoPage() {
   useRequireCreate("/apreciacao-maquinas");
@@ -33,6 +34,8 @@ export default function NovaApreciacaoPage() {
     const d = new Date();
     return d.toISOString().slice(0, 10);
   });
+
+  const empresaSelecionada = empresas.find((e) => e.id_empresa === idEmpresa) ?? null;
 
   // Filtra máquinas pela empresa selecionada (mais máquinas Chabra sem empresa).
   const maquinasFiltradas = useMemo(() => {
@@ -118,6 +121,11 @@ export default function NovaApreciacaoPage() {
               </option>
             ))}
           </select>
+          {empresaSelecionada?.cnpj && (
+            <p className="mt-1 text-xs text-gray-500">
+              CNPJ {formatCNPJ(empresaSelecionada.cnpj)}
+            </p>
+          )}
         </Campo>
 
         <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-3">
