@@ -254,9 +254,74 @@ export async function removerFotoMaquinaStorage(storagePath: string) {
 // empresa → nome+setor na mesma inspeção (regra NR-12 do prompt).
 // ═════════════════════════════════════════════════════════════════════════════
 
+/** Chaves de dedupe compartilhadas entre pendentes e importação — os dois
+ *  lados PRECISAM usar exatamente as mesmas regras, senão uma máquina
+ *  bloqueada na importação fica "pendente" pra sempre. */
+const chaveSerie = (emp: string | null, serie: string | null | undefined) =>
+  serie?.trim() ? `${emp ?? ""}::${serie.trim().toLowerCase()}` : null;
+const chaveNome = (
+  emp: string | null,
+  nome: string,
+  setor: string | null,
+  insp: string | null
+) =>
+  `${emp ?? ""}::${nome.trim().toLowerCase()}::${(setor ?? "")
+    .trim()
+    .toLowerCase()}::${insp ?? ""}`;
+
+interface InventarioDedupeRow {
+  id_maquina_inspecao: string | null;
+  numero_serie: string | null;
+  nome: string;
+  setor: string | null;
+  id_inspecao: string | null;
+  id_empresa: string | null;
+}
+
+function montarSetsDedupe(inventario: InventarioDedupeRow[]) {
+  return {
+    jaImportadas: new Set(
+      inventario.map((r) => r.id_maquina_inspecao).filter(Boolean) as string[]
+    ),
+    seriesExistentes: new Set(
+      inventario
+        .map((r) => chaveSerie(r.id_empresa, r.numero_serie))
+        .filter(Boolean) as string[]
+    ),
+    nomesExistentes: new Set(
+      inventario.map((r) =>
+        chaveNome(r.id_empresa, r.nome, r.setor, r.id_inspecao)
+      )
+    ),
+  };
+}
+
+/** Resolve id_setor → nome (setores.setor_ghe) pras máquinas de inspeção. */
+async function resolverSetores(
+  supabase: ReturnType<typeof createSupabaseBrowserClient>,
+  maquinas: InspecaoMaquina[]
+) {
+  const idsSetor = Array.from(
+    new Set(maquinas.map((m) => m.id_setor).filter(Boolean))
+  ) as string[];
+  const setorNome = new Map<string, string>();
+  if (idsSetor.length > 0) {
+    const { data } = await supabase
+      .from("setores")
+      .select("id_setor, setor_ghe")
+      .in("id_setor", idsSetor);
+    (data as { id_setor: string; setor_ghe: string }[] | null)?.forEach((s) =>
+      setorNome.set(s.id_setor, s.setor_ghe)
+    );
+  }
+  return setorNome;
+}
+
 /**
  * Máquinas de inspeções da empresa que ainda NÃO foram importadas pro
  * inventário. Alimenta o banner da nova apreciação e o modal de importação.
+ * Ignora inspeções soft-deletadas e aplica as MESMAS regras de dedupe da
+ * importação (id origem → nº de série → nome+setor+inspeção).
  */
 export function useMaquinasInspecaoPendentes(idEmpresa: string | null | undefined) {
   return useQuery({
@@ -264,7 +329,7 @@ export function useMaquinasInspecaoPendentes(idEmpresa: string | null | undefine
     enabled: !!idEmpresa,
     queryFn: async () => {
       const supabase = createSupabaseBrowserClient();
-      const [maqRes, invRes] = await Promise.all([
+      const [maqRes, invRes, inspRes] = await Promise.all([
         supabase
           .from("inspecao_maquinas")
           .select("*")
@@ -272,33 +337,44 @@ export function useMaquinasInspecaoPendentes(idEmpresa: string | null | undefine
           .order("created_at", { ascending: false }),
         supabase
           .from("inventario_maquinas")
-          .select("id_maquina_inspecao, numero_serie")
+          .select("id_maquina_inspecao, numero_serie, nome, setor, id_inspecao, id_empresa")
           .eq("id_empresa", idEmpresa!),
+        supabase
+          .from("inspecoes")
+          .select("id_inspecao")
+          .eq("id_empresa", idEmpresa!)
+          .neq("status", "DELETADA"),
       ]);
       if (maqRes.error) throw maqRes.error;
       if (invRes.error) throw invRes.error;
+      if (inspRes.error) throw inspRes.error;
 
-      const todas = (maqRes.data ?? []) as unknown as InspecaoMaquina[];
-      const inventario = (invRes.data ?? []) as {
-        id_maquina_inspecao: string | null;
-        numero_serie: string | null;
-      }[];
-      const importadas = new Set(
-        inventario.map((r) => r.id_maquina_inspecao).filter(Boolean) as string[]
+      const inspecoesValidas = new Set(
+        ((inspRes.data ?? []) as { id_inspecao: string }[]).map(
+          (r) => r.id_inspecao
+        )
       );
-      const seriesExistentes = new Set(
-        inventario
-          .map((r) => r.numero_serie?.trim().toLowerCase())
-          .filter(Boolean) as string[]
-      );
+      const todas = (
+        (maqRes.data ?? []) as unknown as InspecaoMaquina[]
+      ).filter((m) => inspecoesValidas.has(m.id_inspecao));
+
+      const { jaImportadas, seriesExistentes, nomesExistentes } =
+        montarSetsDedupe((invRes.data ?? []) as InventarioDedupeRow[]);
+      const setorNome = await resolverSetores(supabase, todas);
 
       const pendentes = todas.filter((m) => {
-        if (importadas.has(m.id_maquina_inspecao)) return false;
-        const serie = m.numero_serie?.trim().toLowerCase();
-        if (serie && seriesExistentes.has(serie)) return false;
+        if (jaImportadas.has(m.id_maquina_inspecao)) return false;
+        const kSerie = chaveSerie(m.id_empresa, m.numero_serie);
+        if (kSerie && seriesExistentes.has(kSerie)) return false;
+        const setor = m.id_setor ? setorNome.get(m.id_setor) ?? null : null;
+        const kNome = chaveNome(m.id_empresa, m.nome, setor, m.id_inspecao);
+        if (nomesExistentes.has(kNome)) return false;
+        // dedupe intra-lote: duas idênticas na mesma inspeção contam como 1
+        if (kSerie) seriesExistentes.add(kSerie);
+        nomesExistentes.add(kNome);
         return true;
       });
-      return { todas, pendentes, importadas };
+      return { todas, pendentes, importadas: jaImportadas };
     },
   });
 }
@@ -326,24 +402,39 @@ export function useImportarMaquinasInspecao() {
       const supabase = createSupabaseBrowserClient();
       if (maquinasInspecao.length === 0) return { criadas: 0, ignoradas: 0 };
 
-      // ── Resolve nomes dos setores (inspecao_maquinas.id_setor → setores) ──
-      const idsSetor = Array.from(
-        new Set(maquinasInspecao.map((m) => m.id_setor).filter(Boolean))
+      // ── Relê as máquinas FRESCAS do banco (o caller pode estar com cache
+      //    stale de até 5min: máquina deletada/editada na inspeção, ou
+      //    inspeção soft-deletada nesse meio-tempo) ────────────────────────
+      const idsOrigem = maquinasInspecao.map((m) => m.id_maquina_inspecao);
+      const { data: frescasData, error: frescasErr } = await supabase
+        .from("inspecao_maquinas")
+        .select("*")
+        .in("id_maquina_inspecao", idsOrigem);
+      if (frescasErr) throw frescasErr;
+      let frescas = (frescasData ?? []) as unknown as InspecaoMaquina[];
+
+      const idsInspecao = Array.from(
+        new Set(frescas.map((m) => m.id_inspecao).filter(Boolean))
       ) as string[];
-      const setorNome = new Map<string, string>();
-      if (idsSetor.length > 0) {
-        const { data } = await supabase
-          .from("setores")
-          .select("id_setor, setor_ghe")
-          .in("id_setor", idsSetor);
-        (data as { id_setor: string; setor_ghe: string }[] | null)?.forEach((s) =>
-          setorNome.set(s.id_setor, s.setor_ghe)
+      if (idsInspecao.length > 0) {
+        const { data: inspData } = await supabase
+          .from("inspecoes")
+          .select("id_inspecao")
+          .in("id_inspecao", idsInspecao)
+          .neq("status", "DELETADA");
+        const validas = new Set(
+          ((inspData ?? []) as { id_inspecao: string }[]).map((r) => r.id_inspecao)
         );
+        frescas = frescas.filter((m) => validas.has(m.id_inspecao));
       }
+      // deletadas/inválidas no meio do caminho contam como ignoradas
+      let ignoradas = maquinasInspecao.length - frescas.length;
+
+      const setorNome = await resolverSetores(supabase, frescas);
 
       // ── Dedupe contra o inventário atual das empresas envolvidas ──────────
       const idsEmpresa = Array.from(
-        new Set(maquinasInspecao.map((m) => m.id_empresa).filter(Boolean))
+        new Set(frescas.map((m) => m.id_empresa).filter(Boolean))
       ) as string[];
       let invQ = supabase
         .from("inventario_maquinas")
@@ -351,42 +442,12 @@ export function useImportarMaquinasInspecao() {
       if (idsEmpresa.length > 0) invQ = invQ.in("id_empresa", idsEmpresa);
       const { data: invData, error: invErr } = await invQ;
       if (invErr) throw invErr;
-      const inventario = (invData ?? []) as {
-        id_maquina_inspecao: string | null;
-        numero_serie: string | null;
-        nome: string;
-        setor: string | null;
-        id_inspecao: string | null;
-        id_empresa: string | null;
-      }[];
-
-      const jaImportadas = new Set(
-        inventario.map((r) => r.id_maquina_inspecao).filter(Boolean) as string[]
-      );
-      const chaveSerie = (emp: string | null, serie: string | null | undefined) =>
-        serie?.trim() ? `${emp ?? ""}::${serie.trim().toLowerCase()}` : null;
-      const chaveNome = (
-        emp: string | null,
-        nome: string,
-        setor: string | null,
-        insp: string | null
-      ) => `${emp ?? ""}::${nome.trim().toLowerCase()}::${(setor ?? "").trim().toLowerCase()}::${insp ?? ""}`;
-
-      const seriesExistentes = new Set(
-        inventario
-          .map((r) => chaveSerie(r.id_empresa, r.numero_serie))
-          .filter(Boolean) as string[]
-      );
-      const nomesExistentes = new Set(
-        inventario.map((r) =>
-          chaveNome(r.id_empresa, r.nome, r.setor, r.id_inspecao)
-        )
-      );
+      const { jaImportadas, seriesExistentes, nomesExistentes } =
+        montarSetsDedupe((invData ?? []) as InventarioDedupeRow[]);
 
       let criadas = 0;
-      let ignoradas = 0;
 
-      for (const m of maquinasInspecao) {
+      for (const m of frescas) {
         const setor = m.id_setor ? setorNome.get(m.id_setor) ?? null : null;
         const kSerie = chaveSerie(m.id_empresa, m.numero_serie);
         const kNome = chaveNome(m.id_empresa, m.nome, setor, m.id_inspecao);
@@ -480,7 +541,18 @@ export function useImportarMaquinasInspecao() {
         const { error } = await supabase
           .from("inventario_maquinas")
           .insert(row as never);
-        if (error) throw error;
+        if (error) {
+          // unique violation = outra aba/usuário importou a mesma máquina
+          // em paralelo (índice único da v69) — trata como já existente
+          if ((error as { code?: string }).code === "23505") {
+            if (foto_storage_path) {
+              await supabase.storage.from("fotos").remove([foto_storage_path]);
+            }
+            ignoradas++;
+            continue;
+          }
+          throw error;
+        }
 
         // marca como existente pra dedupe dentro do próprio lote
         jaImportadas.add(m.id_maquina_inspecao);
@@ -491,7 +563,9 @@ export function useImportarMaquinasInspecao() {
 
       return { criadas, ignoradas };
     },
-    onSuccess: () => {
+    // onSettled (não onSuccess): numa falha parcial as linhas já inseridas
+    // precisam aparecer na UI e sair do banner de pendentes
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["inventario-maquinas"] });
       qc.invalidateQueries({ queryKey: ["inspecao-maquinas-pendentes"] });
     },

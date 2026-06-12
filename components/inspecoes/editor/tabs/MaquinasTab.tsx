@@ -170,6 +170,8 @@ export default function MaquinasTab({
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ["inspecao", idInspecao] });
+    // máquinas salvas/deletadas aqui alimentam o banner/modal de importação
+    qc.invalidateQueries({ queryKey: ["inspecao-maquinas-pendentes"] });
   }
 
   function f<K extends keyof FormState>(key: K, value: FormState[K]) {

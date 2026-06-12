@@ -356,6 +356,36 @@ function padLegendas(legendas: string[] | null | undefined, tamanho: number): st
   return base;
 }
 
+/**
+ * Lê os arrays de foto FRESCOS do banco. As mutações de foto/legenda regravam
+ * o array inteiro — partir do cache do React Query (props) causa lost update
+ * quando duas mutações correm em sequência rápida (blur + blur, blur + X).
+ */
+async function lerFotosItemFresco(
+  supabase: ReturnType<typeof createSupabaseBrowserClient>,
+  id_item: string
+) {
+  const { data, error } = await supabase
+    .from("apreciacoes_maquinas_itens")
+    .select("foto_urls, foto_storage_paths, foto_legendas")
+    .eq("id_item", id_item)
+    .single();
+  if (error) throw error;
+  const row = data as unknown as {
+    foto_urls: string[] | null;
+    foto_storage_paths: string[] | null;
+    foto_legendas: string[] | null;
+  };
+  return {
+    urls: row.foto_urls ?? [],
+    paths: row.foto_storage_paths ?? [],
+    legendas: row.foto_legendas ?? [],
+  };
+}
+
+/** Serializa as mutações de foto/legenda entre si (React Query scope). */
+const SCOPE_FOTOS_APR = { id: "apreciacao-fotos-item" };
+
 export function useUploadFotoItemApreciacao() {
   const qc = useQueryClient();
   return useMutation({
@@ -369,7 +399,8 @@ export function useUploadFotoItemApreciacao() {
     }) => {
       const supabase = createSupabaseBrowserClient();
 
-      if (params.fotos_paths_atuais.length >= MAX_FOTOS_POR_ITEM_APR) {
+      const atual = await lerFotosItemFresco(supabase, params.id_item);
+      if (atual.paths.length >= MAX_FOTOS_POR_ITEM_APR) {
         throw new Error(
           `Limite de ${MAX_FOTOS_POR_ITEM_APR} fotos por item atingido.`
         );
@@ -389,12 +420,9 @@ export function useUploadFotoItemApreciacao() {
 
       const { data: pub } = supabase.storage.from("fotos").getPublicUrl(path);
 
-      const novasUrls = [...params.fotos_urls_atuais, pub.publicUrl];
-      const novosPaths = [...params.fotos_paths_atuais, path];
-      const novasLegendas = [
-        ...padLegendas(params.fotos_legendas_atuais, params.fotos_urls_atuais.length),
-        "",
-      ];
+      const novasUrls = [...atual.urls, pub.publicUrl];
+      const novosPaths = [...atual.paths, path];
+      const novasLegendas = [...padLegendas(atual.legendas, atual.urls.length), ""];
 
       const { error: updateErr } = await supabase
         .from("apreciacoes_maquinas_itens")
@@ -409,6 +437,7 @@ export function useUploadFotoItemApreciacao() {
 
       return { foto_url: pub.publicUrl, path };
     },
+    scope: SCOPE_FOTOS_APR,
     onSuccess: (_d, params) => {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_apreciacao) });
     },
@@ -429,7 +458,10 @@ export function useAtualizarLegendaFotoItem() {
       total_fotos: number;
     }) => {
       const supabase = createSupabaseBrowserClient();
-      const legendas = padLegendas(params.legendas_atuais, params.total_fotos);
+      const atual = await lerFotosItemFresco(supabase, params.id_item);
+      // a foto pode ter sido removida entre o blur e a gravação
+      if (params.indice >= atual.urls.length) return params;
+      const legendas = padLegendas(atual.legendas, atual.urls.length);
       legendas[params.indice] = params.legenda;
       const { error } = await supabase
         .from("apreciacoes_maquinas_itens")
@@ -441,6 +473,7 @@ export function useAtualizarLegendaFotoItem() {
       if (error) throw error;
       return params;
     },
+    scope: SCOPE_FOTOS_APR,
     onSuccess: (_d, params) => {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_apreciacao) });
     },
@@ -915,13 +948,14 @@ export function useRemoverFotoItemApreciacao() {
       // Storage: best-effort
       await supabase.storage.from("fotos").remove([params.foto_storage_path]);
 
-      const idx = params.fotos_paths_atuais.indexOf(params.foto_storage_path);
-      const novasUrls = params.fotos_urls_atuais.filter((_, i) => i !== idx);
-      const novosPaths = params.fotos_paths_atuais.filter((_, i) => i !== idx);
-      const novasLegendas = padLegendas(
-        params.fotos_legendas_atuais,
-        params.fotos_urls_atuais.length
-      ).filter((_, i) => i !== idx);
+      const atual = await lerFotosItemFresco(supabase, params.id_item);
+      const idx = atual.paths.indexOf(params.foto_storage_path);
+      if (idx < 0) return params; // já removida por outra mutação
+      const novasUrls = atual.urls.filter((_, i) => i !== idx);
+      const novosPaths = atual.paths.filter((_, i) => i !== idx);
+      const novasLegendas = padLegendas(atual.legendas, atual.urls.length).filter(
+        (_, i) => i !== idx
+      );
 
       const { error } = await supabase
         .from("apreciacoes_maquinas_itens")
@@ -935,6 +969,7 @@ export function useRemoverFotoItemApreciacao() {
       if (error) throw error;
       return params;
     },
+    scope: SCOPE_FOTOS_APR,
     onSuccess: (_d, params) => {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_apreciacao) });
     },
@@ -1022,7 +1057,35 @@ export function useEnviarAcoesParaPlanoAcao() {
         const { error } = await supabase
           .from("acoes_5w2h")
           .insert(novas as never);
-        if (error) throw error;
+        if (error) {
+          // unique violation = envio concorrente (duas abas/usuários):
+          // re-consulta o que já entrou e insere só o restante
+          if ((error as { code?: string }).code === "23505") {
+            const { data: ex2 } = await supabase
+              .from("acoes_5w2h")
+              .select("id_apreciacao_acao")
+              .in("id_apreciacao_acao", novas.map((n) => n.id_apreciacao_acao!));
+            const jaForam = new Set(
+              ((ex2 ?? []) as { id_apreciacao_acao: string | null }[])
+                .map((r) => r.id_apreciacao_acao)
+                .filter(Boolean) as string[]
+            );
+            const restantes = novas.filter(
+              (n) => !jaForam.has(n.id_apreciacao_acao!)
+            );
+            if (restantes.length > 0) {
+              const { error: e2 } = await supabase
+                .from("acoes_5w2h")
+                .insert(restantes.map((n) => ({ ...n, id_acao: gerarId("ACA") })) as never);
+              if (e2) throw e2;
+            }
+            return {
+              enviadas: restantes.length,
+              ignoradas: candidatas.length - restantes.length,
+            };
+          }
+          throw error;
+        }
       }
 
       return {
