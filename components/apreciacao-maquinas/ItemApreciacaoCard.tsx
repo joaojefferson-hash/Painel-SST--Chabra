@@ -22,6 +22,7 @@ import {
   useAnalisarFotoApreciacaoIA,
   MAX_FOTOS_POR_ITEM_APR,
 } from "@/lib/hooks/useApreciacoesMaquinas";
+import RevisaoIAModal, { type CampoRevisaoIA } from "@/components/ui/RevisaoIAModal";
 import { useMatrizAtiva } from "@/lib/hooks/useV3";
 import { calcularNivelComMatriz } from "@/lib/calc";
 import {
@@ -86,6 +87,8 @@ export default function ItemApreciacaoCard({
   const { data: matrizAtiva } = useMatrizAtiva();
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmandoExcluir, setConfirmandoExcluir] = useState(false);
+  // Sugestões da análise de foto aguardando revisão (modal aceitar/editar/rejeitar)
+  const [revisaoFotoIA, setRevisaoFotoIA] = useState<CampoRevisaoIA[] | null>(null);
 
   const ehLivre = item.item_origem === "LIVRE";
   const ehNaoConforme = item.situacao === "NAO_CONFORME";
@@ -197,7 +200,7 @@ export default function ItemApreciacaoCard({
   async function handleAnalisarFotoIA() {
     if (item.foto_urls.length === 0) return;
     try {
-      const { observacao: nova } = await analisarFoto.mutateAsync({
+      const result = await analisarFoto.mutateAsync({
         foto_urls: item.foto_urls,
         item_codigo: item.item_codigo,
         item_titulo: item.item_titulo,
@@ -205,21 +208,61 @@ export default function ItemApreciacaoCard({
         categoria: item.item_categoria,
         textoAtual: observacao.trim() || null,
       });
-      setObservacao(nova);
-      // Salva imediatamente — o debounce de auto-save também salvaria, mas
-      // o usuário espera ver o texto persistido logo após gerar pela IA.
-      atualizar.mutate({
-        id_apreciacao: item.id_apreciacao,
-        id_item: item.id_item,
-        observacao: nova,
-      });
-      toast.success("Observação gerada — revise antes de finalizar");
+      // Abre revisão — nada é salvo sem o usuário confirmar no modal
+      const campos: CampoRevisaoIA[] = [
+        {
+          key: "observacao",
+          label: "Observação técnica",
+          valorSugerido: result.observacao,
+          valorAtual: observacao || null,
+          multiline: true,
+        },
+      ];
+      const achados = result.achados ?? [];
+      if (achados.length > 0) {
+        const recSugerida = achados
+          .map((a) => {
+            const sev = a.severidade ? ` [${a.severidade}]` : "";
+            return `- ${a.titulo}${sev}${a.recomendacao ? `: ${a.recomendacao}` : ""}`;
+          })
+          .join("\n");
+        campos.push({
+          key: "recomendacao",
+          label: `Recomendação (${achados.length} achado${achados.length > 1 ? "s" : ""} visual${achados.length > 1 ? "is" : ""})`,
+          valorSugerido: recSugerida,
+          valorAtual: recomendacao || null,
+          multiline: true,
+        });
+      }
+      setRevisaoFotoIA(campos);
     } catch (err) {
       console.error(err);
       toast.error(
         err instanceof Error ? err.message : "Falha ao analisar foto"
       );
     }
+  }
+
+  /** Aplica os campos aceitos na revisão da análise de foto da IA. */
+  function aplicarRevisaoFotoIA(valores: Record<string, string>) {
+    const patch: { observacao?: string; recomendacao?: string } = {};
+    if (valores.observacao !== undefined) {
+      setObservacao(valores.observacao);
+      patch.observacao = valores.observacao;
+    }
+    if (valores.recomendacao !== undefined) {
+      setRecomendacao(valores.recomendacao);
+      patch.recomendacao = valores.recomendacao;
+    }
+    if (Object.keys(patch).length > 0) {
+      atualizar.mutate({
+        id_apreciacao: item.id_apreciacao,
+        id_item: item.id_item,
+        ...patch,
+      });
+    }
+    setRevisaoFotoIA(null);
+    toast.success("Análise aplicada — revise antes de finalizar");
   }
 
   const corBorda = SITUACAO_CORES[item.situacao].split(" ")[2] ?? "border-gray-200";
@@ -516,6 +559,17 @@ export default function ItemApreciacaoCard({
             className="w-full rounded-md border border-red-200 bg-red-50/30 px-2 py-1.5 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:bg-gray-50"
           />
         </div>
+      )}
+
+      {/* Revisão da análise de foto da IA — aceitar/editar/rejeitar */}
+      {revisaoFotoIA && (
+        <RevisaoIAModal
+          titulo={`Análise visual — item ${item.item_codigo}`}
+          descricao={`A IA analisou ${item.foto_urls.length} foto(s) deste item em relação ao requisito NR-12.`}
+          campos={revisaoFotoIA}
+          onAplicar={aplicarRevisaoFotoIA}
+          onClose={() => setRevisaoFotoIA(null)}
+        />
       )}
     </div>
   );

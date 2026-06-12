@@ -815,8 +815,17 @@ export interface AnalisarFotoIAInput {
   textoAtual?: string | null;
 }
 
+/** Achado visual estruturado (possível não conformidade vista na foto). */
+export interface AchadoVisualIA {
+  titulo: string;
+  severidade: "ALTA" | "MEDIA" | "BAIXA" | null;
+  recomendacao: string | null;
+}
+
 export interface AnalisarFotoIAOutput {
   observacao: string;
+  /** Possíveis NCs visíveis nas fotos (edge function v3+; pode vir vazio). */
+  achados?: AchadoVisualIA[];
 }
 
 /**

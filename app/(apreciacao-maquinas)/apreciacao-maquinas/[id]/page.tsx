@@ -45,6 +45,7 @@ import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import { cn } from "@/lib/utils";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
+import RevisaoIAModal, { type CampoRevisaoIA } from "@/components/ui/RevisaoIAModal";
 import {
   CATEGORIAS_NR12_LABELS,
   CATEGORIAS_NR12_ORDEM,
@@ -108,6 +109,8 @@ export default function DetalheApreciacaoPage() {
   const [recomendacoes, setRecomendacoes] = useState("");
   const [riscoResidual, setRiscoResidual] = useState<RiscoResidual | "">("");
   const [observacoes, setObservacoes] = useState("");
+  // Parecer da IA aguardando revisão (modal aceitar/editar/rejeitar)
+  const [revisaoParecer, setRevisaoParecer] = useState<CampoRevisaoIA[] | null>(null);
 
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
 
@@ -347,19 +350,53 @@ export default function DetalheApreciacaoPage() {
         })),
         textoAtual: conclusao.trim() || null,
       });
-      // Preenche os 3 campos — usuário revisa e clica "Salvar conclusão"
-      setConclusao(result.conclusao_tecnica);
-      setRecomendacoes(result.recomendacoes_finais);
+      // Abre o modal de revisão — nada é aplicado sem o usuário confirmar
+      const campos: CampoRevisaoIA[] = [
+        {
+          key: "conclusao_tecnica",
+          label: "Conclusão técnica",
+          valorSugerido: result.conclusao_tecnica,
+          valorAtual: conclusao || null,
+          multiline: true,
+        },
+        {
+          key: "recomendacoes",
+          label: "Recomendações finais",
+          valorSugerido: result.recomendacoes_finais,
+          valorAtual: recomendacoes || null,
+          multiline: true,
+        },
+      ];
       if (result.risco_residual_sugerido) {
-        setRiscoResidual(result.risco_residual_sugerido);
+        campos.push({
+          key: "risco_residual",
+          label: "Risco residual",
+          valorSugerido: result.risco_residual_sugerido,
+          valorAtual: riscoResidual || null,
+          options: (Object.keys(RISCO_RESIDUAL_LABELS) as RiscoResidual[]).map((r) => ({
+            value: r,
+            label: RISCO_RESIDUAL_LABELS[r],
+          })),
+        });
       }
-      toast.success("Parecer gerado — revise antes de salvar");
+      setRevisaoParecer(campos);
     } catch (err) {
       console.error(err);
       toast.error(
         err instanceof Error ? err.message : "Falha ao gerar parecer"
       );
     }
+  }
+
+  /** Aplica os campos aceitos na revisão do parecer da IA. */
+  function aplicarRevisaoParecer(valores: Record<string, string>) {
+    if (valores.conclusao_tecnica !== undefined) setConclusao(valores.conclusao_tecnica);
+    if (valores.recomendacoes !== undefined) setRecomendacoes(valores.recomendacoes);
+    if (valores.risco_residual !== undefined) {
+      setRiscoResidual((valores.risco_residual as RiscoResidual) || "");
+    }
+    setRevisaoParecer(null);
+    toast.success("Parecer aplicado — revise e clique em Salvar conclusão");
   }
 
   /** Sugere risco_residual baseado no MAX nível dos itens NAO_CONFORME. */
@@ -1142,6 +1179,17 @@ export default function DetalheApreciacaoPage() {
             </button>
           )}
         </div>
+      )}
+
+      {/* Revisão do parecer gerado pela IA — aceitar/editar/rejeitar */}
+      {revisaoParecer && (
+        <RevisaoIAModal
+          titulo="Parecer técnico sugerido pela IA"
+          descricao="Gerado a partir do checklist NR-12 preenchido (itens avaliados, NCs e níveis de risco)."
+          campos={revisaoParecer}
+          onAplicar={aplicarRevisaoParecer}
+          onClose={() => setRevisaoParecer(null)}
+        />
       )}
     </div>
   );

@@ -23,6 +23,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useImportarMaquinasInspecao } from "@/lib/hooks/useInventarioMaquinas";
+import RevisaoIAModal, { type CampoRevisaoIA } from "@/components/ui/RevisaoIAModal";
 import { cn } from "@/lib/utils";
 import type { InspecaoMaquina, Setor } from "@/lib/supabase/types";
 
@@ -139,6 +140,12 @@ export default function MaquinasTab({
   const [analisandoId, setAnalisandoId] = useState<string | null>(null);
   const [expandedParecer, setExpandedParecer] = useState<string | null>(null);
   const importarApreciacao = useImportarMaquinasInspecao();
+  // Sugestões da IA aguardando revisão (modal aceitar/editar/rejeitar)
+  const [revisaoIA, setRevisaoIA] = useState<{
+    maquina: InspecaoMaquina;
+    campos: CampoRevisaoIA[];
+  } | null>(null);
+  const [aplicandoIA, setAplicandoIA] = useState(false);
 
   // foto upload
   const fileRef = useRef<HTMLInputElement>(null);
@@ -358,31 +365,90 @@ export default function MaquinasTab({
       const result = data?.data;
       if (!result) throw new Error("Resposta inválida da IA");
 
-      const upd: Record<string, unknown> = {
-        parecer_ia: result.parecer ?? null,
-        updated_at: new Date().toISOString(),
-      };
-      if (result.grau_risco) upd.grau_risco = result.grau_risco;
-      if (result.protecao_fixa !== undefined && result.protecao_fixa !== null) upd.protecao_fixa = result.protecao_fixa;
-      if (result.protecao_movel !== undefined && result.protecao_movel !== null) upd.protecao_movel = result.protecao_movel;
-      if (result.intertravamento !== undefined && result.intertravamento !== null) upd.intertravamento = result.intertravamento;
-      if (result.botao_emergencia !== undefined && result.botao_emergencia !== null) upd.botao_emergencia = result.botao_emergencia;
-      if (result.aterramento !== undefined && result.aterramento !== null) upd.aterramento = result.aterramento;
-      if (result.sinalizacao !== undefined && result.sinalizacao !== null) upd.sinalizacao = result.sinalizacao;
-      if (result.necessita_adequacao_nr12 !== undefined && result.necessita_adequacao_nr12 !== null)
-        upd.necessita_adequacao_nr12 = result.necessita_adequacao_nr12;
-
-      await supabase
-        .from("inspecao_maquinas")
-        .update(upd as never)
-        .eq("id_maquina_inspecao", m.id_maquina_inspecao);
-
-      toast.success("Análise IA concluída");
-      refresh();
+      // Monta a revisão — nada é persistido sem o usuário confirmar no modal
+      const boolParaTexto = (v: boolean | null | undefined) =>
+        v === true ? "Sim" : v === false ? "Não" : "";
+      const SIM_NAO = [
+        { value: "Sim", label: "Sim" },
+        { value: "Não", label: "Não" },
+      ];
+      const campos: CampoRevisaoIA[] = [];
+      if (result.parecer) {
+        campos.push({
+          key: "parecer_ia",
+          label: "Parecer técnico (IA)",
+          valorSugerido: String(result.parecer),
+          valorAtual: m.parecer_ia,
+          multiline: true,
+        });
+      }
+      if (result.grau_risco) {
+        campos.push({
+          key: "grau_risco",
+          label: "Grau de risco",
+          valorSugerido: String(result.grau_risco),
+          valorAtual: m.grau_risco,
+          options: (Object.keys(GRAU_LABELS) as GrauRisco[]).map((g) => ({
+            value: g,
+            label: GRAU_LABELS[g],
+          })),
+        });
+      }
+      const BOOLS: { key: keyof InspecaoMaquina & string; label: string }[] = [
+        { key: "protecao_fixa", label: "Proteção fixa" },
+        { key: "protecao_movel", label: "Proteção móvel" },
+        { key: "intertravamento", label: "Intertravamento" },
+        { key: "botao_emergencia", label: "Botão de emergência" },
+        { key: "aterramento", label: "Aterramento elétrico" },
+        { key: "sinalizacao", label: "Sinalização de segurança" },
+        { key: "necessita_adequacao_nr12", label: "Necessita adequação NR-12" },
+      ];
+      for (const b of BOOLS) {
+        const v = result[b.key];
+        if (v === undefined || v === null) continue;
+        campos.push({
+          key: b.key,
+          label: b.label,
+          valorSugerido: boolParaTexto(v as boolean),
+          valorAtual: boolParaTexto(m[b.key] as boolean | null) || null,
+          options: SIM_NAO,
+        });
+      }
+      if (campos.length === 0) {
+        toast("A IA não retornou sugestões pra esta máquina.", { icon: "ℹ️" });
+        return;
+      }
+      setRevisaoIA({ maquina: m, campos });
     } catch (e) {
       toast.error(`Erro na análise IA: ${(e as Error).message}`);
     } finally {
       setAnalisandoId(null);
+    }
+  }
+
+  /** Persiste os campos aceitos na revisão da análise de IA. */
+  async function aplicarRevisaoIA(valores: Record<string, string>) {
+    if (!revisaoIA) return;
+    setAplicandoIA(true);
+    try {
+      const upd: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      for (const [key, valor] of Object.entries(valores)) {
+        if (key === "parecer_ia") upd.parecer_ia = valor || null;
+        else if (key === "grau_risco") upd.grau_risco = valor || null;
+        else upd[key] = valor === "Sim" ? true : valor === "Não" ? false : null;
+      }
+      const { error } = await supabase
+        .from("inspecao_maquinas")
+        .update(upd as never)
+        .eq("id_maquina_inspecao", revisaoIA.maquina.id_maquina_inspecao);
+      if (error) throw error;
+      toast.success("Análise IA aplicada");
+      setRevisaoIA(null);
+      refresh();
+    } catch (e) {
+      toast.error(`Erro ao aplicar: ${(e as Error).message}`);
+    } finally {
+      setAplicandoIA(false);
     }
   }
 
@@ -932,6 +998,18 @@ export default function MaquinasTab({
             </div>
           )}
         </div>
+      )}
+
+      {/* Revisão da análise de IA — aceitar/editar/rejeitar antes de persistir */}
+      {revisaoIA && (
+        <RevisaoIAModal
+          titulo={`Análise NR-12 da IA — ${revisaoIA.maquina.nome}`}
+          descricao="Sugestões geradas a partir das fotos e dados da máquina. Nada é salvo sem a sua confirmação."
+          campos={revisaoIA.campos}
+          onAplicar={aplicarRevisaoIA}
+          onClose={() => setRevisaoIA(null)}
+          aplicando={aplicandoIA}
+        />
       )}
     </div>
   );

@@ -16,6 +16,7 @@ import {
   type StatusMaquina,
   type GrauRiscoMaquina,
 } from "@/lib/supabase/types";
+import RevisaoIAModal, { type CampoRevisaoIA } from "@/components/ui/RevisaoIAModal";
 import { cn } from "@/lib/utils";
 
 const BOOL_OPTS = [
@@ -108,6 +109,8 @@ export default function MaquinaForm({
   const [salvando, setSalvando] = useState(false);
   const [analisando, setAnalisando] = useState(false);
   const [fotoFile, setFotoFile] = useState<File | null>(null);
+  // Sugestões da IA aguardando revisão (modal aceitar/editar/rejeitar)
+  const [revisaoIA, setRevisaoIA] = useState<CampoRevisaoIA[] | null>(null);
 
   useEffect(() => {
     if (inicial) setForm(initialForm(inicial));
@@ -158,30 +161,57 @@ export default function MaquinaForm({
         throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
       }
       const { data } = await res.json() as { data: Record<string, unknown> };
-      // Preenche apenas campos vazios (não sobrescreve o que o usuário já digitou)
-      const fill = (key: keyof typeof form, val: unknown) => {
-        if (val !== null && val !== undefined && val !== "" && !form[key]) {
-          setF(key, val);
-        }
-      };
-      fill("nome", data.nome);
-      fill("tipo", data.tipo);
-      fill("categoria", data.categoria);
-      fill("marca", data.marca);
-      fill("modelo", data.modelo);
-      fill("numero_serie", data.numero_serie);
-      fill("ano_fabricacao", typeof data.ano_fabricacao === "number" ? data.ano_fabricacao : null);
-      fill("capacidade_operacional", data.capacidade_operacional);
-      fill("tensao", data.tensao);
-      fill("potencia", data.potencia);
-      fill("descricao_tecnica", data.descricao_tecnica);
-      toast.success("Campos preenchidos pela IA — revise antes de salvar");
+      // Monta a revisão — nada é aplicado sem o usuário confirmar no modal
+      const SUGESTOES: { key: keyof MaquinaInput & string; label: string; multiline?: boolean }[] = [
+        { key: "nome", label: "Nome da máquina" },
+        { key: "tipo", label: "Tipo" },
+        { key: "categoria", label: "Categoria" },
+        { key: "marca", label: "Fabricante / Marca" },
+        { key: "modelo", label: "Modelo" },
+        { key: "numero_serie", label: "Número de série" },
+        { key: "ano_fabricacao", label: "Ano de fabricação" },
+        { key: "capacidade_operacional", label: "Capacidade operacional" },
+        { key: "tensao", label: "Tensão" },
+        { key: "potencia", label: "Potência" },
+        { key: "descricao_tecnica", label: "Descrição técnica", multiline: true },
+      ];
+      const campos: CampoRevisaoIA[] = [];
+      for (const s of SUGESTOES) {
+        const val = data[s.key];
+        if (val === null || val === undefined || val === "") continue;
+        campos.push({
+          key: s.key,
+          label: s.label,
+          valorSugerido: String(val),
+          valorAtual: form[s.key] != null ? String(form[s.key]) : null,
+          multiline: s.multiline,
+        });
+      }
+      if (campos.length === 0) {
+        toast("A IA não identificou dados na foto. Tente uma foto da plaqueta.", { icon: "ℹ️" });
+        return;
+      }
+      setRevisaoIA(campos);
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Falha na análise IA");
     } finally {
       setAnalisando(false);
     }
+  }
+
+  /** Aplica os campos aceitos na revisão da IA. */
+  function aplicarRevisaoIA(valores: Record<string, string>) {
+    for (const [key, valor] of Object.entries(valores)) {
+      if (key === "ano_fabricacao") {
+        const n = Number(valor);
+        setF("ano_fabricacao", valor && Number.isFinite(n) ? n : null);
+      } else {
+        setF(key as keyof MaquinaInput, valor || null);
+      }
+    }
+    setRevisaoIA(null);
+    toast.success("Sugestões aplicadas — revise e salve");
   }
 
   async function handleRemoverFoto() {
@@ -520,6 +550,17 @@ export default function MaquinaForm({
             {submitLabel}
           </button>
         </div>
+      )}
+
+      {/* Revisão das sugestões da IA — aceitar/editar/rejeitar */}
+      {revisaoIA && (
+        <RevisaoIAModal
+          titulo="Sugestões da IA — dados da máquina"
+          descricao="Extraído da foto enviada (plaqueta/identificação da máquina)."
+          campos={revisaoIA}
+          onAplicar={aplicarRevisaoIA}
+          onClose={() => setRevisaoIA(null)}
+        />
       )}
     </form>
   );
