@@ -213,23 +213,6 @@ function CarimboSignatario({
         </div>
       </div>
 
-      {/* Identificação abaixo do quadro */}
-      <div
-        style={{
-          textAlign: "center",
-          lineHeight: 1.4,
-          fontFamily: "Arial, Helvetica, sans-serif",
-        }}
-      >
-        <div style={{ fontWeight: 600, fontSize: 11, color: CINZA_TEXTO }}>
-          {signatario.nomeCompleto}
-        </div>
-        {signatario.funcaoNoDocumento && (
-          <div style={{ fontSize: 10, color: CINZA_LEVE }}>
-            {signatario.funcaoNoDocumento}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
