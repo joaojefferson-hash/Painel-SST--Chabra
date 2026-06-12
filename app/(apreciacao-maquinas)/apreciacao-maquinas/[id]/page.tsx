@@ -414,7 +414,7 @@ export default function DetalheApreciacaoPage() {
 
       {/* Cabeçalho de impressão (visível em tela também, discreto) */}
       <RelatorioPrintHeader
-        titulo={`Apreciação NR-12 — ${maquinaNome}`}
+        titulo={`Apreciação de Risco NR-12 — ${maquinaNome}`}
         subtitulo={empresaNome}
         terciario={
           apreciacao.data_apreciacao
@@ -886,7 +886,7 @@ export default function DetalheApreciacaoPage() {
       {/* Seção: Plano de Ação — standalone da apreciação */}
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-3 print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
         <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-700">
-          <ListTodo className="size-4" /> Plano de Ação
+          <ListTodo className="size-4" /> Plano de Adequação
         </h2>
         <PlanoAcaoTable
           idApreciacao={apreciacao.id_apreciacao}

@@ -106,7 +106,7 @@ export default function PlanoAcaoTable({
       }
     } catch (err) {
       console.error(err);
-      toast.error("Falha ao gerar plano de ação");
+      toast.error("Falha ao gerar plano de adequação");
     }
   }
 

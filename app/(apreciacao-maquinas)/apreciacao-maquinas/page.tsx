@@ -80,10 +80,10 @@ export default function ApreciacaoMaquinasPage() {
           Apreciação de Máquinas (NR-12)
         </h1>
         <p className="text-sm text-gray-600">
-          Laudo técnico estruturado de conformidade com a NR-12. Avalia uma
-          máquina contra checklist regulatório por categoria (instalações,
-          dispositivos, sistemas de segurança, ergonomia, manutenção...), com
-          evidência fotográfica por item.
+          Apreciação de risco de máquinas e equipamentos em conformidade com o
+          item 12.1.9 da NR-12 e norma ABNT NBR 12100:2013. Avalia checklist
+          regulatório por categoria, gera Plano de Adequação com prazos e
+          mantém relação atualizada do parque de máquinas.
         </p>
       </div>
 

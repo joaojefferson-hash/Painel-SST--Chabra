@@ -96,9 +96,10 @@ export default function NovaApreciacaoPage() {
           Nova apreciação NR-12
         </h1>
         <p className="text-sm text-gray-600">
-          Preencha os dados do laudo. Ao criar, o checklist da NR-12 é gerado
+          Apreciação de risco em conformidade com o item 12.1.9 da NR-12 e
+          norma ABNT NBR 12100:2013. Ao criar, o checklist é gerado
           automaticamente com <strong>{CATALOGO_NR12.length}</strong> itens
-          agrupados por categoria, prontos pra avaliação.
+          agrupados por categoria, prontos para avaliação.
         </p>
       </div>
 
