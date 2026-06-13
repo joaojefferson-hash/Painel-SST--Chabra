@@ -113,8 +113,8 @@ function SetorBlock({ setor, idx }: { setor: AepSetor; idx: number }) {
         </tbody>
       </table>
 
-      {/* Triagem */}
-      <div className="mb-3 grid grid-cols-3 gap-2 text-xs">
+      {/* Triagem — uma ergonomia embaixo da outra */}
+      <div className="mb-3 space-y-2 text-xs">
         {/* Física */}
         <div className="rounded border border-blue-200">
           <div className="bg-blue-50 px-2 py-1 font-semibold text-blue-800 text-[10px] uppercase">Ergonomia Física</div>
@@ -180,19 +180,19 @@ function SetorBlock({ setor, idx }: { setor: AepSetor; idx: number }) {
         </table>
       )}
 
-      {/* Parecer + Recomendações */}
+      {/* Recomendações + Parecer — um embaixo do outro */}
       {(setor.parecer_tecnico || setor.recomendacoes) && (
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          {setor.parecer_tecnico && (
-            <div>
-              <p className="font-semibold text-gray-700 mb-1">Parecer Técnico Preliminar</p>
-              <p className="text-gray-600 leading-relaxed">{setor.parecer_tecnico}</p>
-            </div>
-          )}
+        <div className="space-y-3 text-xs">
           {setor.recomendacoes && (
             <div>
               <p className="font-semibold text-gray-700 mb-1">Recomendações</p>
               <p className="text-gray-600 leading-relaxed">{setor.recomendacoes}</p>
+            </div>
+          )}
+          {setor.parecer_tecnico && (
+            <div>
+              <p className="font-semibold text-gray-700 mb-1">Parecer Técnico Preliminar</p>
+              <p className="text-gray-600 leading-relaxed">{setor.parecer_tecnico}</p>
             </div>
           )}
         </div>

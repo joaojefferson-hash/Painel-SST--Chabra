@@ -428,12 +428,12 @@ function SetorBlock({
         </tbody>
       </table>
 
-      {/* Checklists — 3 colunas */}
+      {/* Checklists — uma ergonomia embaixo da outra */}
       <div
         style={{
           marginBottom: 12,
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
+          display: "flex",
+          flexDirection: "column",
           gap: 8,
           fontSize: 11,
         }}
@@ -590,26 +590,16 @@ function SetorBlock({
         </table>
       )}
 
-      {/* Parecer + Recomendações */}
+      {/* Recomendações + Parecer — um embaixo do outro */}
       {(setor.parecer_tecnico || setor.recomendacoes) && (
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            display: "flex",
+            flexDirection: "column",
             gap: 12,
             fontSize: 11,
           }}
         >
-          {setor.parecer_tecnico && (
-            <div>
-              <p style={{ margin: "0 0 4px", fontWeight: 600, color: "#374151" }}>
-                Parecer Técnico Preliminar
-              </p>
-              <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.6 }}>
-                {setor.parecer_tecnico}
-              </p>
-            </div>
-          )}
           {setor.recomendacoes && (
             <div>
               <p style={{ margin: "0 0 4px", fontWeight: 600, color: "#374151" }}>
@@ -617,6 +607,16 @@ function SetorBlock({
               </p>
               <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.6 }}>
                 {setor.recomendacoes}
+              </p>
+            </div>
+          )}
+          {setor.parecer_tecnico && (
+            <div>
+              <p style={{ margin: "0 0 4px", fontWeight: 600, color: "#374151" }}>
+                Parecer Técnico Preliminar
+              </p>
+              <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.6 }}>
+                {setor.parecer_tecnico}
               </p>
             </div>
           )}
