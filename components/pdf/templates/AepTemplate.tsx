@@ -336,9 +336,7 @@ function SetorBlock({
             {setor.nome_setor || "—"}
           </p>
           <p style={{ margin: 0, fontSize: 10, color: "#047857" }}>
-            {[setor.unidade, setor.ghe, setor.cargo, setor.funcao]
-              .filter(Boolean)
-              .join(" · ")}
+            {[setor.unidade, setor.ghe].filter(Boolean).join(" · ")}
           </p>
         </div>
         {rMax && rMaxCores && (
@@ -409,16 +407,28 @@ function SetorBlock({
             </td>
             <td style={{ padding: "4px 8px" }}>{setor.qtd_expostos || "—"}</td>
           </tr>
-          {(setor.metodo_coleta || setor.trabalhadores_consultados) && (
+          {setor.metodo_coleta && (
             <tr>
               <td style={{ backgroundColor: "#f9fafb", padding: "4px 8px", fontWeight: 600, verticalAlign: "top" }}>
                 Método de coleta (NR-1)
               </td>
-              <td style={{ padding: "4px 8px" }}>{setor.metodo_coleta || "—"}</td>
+              <td style={{ padding: "4px 8px" }} colSpan={3}>
+                {setor.metodo_coleta.split(/,\s*/).filter(Boolean).map((m, i) => (
+                  <div key={i}>{m}</div>
+                ))}
+              </td>
+            </tr>
+          )}
+          {setor.trabalhadores_consultados && (
+            <tr>
               <td style={{ backgroundColor: "#f9fafb", padding: "4px 8px", fontWeight: 600, verticalAlign: "top" }}>
                 Trabalhadores consultados
               </td>
-              <td style={{ padding: "4px 8px" }}>{setor.trabalhadores_consultados || "—"}</td>
+              <td style={{ padding: "4px 8px" }} colSpan={3}>
+                {setor.trabalhadores_consultados.split(/,\s*/).filter(Boolean).map((t, i) => (
+                  <div key={i}>{t}</div>
+                ))}
+              </td>
             </tr>
           )}
           {setor.descricao_atividade && (
@@ -449,8 +459,13 @@ function SetorBlock({
               <td style={{ padding: "4px 8px" }} colSpan={3}>
                 {setor.cargos
                   .filter((c) => c.cargo?.trim())
-                  .map((c) => `${c.cargo}${c.quantidade ? ` (${c.quantidade})` : ""}${c.descricao ? ` — ${c.descricao}` : ""}`)
-                  .join("; ")}
+                  .map((c) => (
+                    <div key={c.id}>
+                      {c.cargo}
+                      {c.quantidade ? ` (${c.quantidade})` : ""}
+                      {c.descricao ? ` — ${c.descricao}` : ""}
+                    </div>
+                  ))}
               </td>
             </tr>
           )}

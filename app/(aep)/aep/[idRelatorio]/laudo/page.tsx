@@ -82,7 +82,7 @@ function SetorBlock({ setor, idx }: { setor: AepSetor; idx: number }) {
         <div className="flex-1">
           <p className="font-bold text-emerald-900">{setor.nome_setor || "—"}</p>
           <p className="text-xs text-emerald-700">
-            {[setor.unidade, setor.ghe, setor.cargo, setor.funcao].filter(Boolean).join(" · ")}
+            {[setor.unidade, setor.ghe].filter(Boolean).join(" · ")}
           </p>
         </div>
         {rMax && (
@@ -104,12 +104,24 @@ function SetorBlock({ setor, idx }: { setor: AepSetor; idx: number }) {
             <td className="bg-gray-50 px-2 py-1 font-semibold w-1/4">Qtd. Expostos</td>
             <td className="px-2 py-1">{setor.qtd_expostos || "—"}</td>
           </tr>
-          {(setor.metodo_coleta || setor.trabalhadores_consultados) && (
+          {setor.metodo_coleta && (
             <tr className="border-b border-gray-100">
-              <td className="bg-gray-50 px-2 py-1 font-semibold align-top">Método de coleta (NR-1)</td>
-              <td className="px-2 py-1">{setor.metodo_coleta || "—"}</td>
+              <td className="bg-gray-50 px-2 py-1 font-semibold align-top w-1/4">Método de coleta (NR-1)</td>
+              <td className="px-2 py-1" colSpan={3}>
+                {setor.metodo_coleta.split(/,\s*/).filter(Boolean).map((m, i) => (
+                  <div key={i}>{m}</div>
+                ))}
+              </td>
+            </tr>
+          )}
+          {setor.trabalhadores_consultados && (
+            <tr className="border-b border-gray-100">
               <td className="bg-gray-50 px-2 py-1 font-semibold align-top">Trabalhadores consultados</td>
-              <td className="px-2 py-1">{setor.trabalhadores_consultados || "—"}</td>
+              <td className="px-2 py-1" colSpan={3}>
+                {setor.trabalhadores_consultados.split(/,\s*/).filter(Boolean).map((t, i) => (
+                  <div key={i}>{t}</div>
+                ))}
+              </td>
             </tr>
           )}
           {setor.descricao_atividade && (
@@ -124,8 +136,13 @@ function SetorBlock({ setor, idx }: { setor: AepSetor; idx: number }) {
               <td className="px-2 py-1" colSpan={3}>
                 {setor.cargos
                   .filter((c) => c.cargo?.trim())
-                  .map((c) => `${c.cargo}${c.quantidade ? ` (${c.quantidade})` : ""}${c.descricao ? ` — ${c.descricao}` : ""}`)
-                  .join("; ")}
+                  .map((c) => (
+                    <div key={c.id}>
+                      {c.cargo}
+                      {c.quantidade ? ` (${c.quantidade})` : ""}
+                      {c.descricao ? ` — ${c.descricao}` : ""}
+                    </div>
+                  ))}
               </td>
             </tr>
           )}

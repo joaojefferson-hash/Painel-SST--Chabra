@@ -460,7 +460,6 @@ export default function AepSetoresPage({
                       { key: "unidade",    label: "Unidade",  placeholder: "Unidade / filial" },
                       { key: "ghe",        label: "GHE",      placeholder: "Grupo Homogêneo de Exposição" },
                       { key: "jornada",    label: "Jornada",  placeholder: "Ex: 8h/dia, 44h/semana" },
-                      { key: "funcao",     label: "Função",   placeholder: "Preenchida automaticamente pelos cargos" },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <label className="mb-1 block text-xs font-medium text-gray-600">{label}</label>
