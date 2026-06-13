@@ -26,6 +26,8 @@ import TiposRiscoTab from "@/components/config/TiposRiscoTab";
 import PerguntasTab from "@/components/config/PerguntasTab";
 import MatrizesTab from "@/components/config/MatrizesTab";
 import TextosPadraoTab from "@/components/config/TextosPadraoTab";
+import UnidadesTab from "@/components/config/UnidadesTab";
+import { Building2 } from "lucide-react";
 import toast from "react-hot-toast";
 import MatrizRisco from "@/components/riscos/MatrizRisco";
 import { PROBABILIDADES, SEVERIDADES } from "@/lib/utils";
@@ -47,6 +49,7 @@ type TabKey =
   | "logo"
   | "assinatura"
   | "textosPadrao"
+  | "unidades"
   | "atualizacao";
 
 export default function ConfigPage() {
@@ -76,6 +79,7 @@ export default function ConfigPage() {
     { key: "logo" as TabKey, label: "Logo da Empresa", icon: ImageIcon },
     { key: "assinatura" as TabKey, label: "Assinatura da Empresa", icon: Upload },
     { key: "textosPadrao" as TabKey, label: "Textos Padrão", icon: BookText },
+    { key: "unidades" as TabKey, label: "Unidades", icon: Building2 },
     { key: "atualizacao" as TabKey, label: "Atualização", icon: Download },
   ];
 
@@ -137,6 +141,7 @@ export default function ConfigPage() {
           {tab === "assinatura" && <AssinaturaEmpresaUpload configs={configs} />}
 
           {tab === "textosPadrao" && <TextosPadraoTab />}
+          {tab === "unidades" && <UnidadesTab />}
           {tab === "atualizacao" && <AtualizacaoTab />}
         </div>
       </div>

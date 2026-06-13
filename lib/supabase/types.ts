@@ -203,8 +203,17 @@ export interface Empresa {
   cnae_descricao: string | null;
   situacao_cadastral: string | null;
   porte: string | null;
+  /** Unidade (agrupamento de acesso). Null = visível a todos os usuários. */
+  id_unidade: string | null;
   /** Lista de módulos em que a empresa está habilitada (aparece nos selects). */
   modulos_habilitados: ModuloEmpresa[];
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface Unidade {
+  id_unidade: string;
+  nome: string;
   created_at: string;
   updated_at: string | null;
 }
@@ -627,6 +636,8 @@ export interface Usuario {
   perfil: PerfilUsuario;
   ativo_sistema: boolean;
   empresas_vinculadas: string[];
+  /** Unidades de acesso do usuário. Vê as empresas dessas unidades + as sem unidade. */
+  unidades?: string[];
   modulos_permitidos?: ModuloPermitido[];
   /** Permissão granular pra criar relatórios/itens. Admin contorna. */
   pode_criar?: boolean;

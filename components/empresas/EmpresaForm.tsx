@@ -11,6 +11,7 @@ import {
   type ModuloEmpresa,
   MODULOS_EMPRESA,
 } from "@/lib/supabase/types";
+import { useUnidades } from "@/lib/hooks/useUnidades";
 
 const DEFAULT_MODULOS: ModuloEmpresa[] = [
   "sst",
@@ -36,6 +37,7 @@ export default function EmpresaForm({
   const qc = useQueryClient();
   const isEdit = !!empresa;
   const [buscandoCnpj, setBuscandoCnpj] = useState(false);
+  const { data: unidades = [] } = useUnidades();
 
   const [form, setForm] = useState({
     nome_empresa: "",
@@ -45,6 +47,7 @@ export default function EmpresaForm({
     cei: "",
     caepf: "",
     cno: "",
+    id_unidade: "",
     logradouro: "",
     numero: "",
     complemento: "",
@@ -73,6 +76,7 @@ export default function EmpresaForm({
         cei: empresa?.cei ?? "",
         caepf: empresa?.caepf ?? "",
         cno: empresa?.cno ?? "",
+        id_unidade: empresa?.id_unidade ?? "",
         logradouro: empresa?.logradouro ?? "",
         numero: empresa?.numero ?? "",
         complemento: empresa?.complemento ?? "",
@@ -173,6 +177,7 @@ export default function EmpresaForm({
         cei: form.cei.replace(/\D/g, "") || null,
         caepf: form.caepf.replace(/\D/g, "") || null,
         cno: form.cno.replace(/\D/g, "") || null,
+        id_unidade: form.id_unidade || null,
         logradouro: form.logradouro.trim() || null,
         numero: form.numero.trim() || null,
         complemento: form.complemento.trim() || null,
@@ -336,6 +341,27 @@ export default function EmpresaForm({
               />
             </div>
           </div>
+        </div>
+
+        {/* Unidade — controla quais usuários enxergam esta empresa */}
+        <div>
+          <label className="text-sm font-medium text-gray-700">Unidade</label>
+          <select
+            value={form.id_unidade}
+            onChange={(e) => setForm({ ...form, id_unidade: e.target.value })}
+            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+          >
+            <option value="">Sem unidade (visível para todos)</option>
+            {unidades.map((u) => (
+              <option key={u.id_unidade} value={u.id_unidade}>
+                {u.nome}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Só usuários com esta unidade verão a empresa. Sem unidade = todos veem.
+            Cadastre unidades em Configurações → Unidades.
+          </p>
         </div>
 
         {/* Endereço e contato — preenchidos pela busca por CNPJ, editáveis */}

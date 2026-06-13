@@ -24,6 +24,7 @@ import Pagination from "@/components/ui/Pagination";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
+import { useUnidades } from "@/lib/hooks/useUnidades";
 import { useCurrentUser } from "@/lib/hooks/useUsuario";
 import { usePagination } from "@/lib/hooks/usePagination";
 import { cn, gerarId } from "@/lib/utils";
@@ -294,6 +295,7 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
   const qc = useQueryClient();
   const isEdit = !!usuario;
   const { data: empresas = [] } = useEmpresas();
+  const { data: unidades = [] } = useUnidades();
 
   const [form, setForm] = useState({
     nome: "",
@@ -303,6 +305,7 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
     perfil: "Tecnico" as PerfilUsuario,
     ativo_sistema: true,
     empresas_vinculadas: [] as string[],
+    unidades: [] as string[],
     modulos_permitidos: [...TODOS_MODULOS] as ModuloPermitido[],
     // V45: permissões granulares — Admin contorna estes flags, mas a UI
     // mantém eles marcados pra clareza.
@@ -332,6 +335,7 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
         perfil: perfilDoUser,
         ativo_sistema: usuario?.ativo_sistema ?? true,
         empresas_vinculadas: usuario?.empresas_vinculadas ?? [],
+        unidades: usuario?.unidades ?? [],
         modulos_permitidos:
           usuario?.modulos_permitidos ?? [...TODOS_MODULOS],
         // Se o usuário já existe, respeita o que está no banco.
@@ -425,6 +429,7 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
               form.perfil === "Tecnico" || form.perfil === "Cliente"
                 ? form.empresas_vinculadas
                 : [],
+            unidades: form.unidades,
             modulos_permitidos: form.modulos_permitidos,
             pode_criar: form.pode_criar,
             pode_editar: form.pode_editar,
@@ -463,6 +468,7 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
               form.perfil === "Tecnico" || form.perfil === "Cliente"
                 ? form.empresas_vinculadas
                 : [],
+            unidades: form.unidades,
             modulos_permitidos: form.modulos_permitidos,
             pode_criar: form.pode_criar,
             pode_editar: form.pode_editar,
@@ -578,6 +584,15 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
       empresas_vinculadas: f.empresas_vinculadas.includes(id)
         ? f.empresas_vinculadas.filter((x) => x !== id)
         : [...f.empresas_vinculadas, id],
+    }));
+  }
+
+  function toggleUnidade(id: string) {
+    setForm((f) => ({
+      ...f,
+      unidades: f.unidades.includes(id)
+        ? f.unidades.filter((x) => x !== id)
+        : [...f.unidades, id],
     }));
   }
 
@@ -806,6 +821,40 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
                   )
                 );
               })()}
+            </div>
+          </Field>
+        )}
+
+        {(form.perfil === "Tecnico" || form.perfil === "Visualizador") && (
+          <Field
+            label={`Unidades — ${form.unidades.length === 0 ? "nenhuma (vê só empresas sem unidade)" : `${form.unidades.length} selecionada(s)`}`}
+          >
+            <p className="mb-2 text-xs text-gray-500">
+              O usuário vê as empresas destas unidades + as empresas sem unidade.
+              Sem nenhuma marcada, vê apenas empresas sem unidade. Cadastre em
+              Configurações → Unidades.
+            </p>
+            <div className="max-h-48 overflow-auto rounded-md border border-gray-200 bg-white p-2">
+              {unidades.length === 0 ? (
+                <p className="p-2 text-xs text-gray-500">
+                  Nenhuma unidade cadastrada.
+                </p>
+              ) : (
+                unidades.map((u) => (
+                  <label
+                    key={u.id_unidade}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.unidades.includes(u.id_unidade)}
+                      onChange={() => toggleUnidade(u.id_unidade)}
+                      className="rounded border-gray-300 text-verde-primary focus:ring-verde-primary/30"
+                    />
+                    <span className="text-sm text-gray-700">{u.nome}</span>
+                  </label>
+                ))
+              )}
             </div>
           </Field>
         )}
