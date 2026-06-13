@@ -383,6 +383,31 @@ export const MAX_FOTOS_POR_ITEM = 8;
  * sobe 2+ fotos rapidamente em sequência (cada chamada vê o estado mais
  * recente vindo do componente).
  */
+/**
+ * Lê os arrays de foto FRESCOS do banco. As mutações regravam o array
+ * inteiro — partir dos arrays vindos das props (cache stale do React Query)
+ * causa lost update quando o usuário sobe/remove fotos em sequência rápida.
+ */
+async function lerFotosItemConformidade(
+  supabase: ReturnType<typeof createSupabaseBrowserClient>,
+  id_item: string
+) {
+  const { data, error } = await supabase
+    .from("relatorios_conformidade_itens")
+    .select("foto_urls, foto_storage_paths")
+    .eq("id_item", id_item)
+    .single();
+  if (error) throw error;
+  const row = data as unknown as {
+    foto_urls: string[] | null;
+    foto_storage_paths: string[] | null;
+  };
+  return { urls: row.foto_urls ?? [], paths: row.foto_storage_paths ?? [] };
+}
+
+/** Serializa as mutações de foto do mesmo item entre si (React Query scope). */
+const SCOPE_FOTOS_CONF = { id: "conformidade-fotos-item" };
+
 export function useUploadFotoItemConformidade() {
   const qc = useQueryClient();
   return useMutation({
@@ -390,12 +415,11 @@ export function useUploadFotoItemConformidade() {
       id_relatorio: string;
       id_item: string;
       file: File;
-      fotos_urls_atuais: string[];
-      fotos_paths_atuais: string[];
     }) => {
       const supabase = createSupabaseBrowserClient();
 
-      if (params.fotos_paths_atuais.length >= MAX_FOTOS_POR_ITEM) {
+      const atual = await lerFotosItemConformidade(supabase, params.id_item);
+      if (atual.paths.length >= MAX_FOTOS_POR_ITEM) {
         throw new Error(
           `Limite de ${MAX_FOTOS_POR_ITEM} fotos por item atingido.`
         );
@@ -415,8 +439,8 @@ export function useUploadFotoItemConformidade() {
 
       const { data: pub } = supabase.storage.from("fotos").getPublicUrl(path);
 
-      const novasUrls = [...params.fotos_urls_atuais, pub.publicUrl];
-      const novosPaths = [...params.fotos_paths_atuais, path];
+      const novasUrls = [...atual.urls, pub.publicUrl];
+      const novosPaths = [...atual.paths, path];
 
       const { error: updateErr } = await supabase
         .from("relatorios_conformidade_itens")
@@ -430,6 +454,7 @@ export function useUploadFotoItemConformidade() {
 
       return { foto_url: pub.publicUrl, path };
     },
+    scope: SCOPE_FOTOS_CONF,
     onSuccess: (_d, params) => {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_relatorio) });
     },
@@ -448,20 +473,18 @@ export function useRemoverFotoItemConformidade() {
       id_relatorio: string;
       id_item: string;
       foto_storage_path: string;
-      fotos_urls_atuais: string[];
-      fotos_paths_atuais: string[];
     }) => {
       const supabase = createSupabaseBrowserClient();
 
       // Apaga do storage (best-effort)
       await supabase.storage.from("fotos").remove([params.foto_storage_path]);
 
-      // Filtra mantendo o pareamento URL ↔ path
-      const idx = params.fotos_paths_atuais.indexOf(params.foto_storage_path);
-      const novosPaths = params.fotos_paths_atuais.filter(
-        (_, i) => i !== idx
-      );
-      const novasUrls = params.fotos_urls_atuais.filter((_, i) => i !== idx);
+      // Relê fresco do banco e filtra mantendo o pareamento URL ↔ path
+      const atual = await lerFotosItemConformidade(supabase, params.id_item);
+      const idx = atual.paths.indexOf(params.foto_storage_path);
+      if (idx < 0) return params; // já removida por outra mutação
+      const novosPaths = atual.paths.filter((_, i) => i !== idx);
+      const novasUrls = atual.urls.filter((_, i) => i !== idx);
 
       const { error } = await supabase
         .from("relatorios_conformidade_itens")
@@ -474,6 +497,7 @@ export function useRemoverFotoItemConformidade() {
       if (error) throw error;
       return params;
     },
+    scope: SCOPE_FOTOS_CONF,
     onSuccess: (_d, params) => {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_relatorio) });
     },

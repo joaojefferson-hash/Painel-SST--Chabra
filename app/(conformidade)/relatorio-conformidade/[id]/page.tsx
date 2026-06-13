@@ -427,8 +427,6 @@ export default function DetalheConformidadePage({
                     id_relatorio: id,
                     id_item: item.id_item,
                     file,
-                    fotos_urls_atuais: item.foto_urls,
-                    fotos_paths_atuais: item.foto_storage_paths,
                   },
                   {
                     onSuccess: () => toast.success("Foto enviada"),
@@ -446,8 +444,6 @@ export default function DetalheConformidadePage({
                       id_relatorio: id,
                       id_item: item.id_item,
                       foto_storage_path: path,
-                      fotos_urls_atuais: item.foto_urls,
-                      fotos_paths_atuais: item.foto_storage_paths,
                     },
                     {
                       onSuccess: () => toast.success("Foto removida"),

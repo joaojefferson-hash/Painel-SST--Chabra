@@ -472,10 +472,12 @@ export function useDrpsTextoPadrao() {
     staleTime: 60 * 1000,
     queryFn: async () => {
       const supabase = createSupabaseBrowserClient();
+      // Lê da MESMA tabela em que as mutações escrevem (drps_texto_padrao).
+      // Antes lia de textos_padrao (modulo=psicossocial), que nunca recebia
+      // dados — a tela ficava sempre vazia e nada entrava no PDF.
       const { data, error } = await supabase
-        .from("textos_padrao")
+        .from("drps_texto_padrao")
         .select("*")
-        .eq("modulo", "psicossocial")
         .order("ordem", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as DrpsTextoPadraoCapitulo[];
