@@ -65,6 +65,28 @@ export interface TextoPadraoCapitulo {
   updated_at: string | null;
 }
 
+/** Snapshot de uma versão de um capítulo (tabela textos_padrao_versoes, Fase 2). */
+export interface TextoPadraoVersao {
+  id_versao: string;
+  id_capitulo: string;
+  versao: number;
+  modulo: ModuloTextoPadrao;
+  titulo: string;
+  conteudo: string | null;
+  bg_imagem_url: string | null;
+  caixas_texto: CaixaTexto[] | null;
+  orientacao: OrientacaoPagina | null;
+  quebra_pagina: QuebraPagina | null;
+  posicao_pdf: PosicaoPdf | null;
+  tipo: "fixo" | "editavel" | null;
+  slug_fixo: string | null;
+  ordem: number | null;
+  ativo: boolean | null;
+  /** E-mail de quem salvou (null no baseline v1 e em escritas server-side). */
+  editado_por: string | null;
+  editado_em: string;
+}
+
 /** Capítulo gerado automaticamente pelo sistema (não editável pelo usuário). */
 export interface FixoCapitulo {
   titulo: string;

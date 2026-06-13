@@ -21,6 +21,8 @@ import {
   Search,
   Lock,
   Layers,
+  History,
+  RotateCcw,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -36,6 +38,8 @@ import {
   useSalvarCapituloTexto,
   useExcluirCapituloTexto,
   useSeedCapitulosFixos,
+  useHistoricoCapitulo,
+  useRestaurarVersao,
 } from "@/lib/hooks/useTextosPadrao";
 import {
   type ModuloTextoPadrao,
@@ -43,6 +47,7 @@ import {
   type PosicaoPdf,
   type QuebraPagina,
   type TextoPadraoCapitulo,
+  type TextoPadraoVersao,
   MODULO_CONFIGS,
 } from "@/lib/textos-padrao/types";
 import { VARIAVEIS_POR_MODULO } from "@/lib/textos-padrao/variaveis";
@@ -140,6 +145,7 @@ export default function TextoPadraoEditor({ modulo }: Props) {
       <CapituloCard
         key={cap.id_capitulo}
         capitulo={cap}
+        modulo={modulo}
         indice={idx}
         total={total}
         salvando={salvar.isPending}
@@ -526,6 +532,7 @@ function FixoCard({
 
 function CapituloCard({
   capitulo,
+  modulo,
   indice,
   total,
   salvando,
@@ -539,6 +546,7 @@ function CapituloCard({
   onToggleMostrar,
 }: {
   capitulo: TextoPadraoCapitulo;
+  modulo: ModuloTextoPadrao;
   indice: number;
   total: number;
   salvando: boolean;
@@ -569,6 +577,7 @@ function CapituloCard({
   );
   const [dirty, setDirty] = useState(false);
   const [enviandoBg, setEnviandoBg] = useState(false);
+  const [histAberto, setHistAberto] = useState(false);
   const bgInputRef = useRef<HTMLInputElement | null>(null);
   const migrated = useRef(false);
 
@@ -693,6 +702,14 @@ function CapituloCard({
         </button>
         <button
           type="button"
+          onClick={() => setHistAberto(true)}
+          className="rounded-md border border-gray-300 bg-white p-2 text-gray-500 hover:bg-sky-50 hover:text-sky-700"
+          title="Histórico de versões"
+        >
+          <History className="size-4" />
+        </button>
+        <button
+          type="button"
           onClick={onExcluir}
           className="rounded-md border border-gray-300 bg-white p-2 text-gray-500 hover:bg-red-50 hover:text-red-alert"
           title="Excluir"
@@ -700,6 +717,14 @@ function CapituloCard({
           <Trash2 className="size-4" />
         </button>
       </div>
+
+      {histAberto && (
+        <HistoricoVersoesModal
+          capitulo={capitulo}
+          modulo={modulo}
+          onFechar={() => setHistAberto(false)}
+        />
+      )}
       {/* Orientação da página + Quebra de página */}
       <div className="mb-2 flex flex-wrap items-center gap-3 rounded-md border border-dashed border-gray-300 bg-gray-50 p-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -895,6 +920,123 @@ function CapituloCard({
           placeholder="Conteúdo do capítulo... use {{empresa_nome}}, {{cnpj}} etc. pra inserir variáveis."
         />
       )}
+    </div>
+  );
+}
+
+// ============================================================
+// HistoricoVersoesModal — histórico de versões de um capítulo (Fase 2)
+// ============================================================
+
+function resumoVersao(v: TextoPadraoVersao): string {
+  if (v.bg_imagem_url) return "[Capa / imagem de fundo]";
+  const texto = (v.conteudo ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  if (!texto) return "(sem conteúdo)";
+  return texto.length > 180 ? texto.slice(0, 180) + "…" : texto;
+}
+
+function HistoricoVersoesModal({
+  capitulo,
+  modulo,
+  onFechar,
+}: {
+  capitulo: TextoPadraoCapitulo;
+  modulo: ModuloTextoPadrao;
+  onFechar: () => void;
+}) {
+  const { data: versoes = [], isLoading } = useHistoricoCapitulo(capitulo.id_capitulo);
+  const restaurar = useRestaurarVersao(modulo);
+  const [confirmar, setConfirmar] = useState<TextoPadraoVersao | null>(null);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onFechar}
+    >
+      <div
+        className="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <History className="size-4 text-sky-700" />
+            <h3 className="text-sm font-semibold text-gray-900">
+              Histórico — {capitulo.titulo}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onFechar}
+            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          {isLoading ? (
+            <LoadingSkeleton rows={3} />
+          ) : versoes.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-500">
+              Nenhuma versão registrada ainda.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {versoes.map((v, idx) => (
+                <li
+                  key={v.id_versao}
+                  className="rounded-lg border border-gray-200 bg-gray-50/60 p-3"
+                >
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center rounded bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-700">
+                        v{v.versao}
+                      </span>
+                      {idx === 0 && (
+                        <span className="inline-flex items-center rounded bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">
+                          Atual
+                        </span>
+                      )}
+                      <span className="text-[11px] text-gray-500">
+                        {new Date(v.editado_em).toLocaleString("pt-BR")}
+                        {v.editado_por ? ` · ${v.editado_por}` : ""}
+                      </span>
+                    </div>
+                    {idx !== 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmar(v)}
+                        disabled={restaurar.isPending}
+                        className="inline-flex items-center gap-1 rounded-md border border-sky-300 bg-white px-2 py-1 text-[11px] font-semibold text-sky-700 hover:bg-sky-50 disabled:opacity-50"
+                      >
+                        <RotateCcw className="size-3" /> Restaurar
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600">{resumoVersao(v)}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={!!confirmar}
+        title={`Restaurar versão ${confirmar?.versao ?? ""}?`}
+        description="O conteúdo atual do capítulo será substituído por esta versão. A versão atual permanece no histórico (a restauração gera uma nova versão)."
+        loading={restaurar.isPending}
+        onConfirm={() => {
+          if (!confirmar) return;
+          restaurar.mutate(confirmar, {
+            onSuccess: () => {
+              setConfirmar(null);
+              onFechar();
+            },
+          });
+        }}
+        onCancel={() => setConfirmar(null)}
+      />
     </div>
   );
 }

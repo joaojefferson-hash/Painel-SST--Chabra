@@ -11,10 +11,12 @@ import {
   type PosicaoPdf,
   type QuebraPagina,
   type TextoPadraoCapitulo,
+  type TextoPadraoVersao,
 } from "@/lib/textos-padrao/types";
 import type { CaixaTexto } from "@/lib/drps/types";
 
 const KEY = (m: ModuloTextoPadrao) => ["textos-padrao", m] as const;
+const KEY_HIST = (id: string) => ["textos-padrao-versoes", id] as const;
 
 /** Lista todos os capítulos do módulo (ativos e inativos), ordenados. */
 export function useTextosPadrao(modulo: ModuloTextoPadrao) {
@@ -128,6 +130,58 @@ export function useSeedCapitulosFixos(modulo: ModuloTextoPadrao) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY(modulo) });
       toast.success("Seções do sistema adicionadas!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+/** Lista o histórico de versões de um capítulo (mais recente primeiro). */
+export function useHistoricoCapitulo(id_capitulo: string | null) {
+  return useQuery({
+    queryKey: KEY_HIST(id_capitulo ?? ""),
+    enabled: !!id_capitulo,
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("textos_padrao_versoes")
+        .select("*")
+        .eq("id_capitulo", id_capitulo!)
+        .order("versao", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as TextoPadraoVersao[];
+    },
+  });
+}
+
+/**
+ * Restaura uma versão: reescreve o capítulo com o conteúdo da versão escolhida.
+ * O trigger registra a restauração como uma nova versão (não apaga histórico).
+ */
+export function useRestaurarVersao(modulo: ModuloTextoPadrao) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (versao: TextoPadraoVersao) => {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase
+        .from("textos_padrao")
+        .update({
+          titulo: versao.titulo,
+          conteudo: versao.conteudo,
+          bg_imagem_url: versao.bg_imagem_url,
+          caixas_texto: versao.caixas_texto,
+          orientacao: versao.orientacao,
+          quebra_pagina: versao.quebra_pagina,
+          posicao_pdf: versao.posicao_pdf,
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq("id_capitulo", versao.id_capitulo);
+      if (error) throw error;
+    },
+    onSuccess: (_data, versao) => {
+      qc.invalidateQueries({ queryKey: KEY(modulo) });
+      qc.invalidateQueries({ queryKey: KEY_HIST(versao.id_capitulo) });
+      toast.success(`Versão ${versao.versao} restaurada`);
     },
     onError: (e: Error) => toast.error(e.message),
   });
