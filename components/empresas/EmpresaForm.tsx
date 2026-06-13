@@ -35,6 +35,7 @@ export default function EmpresaForm({
 }: Props) {
   const qc = useQueryClient();
   const isEdit = !!empresa;
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
 
   const [form, setForm] = useState({
     nome_empresa: "",
@@ -68,6 +69,76 @@ export default function EmpresaForm({
       });
     }
   }, [open, empresa]);
+
+  /**
+   * Busca os dados da empresa na base da Receita Federal (via BrasilAPI,
+   * dados públicos). Preenche nome fantasia + razão social e, se a observação
+   * estiver vazia, um resumo dos dados cadastrais relevantes (sem capital
+   * social). Nada é salvo aqui — o usuário revisa e confirma.
+   */
+  async function buscarCnpj() {
+    const digitos = form.cnpj.replace(/\D/g, "");
+    if (digitos.length !== 14) {
+      toast.error("Informe um CNPJ com 14 dígitos para buscar.");
+      return;
+    }
+    setBuscandoCnpj(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digitos}`);
+      if (res.status === 404) throw new Error("CNPJ não encontrado na Receita.");
+      if (!res.ok) throw new Error(`Falha na consulta (HTTP ${res.status}).`);
+      const d = (await res.json()) as Record<string, unknown>;
+
+      const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+      const razao = str(d.razao_social);
+      const fantasia = str(d.nome_fantasia);
+
+      // Resumo dos dados cadastrais relevantes (capital social omitido)
+      const cep = str(d.cep).replace(/\D/g, "");
+      const cepFmt = cep.length === 8 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : str(d.cep);
+      const endereco = [
+        [str(d.logradouro), str(d.numero)].filter(Boolean).join(", "),
+        str(d.complemento),
+        str(d.bairro),
+        [str(d.municipio), str(d.uf)].filter(Boolean).join(" - "),
+        cepFmt && `CEP ${cepFmt}`,
+      ]
+        .filter(Boolean)
+        .join(" | ");
+      const tel = str(d.ddd_telefone_1);
+      const cnaeCod =
+        d.cnae_fiscal != null && d.cnae_fiscal !== "" ? String(d.cnae_fiscal) : "";
+      const cnae = [cnaeCod, str(d.cnae_fiscal_descricao)]
+        .filter(Boolean)
+        .join(" - ");
+      const resumo = [
+        fantasia && `Nome fantasia: ${fantasia}`,
+        str(d.descricao_situacao_cadastral) &&
+          `Situação cadastral: ${str(d.descricao_situacao_cadastral)}`,
+        str(d.porte) && `Porte: ${str(d.porte)}`,
+        cnae && `Atividade principal (CNAE): ${cnae}`,
+        endereco && `Endereço: ${endereco}`,
+        tel && `Telefone: ${tel}`,
+        str(d.email) && `E-mail: ${str(d.email)}`,
+        `Dados consultados na Receita Federal (BrasilAPI) em ${new Date().toLocaleDateString("pt-BR")}.`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      setForm((f) => ({
+        ...f,
+        razao_social: razao || f.razao_social,
+        nome_empresa: f.nome_empresa.trim() || fantasia || razao || f.nome_empresa,
+        // só preenche a observação se estiver vazia (não apaga anotações)
+        observacao: f.observacao.trim() ? f.observacao : resumo,
+      }));
+      toast.success("Dados da Receita carregados — revise e salve.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao consultar o CNPJ.");
+    } finally {
+      setBuscandoCnpj(false);
+    }
+  }
 
   function toggleModulo(m: ModuloEmpresa) {
     setForm((f) => {
@@ -160,13 +231,30 @@ export default function EmpresaForm({
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label className="text-sm font-medium text-gray-700">CNPJ</label>
-            <input
-              type="text"
-              value={form.cnpj}
-              onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
-              placeholder="00.000.000/0000-00"
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
-            />
+            <div className="mt-1 flex gap-2">
+              <input
+                type="text"
+                value={form.cnpj}
+                onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    buscarCnpj();
+                  }
+                }}
+                placeholder="00.000.000/0000-00"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+              <button
+                type="button"
+                onClick={buscarCnpj}
+                disabled={buscandoCnpj}
+                title="Buscar dados da empresa na Receita Federal pelo CNPJ"
+                className="shrink-0 rounded-md bg-verde-primary px-3 py-2 text-sm font-semibold text-white hover:bg-verde-accent disabled:opacity-60"
+              >
+                {buscandoCnpj ? "Buscando…" : "Buscar"}
+              </button>
+            </div>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700">Razão Social</label>
