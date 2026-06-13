@@ -83,6 +83,11 @@ export interface ModuloConfig {
    *  O PosicaoPdfStepper mostra só essas — evita o usuário mover
    *  um capítulo para uma posição que nunca aparece no PDF. */
   posicoesDisponiveis: PosicaoPdf[];
+  /** Quando true, o laudo é montado como uma LISTA ÚNICA de blocos ordenada
+   *  por `ordem` (capítulos editáveis + seções do sistema intercalados),
+   *  e o editor mostra tudo numa lista só reordenável. As seções do sistema
+   *  são identificadas pelos slug_fixo dos capítulos `fixo`. */
+  ordenacaoUnificada?: boolean;
 }
 
 export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
@@ -160,10 +165,15 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     modulo: "aep",
     titulo: "Texto Padrão — AEP (Análise Ergonômica Preliminar)",
     descricao:
-      "Capítulos editáveis para os Laudos AEP: capa, introdução, metodologia, considerações finais. Use variáveis dinâmicas para empresa, responsável técnico, data etc.",
-    destino: "Aparecem no Laudo AEP antes (posição 'início') e após (posição 'fim') a análise por setor.",
+      "Monte o laudo AEP como uma lista única: arraste/reordene livremente os capítulos editáveis (introdução, base legal, etc.) e as seções do sistema. A capa e a folha de assinatura ficam sempre nas pontas.",
+    destino: "A ordem definida aqui é exatamente a ordem do laudo AEP gerado.",
     posicoesDisponiveis: ["inicio", "fim"],
-    fixos: [],
+    ordenacaoUnificada: true,
+    fixos: [
+      { titulo: "Indicadores de Necessidade de AET", slug_fixo: "aep_escalonamento", descricao: "Lista de setores que exigem AET completa — gerado automaticamente.", ordem_base: 3000 },
+      { titulo: "Triagem Ergonômica por Setor", slug_fixo: "aep_triagem", descricao: "Tabela de riscos ergonômicos por setor — gerado automaticamente.", ordem_base: 3500 },
+      { titulo: "Considerações Finais e Encaminhamentos", slug_fixo: "aep_consideracoes", descricao: "Conclusão do relatório — gerado automaticamente.", ordem_base: 5000 },
+    ],
   },
   aet: {
     modulo: "aet",

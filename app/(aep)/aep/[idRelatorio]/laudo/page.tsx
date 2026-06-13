@@ -4,6 +4,7 @@ import { use, useMemo, useState } from "react";
 import { AlertTriangle, BadgeCheck, Download, Loader2 } from "lucide-react";
 import { useAepRelatorio, CLASS_COLOR_AEP, riscoMaximoSetor } from "@/lib/hooks/useAep";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
@@ -209,6 +210,7 @@ export default function AepLaudoPage({
 }) {
   const { idRelatorio } = use(params);
   const { data: rel } = useAepRelatorio(idRelatorio);
+  const { data: capsAep = [] } = useTextosPadrao("aep");
   const { pdfAssinado, recarregar } = usePdfAssinado("aep_relatorios", idRelatorio);
   const [baixando, setBaixando] = useState(false);
 
@@ -334,49 +336,64 @@ export default function AepLaudoPage({
           )}
         </div>
 
-        {/* Capítulos antes das seções fixas */}
-        <TextosPadraoPrint modulo="aep" posicao="inicio" valores={valoresVars} />
-
-        {/* Escalonamento AET — indicador global */}
-        {setoresComAet.length > 0 && (
-          <Section num="I" titulo="Indicadores de Necessidade de AET Completa">
-            <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 mb-3">
-              <p className="text-sm font-semibold text-orange-800 mb-2">
-                <AlertTriangle className="inline size-4 mr-1" />
-                Os setores abaixo apresentaram riscos que justificam elaboração de AET completa (NR-17):
-              </p>
-              <ul className="list-disc list-inside text-xs text-orange-700 space-y-1">
-                {setoresComAet.map((s) => (
-                  <li key={s.id}>
-                    <strong>{s.nome_setor}</strong>
-                    {s.cargo && ` — ${s.cargo}`}
-                    {" — "}Risco máximo: <span className="font-semibold">{riscoMaximoSetor(s)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <p className="text-xs text-gray-600 leading-relaxed">
-              Conforme NR-17 e NR-01 (GRO/PGR), a presença de riscos classificados como Alto ou Crítico, ou a convergência de múltiplos riscos Moderados, indica a necessidade de aprofundamento por meio da Análise Ergonômica do Trabalho completa, com avaliação postural (OWAS), análise biomecânica, medições ambientais e elaboração de laudo técnico detalhado.
-            </p>
-          </Section>
-        )}
-
-        {/* Setores */}
-        <Section num="II" titulo="Triagem Ergonômica por Setor">
-          {rel.setores.map((setor, idx) => (
-            <SetorBlock key={setor.id} setor={setor} idx={idx} />
-          ))}
-        </Section>
-
-        {/* Capítulos após as seções fixas */}
-        <TextosPadraoPrint modulo="aep" posicao="fim" valores={valoresVars} />
-
-        {/* Considerações finais */}
-        {rel.conclusao?.trim() && (
-          <Section num="III" titulo="Considerações Finais e Encaminhamentos">
-            <p className="text-xs leading-relaxed text-gray-700 whitespace-pre-line">{rel.conclusao}</p>
-          </Section>
-        )}
+        {/* Corpo do laudo — blocos na ordem definida em Texto Padrão (textos
+            editáveis + seções do sistema). Mesma ordem do PDF gerado. */}
+        {[...capsAep]
+          .filter((c) => c.ativo !== false)
+          .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+          .map((c) => {
+            if (c.tipo === "fixo") {
+              if (c.slug_fixo === "aep_escalonamento") {
+                return setoresComAet.length > 0 ? (
+                  <Section key={c.id_capitulo} titulo="Indicadores de Necessidade de AET Completa">
+                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 mb-3">
+                      <p className="text-sm font-semibold text-orange-800 mb-2">
+                        <AlertTriangle className="inline size-4 mr-1" />
+                        Os setores abaixo apresentaram riscos que justificam elaboração de AET completa (NR-17):
+                      </p>
+                      <ul className="list-disc list-inside text-xs text-orange-700 space-y-1">
+                        {setoresComAet.map((s) => (
+                          <li key={s.id}>
+                            <strong>{s.nome_setor}</strong>
+                            {s.cargo && ` — ${s.cargo}`}
+                            {" — "}Risco máximo: <span className="font-semibold">{riscoMaximoSetor(s)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Conforme NR-17 e NR-01 (GRO/PGR), a presença de riscos classificados como Alto ou Crítico, ou a convergência de múltiplos riscos Moderados, indica a necessidade de aprofundamento por meio da Análise Ergonômica do Trabalho completa, com avaliação postural (OWAS), análise biomecânica, medições ambientais e elaboração de laudo técnico detalhado.
+                    </p>
+                  </Section>
+                ) : null;
+              }
+              if (c.slug_fixo === "aep_triagem") {
+                return (
+                  <Section key={c.id_capitulo} titulo="Triagem Ergonômica por Setor">
+                    {rel.setores.map((setor, idx) => (
+                      <SetorBlock key={setor.id} setor={setor} idx={idx} />
+                    ))}
+                  </Section>
+                );
+              }
+              if (c.slug_fixo === "aep_consideracoes") {
+                return rel.conclusao?.trim() ? (
+                  <Section key={c.id_capitulo} titulo="Considerações Finais e Encaminhamentos">
+                    <p className="text-xs leading-relaxed text-gray-700 whitespace-pre-line">{rel.conclusao}</p>
+                  </Section>
+                ) : null;
+              }
+              return null;
+            }
+            return (
+              <TextosPadraoPrint
+                key={c.id_capitulo}
+                modulo="aep"
+                capituloId={c.id_capitulo}
+                valores={valoresVars}
+              />
+            );
+          })}
 
         {/* Assinatura */}
         <AssinaturaRelatorio

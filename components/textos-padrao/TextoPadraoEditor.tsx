@@ -75,6 +75,9 @@ export default function TextoPadraoEditor({ modulo }: Props) {
 
   const capitulosFixos    = capitulos.filter((c) => c.tipo === "fixo");
   const capitulosEditaveis = capitulos.filter((c) => c.tipo !== "fixo");
+  // Módulos com ordenação unificada (ex: AEP): o laudo é uma lista única de
+  // blocos (editáveis + seções do sistema) na ordem de `ordem`.
+  const unificado = !!config.ordenacaoUnificada;
 
   function novoCapitulo() {
     const ordem = capitulos.length;
@@ -101,7 +104,9 @@ export default function TextoPadraoEditor({ modulo }: Props) {
   async function mover(cap: TextoPadraoCapitulo, direcao: "up" | "down") {
     const grupo = capitulos
       .filter((c) =>
-        cap.tipo === "fixo"
+        unificado
+          ? true // lista única: reordena entre TODOS os blocos
+          : cap.tipo === "fixo"
           ? c.tipo === "fixo"
           : c.tipo !== "fixo" &&
             (c.posicao_pdf ?? "inicio") === (cap.posicao_pdf ?? "inicio")
@@ -141,6 +146,7 @@ export default function TextoPadraoEditor({ modulo }: Props) {
         storagePrefix={`textos-padrao/${modulo}`}
         contagensPorPosicao={contagensPorPosicao}
         posicoesMod={config.posicoesDisponiveis}
+        ocultarPosicao={unificado}
         onSalvar={(patch) =>
           salvar.mutate({ id_capitulo: cap.id_capitulo, ...patch })
         }
@@ -295,6 +301,43 @@ export default function TextoPadraoEditor({ modulo }: Props) {
             )}
           </p>
 
+          {/* Modo UNIFICADO (ex: AEP): lista única reordenável — arraste
+              qualquer bloco (texto editável ou seção do sistema) em qualquer
+              ordem; é exatamente a ordem do laudo. Capa e assinatura ficam
+              fixas nas pontas (não aparecem aqui). */}
+          {unificado ? (
+            <>
+              <div className="rounded-md bg-verde-light/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-verde-primary">
+                Ordem do laudo — arraste/reordene livremente (capa e assinatura são fixas)
+              </div>
+              {aplicaBusca(
+                [...capitulos].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+              ).map((cap, idx, arr) =>
+                cap.tipo === "fixo" ? (
+                  <FixoCard
+                    key={cap.id_capitulo}
+                    capitulo={cap}
+                    indice={idx}
+                    total={arr.length}
+                    salvando={salvar.isPending}
+                    descricao={
+                      config.fixos.find((f) => f.slug_fixo === cap.slug_fixo)?.descricao ?? ""
+                    }
+                    onMover={(dir) => mover(cap, dir)}
+                    onToggleMostrar={() =>
+                      salvar.mutate({ id_capitulo: cap.id_capitulo, ativo: !cap.ativo })
+                    }
+                    onSalvar={(patch) =>
+                      salvar.mutate({ id_capitulo: cap.id_capitulo, ...patch })
+                    }
+                  />
+                ) : (
+                  renderCardEditavel(cap, idx, arr.length)
+                )
+              )}
+            </>
+          ) : (
+          <>
           {/* 1) Editáveis posicionados no INÍCIO (antes do corpo do laudo) */}
           {editavelInicio.length > 0 && (
             <>
@@ -348,6 +391,8 @@ export default function TextoPadraoEditor({ modulo }: Props) {
             <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
               Nenhum capítulo editável encontrado para <strong>&ldquo;{busca}&rdquo;</strong>.
             </div>
+          )}
+          </>
           )}
         </div>
       )}
@@ -487,6 +532,7 @@ function CapituloCard({
   storagePrefix,
   contagensPorPosicao,
   posicoesMod,
+  ocultarPosicao,
   onSalvar,
   onMover,
   onExcluir,
@@ -499,6 +545,9 @@ function CapituloCard({
   storagePrefix: string;
   contagensPorPosicao: Partial<Record<PosicaoPdf, number>>;
   posicoesMod: PosicaoPdf[];
+  /** Em ordenação unificada (ex: AEP), a posição é dada pela ordem na lista,
+   *  então o seletor de posição é ocultado. */
+  ocultarPosicao?: boolean;
   onSalvar: (patch: {
     titulo?: string;
     conteudo?: string | null;
@@ -537,13 +586,13 @@ function CapituloCard({
   ]);
 
   useEffect(() => {
-    if (migrated.current) return;
+    if (ocultarPosicao || migrated.current) return;
     const pos = (capitulo.posicao_pdf ?? "inicio") as PosicaoPdf;
     if (posicoesMod.length > 0 && !posicoesMod.includes(pos)) {
       migrated.current = true;
       onSalvar({ posicao_pdf: posicoesMod[0] });
     }
-  }, [capitulo.posicao_pdf, posicoesMod, onSalvar]);
+  }, [capitulo.posicao_pdf, posicoesMod, onSalvar, ocultarPosicao]);
 
   async function enviarBg(file: File) {
     if (enviandoBg) return;
@@ -751,21 +800,23 @@ function CapituloCard({
             : "A4 vertical em folha nova (ABNT)."}
         </span>
 
-        {/* V53: Posição no PDF — Stepper visual */}
-        <div className="w-full">
-          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-600">
-            📍 Posição no Relatório
-          </p>
-          <PosicaoPdfStepper
-            valor={(capitulo.posicao_pdf ?? "inicio") as PosicaoPdf}
-            onChange={(p) =>
-              onSalvar({ posicao_pdf: p as PosicaoPdf })
-            }
-            contagens={contagensPorPosicao}
-            disabled={salvando}
-            posicoes={posicoesMod}
-          />
-        </div>
+        {/* V53: Posição no PDF — Stepper visual (oculto na ordenação unificada) */}
+        {!ocultarPosicao && (
+          <div className="w-full">
+            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-600">
+              📍 Posição no Relatório
+            </p>
+            <PosicaoPdfStepper
+              valor={(capitulo.posicao_pdf ?? "inicio") as PosicaoPdf}
+              onChange={(p) =>
+                onSalvar({ posicao_pdf: p as PosicaoPdf })
+              }
+              contagens={contagensPorPosicao}
+              disabled={salvando}
+              posicoes={posicoesMod}
+            />
+          </div>
+        )}
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-dashed border-gray-300 bg-gray-50 p-2">

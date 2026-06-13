@@ -17,6 +17,9 @@ interface Props {
    * dos módulos antigos que ainda usam "antes"/"depois" cai no fallback abaixo.
    */
   posicao?: PosicaoPdf | "antes" | "depois";
+  /** Quando setado, renderiza SÓ este capítulo (ignora o filtro de posição).
+   *  Usado pela montagem por blocos ordenados (ex: laudo AEP). */
+  capituloId?: string;
 }
 
 /**
@@ -33,6 +36,7 @@ export default function TextosPadraoPrint({
   modulo,
   valores,
   posicao = "antes",
+  capituloId,
 }: Props) {
   const { data: capitulosTodos = [] } = useTextosPadrao(modulo);
 
@@ -42,11 +46,14 @@ export default function TextosPadraoPrint({
     (c) => c.tipo !== "fixo" && c.ativo !== false
   );
 
+  // Modo "um capítulo" (montagem por blocos ordenados): ignora o filtro de posição.
   // V53: filtra por posição se for uma das novas (inicio/apos_setores/etc).
   // Para os módulos antigos ("antes"/"depois"), mantém o comportamento legado
   // de renderizar TODOS os capítulos (single drop point).
   const ehPosicaoLegado = posicao === "antes" || posicao === "depois";
-  const capitulos = ehPosicaoLegado
+  const capitulos = capituloId
+    ? editaveisTodos.filter((c) => c.id_capitulo === capituloId)
+    : ehPosicaoLegado
     ? editaveisTodos
     : editaveisTodos.filter(
         (c) => (c.posicao_pdf ?? "inicio") === posicao

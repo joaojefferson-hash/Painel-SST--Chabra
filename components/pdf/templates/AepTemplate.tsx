@@ -10,7 +10,7 @@
 import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
-import type { TextoPadraoCapitulo, PosicaoPdf } from "@/lib/textos-padrao/types";
+import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import {
   substituirVariaveis,
   substituirVariaveisTexto,
@@ -257,89 +257,6 @@ body {
 `;
 
 // ── Sub-componentes ───────────────────────────────────────────────────────────
-
-function TexosPadraoBlock({
-  capitulos,
-  posicao,
-  valores,
-}: {
-  capitulos: TextoPadraoCapitulo[];
-  posicao: PosicaoPdf;
-  valores: Record<string, string>;
-}) {
-  const filtrados = capitulos
-    .filter((c) => c.tipo !== "fixo" && c.ativo !== false)
-    .filter((c) => (c.posicao_pdf ?? "inicio") === posicao);
-
-  if (filtrados.length === 0) return null;
-
-  return (
-    <section>
-      {filtrados.map((c, idx) => {
-        const ehCapa = !!c.bg_imagem_url;
-        const orientacao = c.orientacao ?? "retrato";
-        const novaPagina =
-          idx === 0 || ehCapa || (c.quebra_pagina ?? "nova") === "nova";
-        const conteudo = substituirVariaveis(c.conteudo, valores);
-        const titulo = substituirVariaveisTexto(c.titulo, valores);
-        const classes = [
-          "textos-padrao-capitulo",
-          orientacao === "paisagem"
-            ? "textos-padrao-capitulo--paisagem"
-            : "textos-padrao-capitulo--retrato",
-          novaPagina
-            ? "textos-padrao-capitulo--nova-pagina"
-            : "textos-padrao-capitulo--continua",
-          ehCapa ? "textos-padrao-capitulo--capa" : "",
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-        return (
-          <article key={c.id_capitulo} className={classes}>
-            {ehCapa && c.bg_imagem_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={c.bg_imagem_url}
-                alt=""
-                className="textos-padrao-capitulo-bg-img"
-              />
-            )}
-            {!ehCapa && (
-              <h2 className="textos-padrao-capitulo-titulo">{titulo}</h2>
-            )}
-            {ehCapa && c.caixas_texto && c.caixas_texto.length > 0 ? (
-              c.caixas_texto.map((cx) => (
-                <div
-                  key={cx.id}
-                  className="textos-padrao-caixa-texto"
-                  style={{
-                    left: `${cx.x}%`,
-                    top: `${cx.y}%`,
-                    width: `${cx.w ?? 40}%`,
-                    fontSize: cx.fontSize ?? 16,
-                    fontWeight: cx.bold ? 700 : 400,
-                    color: cx.color ?? "#ffffff",
-                    textAlign: (cx.align ?? "left") as React.CSSProperties["textAlign"],
-                    whiteSpace: "pre-wrap",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {substituirVariaveisTexto(cx.conteudo, valores)}
-                </div>
-              ))
-            ) : !ehCapa ? (
-              <div
-                className="textos-padrao-capitulo-conteudo"
-                dangerouslySetInnerHTML={{ __html: conteudo }}
-              />
-            ) : null}
-          </article>
-        );
-      })}
-    </section>
-  );
-}
 
 function SectionTitulo({
   num,
@@ -724,6 +641,140 @@ export default function AepTemplate({
   const setoresComAet = rel.setores.filter((s) => s.necessita_aet);
   const totalRiscos = rel.setores.reduce((a, s) => a + s.riscos.length, 0);
 
+  // Laudo montado como LISTA ÚNICA de blocos, na ordem definida em
+  // textos_padrao(modulo='aep'). Capa (acima) e assinatura (abaixo) são
+  // estruturais. Cada bloco é um texto editável ou uma seção do sistema
+  // (despachada pelo slug_fixo).
+  const blocosOrdenados = [...capitulos]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+  function renderEditavel(c: TextoPadraoCapitulo) {
+    const ehCapa = !!c.bg_imagem_url;
+    const orientacao = c.orientacao ?? "retrato";
+    const novaPagina = ehCapa || (c.quebra_pagina ?? "nova") === "nova";
+    const conteudo = substituirVariaveis(c.conteudo, valoresVars);
+    const titulo = substituirVariaveisTexto(c.titulo, valoresVars);
+    const classes = [
+      "textos-padrao-capitulo",
+      orientacao === "paisagem"
+        ? "textos-padrao-capitulo--paisagem"
+        : "textos-padrao-capitulo--retrato",
+      novaPagina
+        ? "textos-padrao-capitulo--nova-pagina"
+        : "textos-padrao-capitulo--continua",
+      ehCapa ? "textos-padrao-capitulo--capa" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return (
+      <article key={c.id_capitulo} className={classes}>
+        {ehCapa && c.bg_imagem_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={c.bg_imagem_url} alt="" className="textos-padrao-capitulo-bg-img" />
+        )}
+        {!ehCapa && <h2 className="textos-padrao-capitulo-titulo">{titulo}</h2>}
+        {ehCapa && c.caixas_texto && c.caixas_texto.length > 0 ? (
+          c.caixas_texto.map((cx) => (
+            <div
+              key={cx.id}
+              className="textos-padrao-caixa-texto"
+              style={{
+                left: `${cx.x}%`,
+                top: `${cx.y}%`,
+                width: `${cx.w ?? 40}%`,
+                fontSize: cx.fontSize ?? 16,
+                fontWeight: cx.bold ? 700 : 400,
+                color: cx.color ?? "#ffffff",
+                textAlign: (cx.align ?? "left") as React.CSSProperties["textAlign"],
+                whiteSpace: "pre-wrap",
+                lineHeight: 1.3,
+              }}
+            >
+              {substituirVariaveisTexto(cx.conteudo, valoresVars)}
+            </div>
+          ))
+        ) : !ehCapa ? (
+          <div
+            className="textos-padrao-capitulo-conteudo"
+            dangerouslySetInnerHTML={{ __html: conteudo }}
+          />
+        ) : null}
+      </article>
+    );
+  }
+
+  const secaoIndicadores =
+    setoresComAet.length > 0 ? (
+      <div style={{ marginBottom: 24 }}>
+        <SectionTitulo titulo="Indicadores de Necessidade de AET Completa" />
+        <div
+          style={{
+            borderRadius: 12,
+            border: "1px solid #fed7aa",
+            backgroundColor: "#fff7ed",
+            padding: 16,
+            marginBottom: 12,
+          }}
+        >
+          <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: "#9a3412" }}>
+            ⚠ Os setores abaixo apresentaram riscos que justificam elaboração de AET completa (NR-17):
+          </p>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 11, color: "#c2410c", lineHeight: 1.8 }}>
+            {setoresComAet.map((s) => (
+              <li key={s.id}>
+                <strong>{s.nome_setor}</strong>
+                {s.cargo && ` — ${s.cargo}`}
+                {" — "}Risco máximo:{" "}
+                <span style={{ fontWeight: 600 }}>{riscoMaximoSetor(s)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p style={{ margin: 0, fontSize: 11, color: "#4b5563", lineHeight: 1.7 }}>
+          Conforme NR-17 e NR-01 (GRO/PGR), a presença de riscos classificados como Alto ou Crítico, ou a convergência de múltiplos riscos Moderados, indica a necessidade de aprofundamento por meio da Análise Ergonômica do Trabalho completa, com avaliação postural (OWAS), análise biomecânica, medições ambientais e elaboração de laudo técnico detalhado.
+        </p>
+      </div>
+    ) : null;
+
+  const secaoTriagem = (
+    <div style={{ marginBottom: 24 }}>
+      <SectionTitulo titulo="Triagem Ergonômica por Setor" />
+      {rel.setores.map((setor, idx) => (
+        <SetorBlock key={setor.id} setor={setor} idx={idx} />
+      ))}
+    </div>
+  );
+
+  const secaoConsideracoes = rel.conclusao?.trim() ? (
+    <div style={{ marginBottom: 24 }}>
+      <SectionTitulo titulo="Considerações Finais e Encaminhamentos" />
+      <p style={{ margin: 0, fontSize: 11, lineHeight: 1.7, color: "#374151", whiteSpace: "pre-line" }}>
+        {rel.conclusao}
+      </p>
+    </div>
+  ) : null;
+
+  function renderBloco(c: TextoPadraoCapitulo) {
+    if (c.tipo === "fixo") {
+      switch (c.slug_fixo) {
+        case "aep_escalonamento":
+          return secaoIndicadores ? (
+            <div key={c.id_capitulo}>{secaoIndicadores}</div>
+          ) : null;
+        case "aep_triagem":
+          return <div key={c.id_capitulo}>{secaoTriagem}</div>;
+        case "aep_consideracoes":
+          return secaoConsideracoes ? (
+            <div key={c.id_capitulo}>{secaoConsideracoes}</div>
+          ) : null;
+        default:
+          return null;
+      }
+    }
+    return renderEditavel(c);
+  }
+
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
@@ -794,98 +845,9 @@ export default function AepTemplate({
         )}
       </div>
 
-      {/* Textos padrão — posição "início" */}
-      <TexosPadraoBlock
-        capitulos={capitulos}
-        posicao="inicio"
-        valores={valoresVars}
-      />
-
-      {/* Seção I — Indicadores AET */}
-      {setoresComAet.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <SectionTitulo num="I" titulo="Indicadores de Necessidade de AET Completa" />
-          <div
-            style={{
-              borderRadius: 12,
-              border: "1px solid #fed7aa",
-              backgroundColor: "#fff7ed",
-              padding: 16,
-              marginBottom: 12,
-            }}
-          >
-            <p
-              style={{
-                margin: "0 0 8px",
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#9a3412",
-              }}
-            >
-              ⚠ Os setores abaixo apresentaram riscos que justificam elaboração de AET
-              completa (NR-17):
-            </p>
-            <ul
-              style={{
-                margin: 0,
-                paddingLeft: 20,
-                fontSize: 11,
-                color: "#c2410c",
-                lineHeight: 1.8,
-              }}
-            >
-              {setoresComAet.map((s) => (
-                <li key={s.id}>
-                  <strong>{s.nome_setor}</strong>
-                  {s.cargo && ` — ${s.cargo}`}
-                  {" — "}Risco máximo:{" "}
-                  <span style={{ fontWeight: 600 }}>{riscoMaximoSetor(s)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <p style={{ margin: 0, fontSize: 11, color: "#4b5563", lineHeight: 1.7 }}>
-            Conforme NR-17 e NR-01 (GRO/PGR), a presença de riscos classificados como
-            Alto ou Crítico, ou a convergência de múltiplos riscos Moderados, indica a
-            necessidade de aprofundamento por meio da Análise Ergonômica do Trabalho
-            completa, com avaliação postural (OWAS), análise biomecânica, medições
-            ambientais e elaboração de laudo técnico detalhado.
-          </p>
-        </div>
-      )}
-
-      {/* Seção II — Triagem por setor */}
-      <div style={{ marginBottom: 24 }}>
-        <SectionTitulo num="II" titulo="Triagem Ergonômica por Setor" />
-        {rel.setores.map((setor, idx) => (
-          <SetorBlock key={setor.id} setor={setor} idx={idx} />
-        ))}
-      </div>
-
-      {/* Textos padrão — posição "fim" */}
-      <TexosPadraoBlock
-        capitulos={capitulos}
-        posicao="fim"
-        valores={valoresVars}
-      />
-
-      {/* Seção III — Considerações finais */}
-      {rel.conclusao?.trim() && (
-        <div style={{ marginBottom: 24 }}>
-          <SectionTitulo num="III" titulo="Considerações Finais e Encaminhamentos" />
-          <p
-            style={{
-              margin: 0,
-              fontSize: 11,
-              lineHeight: 1.7,
-              color: "#374151",
-              whiteSpace: "pre-line",
-            }}
-          >
-            {rel.conclusao}
-          </p>
-        </div>
-      )}
+      {/* Corpo do laudo — blocos na ordem definida (textos editáveis +
+          seções do sistema), entre a capa e a folha de assinatura */}
+      {blocosOrdenados.map((c) => renderBloco(c))}
 
       {/* Folha de assinaturas digital (ICP-Brasil) */}
       <FolhaAssinaturas
