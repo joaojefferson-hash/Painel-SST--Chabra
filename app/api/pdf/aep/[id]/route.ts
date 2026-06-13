@@ -80,6 +80,9 @@ function normalizarSetor(s: unknown): AepSetorLocal {
     trabalhadores_consultados: (setor.trabalhadores_consultados as string) ?? "",
     observacoes_checklist:
       (setor.observacoes_checklist as Record<string, string>) ?? {},
+    cargos: Array.isArray(setor.cargos)
+      ? (setor.cargos as AepSetorLocal["cargos"])
+      : [],
     riscos: Array.isArray(setor.riscos) ? (setor.riscos as AepSetorLocal["riscos"]) : [],
     checklist_fisica: normalizarChecklistFisica(setor.checklist_fisica),
     checklist_cognitiva: normalizarChecklistCognitiva(setor.checklist_cognitiva),

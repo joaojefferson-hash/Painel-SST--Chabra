@@ -11,7 +11,7 @@ import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
-import { formatarDataBR } from "@/lib/textos-padrao/variaveis";
+import { formatarDataBR, substituirVariaveis, substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 import type { AepSetor, AepChecklistFisica, AepChecklistCognitiva, AepChecklistOrganizacional } from "@/lib/supabase/types";
 import toast from "react-hot-toast";
 
@@ -116,6 +116,17 @@ function SetorBlock({ setor, idx }: { setor: AepSetor; idx: number }) {
             <tr>
               <td className="bg-gray-50 px-2 py-1 font-semibold align-top">Atividades</td>
               <td className="px-2 py-1" colSpan={3}>{setor.descricao_atividade}</td>
+            </tr>
+          )}
+          {setor.cargos?.length > 0 && (
+            <tr>
+              <td className="bg-gray-50 px-2 py-1 font-semibold align-top">Cargos do setor</td>
+              <td className="px-2 py-1" colSpan={3}>
+                {setor.cargos
+                  .filter((c) => c.cargo?.trim())
+                  .map((c) => `${c.cargo}${c.quantidade ? ` (${c.quantidade})` : ""}${c.descricao ? ` — ${c.descricao}` : ""}`)
+                  .join("; ")}
+              </td>
             </tr>
           )}
         </tbody>
@@ -364,28 +375,36 @@ export default function AepLaudoPage({
           .map((c) => {
             if (c.tipo === "fixo") {
               if (c.slug_fixo === "aep_escalonamento") {
-                return setoresComAet.length > 0 ? (
+                return (
                   <Section key={c.id_capitulo} titulo="Indicadores de Necessidade de AET Completa">
-                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 mb-3">
-                      <p className="text-sm font-semibold text-orange-800 mb-2">
-                        <AlertTriangle className="inline size-4 mr-1" />
-                        Os setores abaixo apresentaram riscos que justificam elaboração de AET completa (NR-17):
+                    {setoresComAet.length > 0 ? (
+                      <>
+                        <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 mb-3">
+                          <p className="text-sm font-semibold text-orange-800 mb-2">
+                            <AlertTriangle className="inline size-4 mr-1" />
+                            Os setores abaixo apresentaram riscos que justificam elaboração de AET completa (NR-17):
+                          </p>
+                          <ul className="list-disc list-inside text-xs text-orange-700 space-y-1">
+                            {setoresComAet.map((s) => (
+                              <li key={s.id}>
+                                <strong>{s.nome_setor}</strong>
+                                {s.cargo && ` — ${s.cargo}`}
+                                {" — "}Risco máximo: <span className="font-semibold">{riscoMaximoSetor(s)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          Conforme NR-17 e NR-01 (GRO/PGR), a presença de riscos classificados como Alto ou Crítico, ou a convergência de múltiplos riscos Moderados, indica a necessidade de aprofundamento por meio da Análise Ergonômica do Trabalho completa, com avaliação postural (OWAS), análise biomecânica, medições ambientais e elaboração de laudo técnico detalhado.
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        Nenhum setor analisado apresentou riscos que justifiquem a elaboração de AET completa (NR-17) nesta avaliação.
                       </p>
-                      <ul className="list-disc list-inside text-xs text-orange-700 space-y-1">
-                        {setoresComAet.map((s) => (
-                          <li key={s.id}>
-                            <strong>{s.nome_setor}</strong>
-                            {s.cargo && ` — ${s.cargo}`}
-                            {" — "}Risco máximo: <span className="font-semibold">{riscoMaximoSetor(s)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <p className="text-xs text-gray-600 leading-relaxed">
-                      Conforme NR-17 e NR-01 (GRO/PGR), a presença de riscos classificados como Alto ou Crítico, ou a convergência de múltiplos riscos Moderados, indica a necessidade de aprofundamento por meio da Análise Ergonômica do Trabalho completa, com avaliação postural (OWAS), análise biomecânica, medições ambientais e elaboração de laudo técnico detalhado.
-                    </p>
+                    )}
                   </Section>
-                ) : null;
+                );
               }
               if (c.slug_fixo === "aep_triagem") {
                 return (
@@ -405,13 +424,28 @@ export default function AepLaudoPage({
               }
               return null;
             }
+            // Texto editável — visível na tela e no print (o TextosPadraoPrint
+            // fica oculto na tela por CSS, então renderizamos inline aqui).
+            if (c.bg_imagem_url) {
+              return (
+                <TextosPadraoPrint
+                  key={c.id_capitulo}
+                  modulo="aep"
+                  capituloId={c.id_capitulo}
+                  valores={valoresVars}
+                />
+              );
+            }
             return (
-              <TextosPadraoPrint
-                key={c.id_capitulo}
-                modulo="aep"
-                capituloId={c.id_capitulo}
-                valores={valoresVars}
-              />
+              <div key={c.id_capitulo} className="mb-6 break-inside-avoid">
+                <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+                  {substituirVariaveisTexto(c.titulo, valoresVars)}
+                </h2>
+                <div
+                  className="prose prose-sm max-w-none text-xs leading-relaxed text-gray-700 [&_p]:mb-2 [&_table]:w-full [&_td]:border [&_td]:border-gray-300 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-gray-300 [&_th]:bg-gray-50 [&_th]:px-2 [&_th]:py-1"
+                  dangerouslySetInnerHTML={{ __html: substituirVariaveis(c.conteudo, valoresVars) }}
+                />
+              </div>
             );
           })}
 

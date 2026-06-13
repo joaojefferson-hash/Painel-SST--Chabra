@@ -78,6 +78,7 @@ export interface AepSetorLocal {
   metodo_coleta?: string;
   trabalhadores_consultados?: string;
   observacoes_checklist?: Record<string, string>;
+  cargos?: { id: string; cargo: string; descricao: string; quantidade: number }[];
   riscos: AepRisco[];
   checklist_fisica: AepChecklistFisica;
   checklist_cognitiva: AepChecklistCognitiva;
@@ -440,6 +441,19 @@ function SetorBlock({
               </td>
             </tr>
           )}
+          {setor.cargos && setor.cargos.length > 0 && (
+            <tr>
+              <td style={{ backgroundColor: "#f9fafb", padding: "4px 8px", fontWeight: 600, verticalAlign: "top" }}>
+                Cargos do setor
+              </td>
+              <td style={{ padding: "4px 8px" }} colSpan={3}>
+                {setor.cargos
+                  .filter((c) => c.cargo?.trim())
+                  .map((c) => `${c.cargo}${c.quantidade ? ` (${c.quantidade})` : ""}${c.descricao ? ` — ${c.descricao}` : ""}`)
+                  .join("; ")}
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
 
@@ -701,38 +715,45 @@ export default function AepTemplate({
     );
   }
 
-  const secaoIndicadores =
-    setoresComAet.length > 0 ? (
-      <div style={{ marginBottom: 24 }}>
-        <SectionTitulo titulo="Indicadores de Necessidade de AET Completa" />
-        <div
-          style={{
-            borderRadius: 12,
-            border: "1px solid #fed7aa",
-            backgroundColor: "#fff7ed",
-            padding: 16,
-            marginBottom: 12,
-          }}
-        >
-          <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: "#9a3412" }}>
-            ⚠ Os setores abaixo apresentaram riscos que justificam elaboração de AET completa (NR-17):
+  const secaoIndicadores = (
+    <div style={{ marginBottom: 24 }}>
+      <SectionTitulo titulo="Indicadores de Necessidade de AET Completa" />
+      {setoresComAet.length > 0 ? (
+        <>
+          <div
+            style={{
+              borderRadius: 12,
+              border: "1px solid #fed7aa",
+              backgroundColor: "#fff7ed",
+              padding: 16,
+              marginBottom: 12,
+            }}
+          >
+            <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: "#9a3412" }}>
+              ⚠ Os setores abaixo apresentaram riscos que justificam elaboração de AET completa (NR-17):
+            </p>
+            <ul style={{ margin: 0, paddingLeft: 20, fontSize: 11, color: "#c2410c", lineHeight: 1.8 }}>
+              {setoresComAet.map((s) => (
+                <li key={s.id}>
+                  <strong>{s.nome_setor}</strong>
+                  {s.cargo && ` — ${s.cargo}`}
+                  {" — "}Risco máximo:{" "}
+                  <span style={{ fontWeight: 600 }}>{riscoMaximoSetor(s)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p style={{ margin: 0, fontSize: 11, color: "#4b5563", lineHeight: 1.7 }}>
+            Conforme NR-17 e NR-01 (GRO/PGR), a presença de riscos classificados como Alto ou Crítico, ou a convergência de múltiplos riscos Moderados, indica a necessidade de aprofundamento por meio da Análise Ergonômica do Trabalho completa, com avaliação postural (OWAS), análise biomecânica, medições ambientais e elaboração de laudo técnico detalhado.
           </p>
-          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 11, color: "#c2410c", lineHeight: 1.8 }}>
-            {setoresComAet.map((s) => (
-              <li key={s.id}>
-                <strong>{s.nome_setor}</strong>
-                {s.cargo && ` — ${s.cargo}`}
-                {" — "}Risco máximo:{" "}
-                <span style={{ fontWeight: 600 }}>{riscoMaximoSetor(s)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        </>
+      ) : (
         <p style={{ margin: 0, fontSize: 11, color: "#4b5563", lineHeight: 1.7 }}>
-          Conforme NR-17 e NR-01 (GRO/PGR), a presença de riscos classificados como Alto ou Crítico, ou a convergência de múltiplos riscos Moderados, indica a necessidade de aprofundamento por meio da Análise Ergonômica do Trabalho completa, com avaliação postural (OWAS), análise biomecânica, medições ambientais e elaboração de laudo técnico detalhado.
+          Nenhum setor analisado apresentou riscos que justifiquem a elaboração de AET completa (NR-17) nesta avaliação.
         </p>
-      </div>
-    ) : null;
+      )}
+    </div>
+  );
 
   const secaoTriagem = (
     <div style={{ marginBottom: 24 }}>
