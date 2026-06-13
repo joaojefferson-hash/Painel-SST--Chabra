@@ -111,8 +111,9 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     titulo: "Texto Padrão — Conformidade NR",
     descricao:
       "Capítulos reutilizáveis para os Relatórios de Conformidade NR. Inclua introdução, fundamentação legal, considerações finais — com variáveis dinâmicas.",
-    destino: "Aparecem nos Relatórios de Conformidade (NR-24, NR-17 etc).",
+    destino: "A ordem definida aqui é a ordem do laudo de Conformidade.",
     posicoesDisponiveis: ["inicio", "fim"],
+    ordenacaoUnificada: true,
     fixos: [
       { titulo: "Itens de Conformidade Avaliados",   slug_fixo: "conformidade_itens",      descricao: "Tabela de itens por NR avaliados — gerada automaticamente.", ordem_base: 2000 },
       { titulo: "Resultado Geral de Conformidade",   slug_fixo: "conformidade_resultado",  descricao: "Percentual de conformidade por NR — gerado automaticamente.", ordem_base: 3000 },
