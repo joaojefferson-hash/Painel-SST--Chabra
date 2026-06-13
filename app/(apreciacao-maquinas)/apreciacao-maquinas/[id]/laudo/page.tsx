@@ -3,10 +3,11 @@
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck, Download, Loader2, AlertTriangle, Cog } from "lucide-react";
-import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import AnexosManager from "@/components/anexos/AnexosManager";
+import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
 import toast from "react-hot-toast";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
 import { useMaquina } from "@/lib/hooks/useInventarioMaquinas";
@@ -39,6 +40,8 @@ export default function LaudoApreciacaoMaquinasPage({
   const itens = data?.itens ?? [];
 
   const { pdfAssinado, recarregar } = usePdfAssinado("apreciacoes_maquinas", id);
+  const { data: pdfCongelado } = usePdfCongelado("apreciacao_maquinas", id);
+  const baseCongeladaUrl = pdfCongelado?.pdf_url ?? undefined;
   const [baixando, setBaixando] = useState(false);
 
   async function handleBaixarPdf() {
@@ -160,10 +163,10 @@ export default function LaudoApreciacaoMaquinasPage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/apreciacao/${id}`} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/apreciacao/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
           </>
         ) : (
-          <BotaoAssinarPdf apiPdfUrl={`/api/pdf/apreciacao/${id}`} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
+          <BotaoAssinarPdf apiPdfUrl={`/api/pdf/apreciacao/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
         )}
         <BotaoGerarPdf
           apiPdfUrl={`/api/pdf/apreciacao/${id}`}
@@ -174,6 +177,21 @@ export default function LaudoApreciacaoMaquinasPage({
             modulo: "apreciacao_maquinas",
             tipoDocumento: "Apreciação de Máquinas NR-12",
             idRelatorio: id,
+            empresaId: apreciacao.id_empresa ?? undefined,
+            empresaNome: empresa?.nome_empresa ?? undefined,
+            empresaCnpj: empresa?.cnpj ?? undefined,
+            responsavelTecnico: apreciacao.responsavel ?? undefined,
+          }}
+        />
+      </div>
+
+      <div className="px-4 pt-3">
+        <PainelCongelamentoPdf
+          modulo="apreciacao_maquinas"
+          idReferencia={id}
+          apiPdfUrl={`/api/pdf/apreciacao/${id}`}
+          opts={{
+            tipoDocumento: "Apreciação de Máquinas NR-12",
             empresaId: apreciacao.id_empresa ?? undefined,
             empresaNome: empresa?.nome_empresa ?? undefined,
             empresaCnpj: empresa?.cnpj ?? undefined,

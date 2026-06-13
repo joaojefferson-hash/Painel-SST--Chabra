@@ -22,6 +22,12 @@ interface Props {
    * Ideal para laudos com template Puppeteer (ex: /api/pdf/aep/[id]).
    */
   apiPdfUrl?: string;
+  /**
+   * URL do PDF BASE já congelado (arquivo imutável, Fase 4). Quando presente,
+   * a assinatura opera sobre ESTE arquivo (não regenera) — garante que o
+   * assinado é byte-a-byte o aprovado. Tem prioridade sobre apiPdfUrl.
+   */
+  baseCongeladaUrl?: string;
 }
 
 export default function BotaoAssinarPdf({
@@ -31,6 +37,7 @@ export default function BotaoAssinarPdf({
   onAssinado,
   reAssinatura = false,
   apiPdfUrl,
+  baseCongeladaUrl,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [capturando, setCapturando] = useState(false);
@@ -40,7 +47,12 @@ export default function BotaoAssinarPdf({
     setCapturando(true);
     try {
       let bytes: ArrayBuffer;
-      if (apiPdfUrl) {
+      if (baseCongeladaUrl) {
+        // Fase 4: assina sobre a base congelada (arquivo imutável), sem regenerar.
+        const res = await fetch(baseCongeladaUrl);
+        if (!res.ok) throw new Error("Falha ao baixar o PDF base congelado");
+        bytes = await res.arrayBuffer();
+      } else if (apiPdfUrl) {
         // Template Puppeteer: a API gera o PDF server-side e retorna o buffer.
         const res = await fetch(apiPdfUrl);
         if (!res.ok) {

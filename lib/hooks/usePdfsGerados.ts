@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -27,6 +28,8 @@ export interface PdfGerado {
   data_assinatura: string | null;
   observacoes: string | null;
   hash_sha256: string | null;
+  congelado_em: string | null;
+  congelado_por: string | null;
   created_at: string;
 }
 
@@ -141,6 +144,113 @@ export function usePdfAssinado(tabelaNome?: string, docId?: string) {
   }, [tabelaNome, docId, queryClient]);
 
   return { pdfAssinado, recarregar };
+}
+
+// ─── Ciclo "base congelada + hash" (Fase 4) ─────────────────────────────────────
+
+const KEY_CONGELADO = (modulo?: string, id?: string) =>
+  ["pdf-congelado", modulo ?? "", id ?? ""];
+
+/**
+ * Versão congelada (aprovada) mais recente de um documento, com URL assinada
+ * do arquivo imutável. É sobre este arquivo que a assinatura deve operar.
+ */
+export function usePdfCongelado(modulo?: string, idReferencia?: string) {
+  return useQuery({
+    queryKey: KEY_CONGELADO(modulo, idReferencia),
+    enabled: !!(modulo && idReferencia),
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("pdfs_gerados")
+        .select("*")
+        .eq("modulo", modulo!)
+        .eq("id_relatorio", idReferencia!)
+        .eq("status", "congelado")
+        .order("versao", { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      const row = ((data ?? [])[0] ?? null) as PdfGerado | null;
+      if (!row?.pdf_storage_path) return row;
+      const { data: signed } = await supabase.storage
+        .from("pdfs-gerados")
+        .createSignedUrl(row.pdf_storage_path, 3600);
+      return { ...row, pdf_url: signed?.signedUrl ?? row.pdf_url };
+    },
+  });
+}
+
+/**
+ * Aprova/congela a versão atual do laudo: gera o PDF base (via rota vetorial,
+ * já com anexos), faz upload imutável, calcula o sha256 e grava em pdfs_gerados
+ * com status='congelado' e versão incrementada. A assinatura usa esse arquivo.
+ */
+export function useCongelarPdf() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ apiPdfUrl, ...opts }: RegistrarPdfOpts & { apiPdfUrl: string }) => {
+      const supabase = createSupabaseBrowserClient();
+
+      const res = await fetch(apiPdfUrl);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Falha ao gerar o PDF base" }));
+        throw new Error((err as { error?: string }).error ?? "Falha ao gerar o PDF base");
+      }
+      const buffer = await res.arrayBuffer();
+      const hash = await computeSha256(buffer);
+
+      const { data: ult } = await supabase
+        .from("pdfs_gerados")
+        .select("versao")
+        .eq("modulo", opts.modulo)
+        .eq("id_relatorio", opts.idRelatorio ?? "")
+        .order("versao", { ascending: false })
+        .limit(1);
+      const proxVersao =
+        (((ult ?? [])[0] as { versao?: number } | undefined)?.versao ?? 0) + 1;
+
+      const storagePath = `${opts.modulo}/${opts.idRelatorio}-v${proxVersao}-${hash.slice(0, 8)}.pdf`;
+      const { error: upErr } = await supabase.storage
+        .from("pdfs-gerados")
+        .upload(storagePath, new Uint8Array(buffer), {
+          contentType: "application/pdf",
+          cacheControl: "3600",
+          upsert: true,
+        });
+      if (upErr) throw upErr;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("pdfs_gerados")
+        .insert({
+          modulo: opts.modulo,
+          tipo_documento: opts.tipoDocumento ?? null,
+          id_relatorio: opts.idRelatorio ?? null,
+          empresa_id: opts.empresaId ?? null,
+          empresa_nome: opts.empresaNome ?? null,
+          empresa_cnpj: opts.empresaCnpj ?? null,
+          setor: opts.setor ?? null,
+          responsavel_tecnico: opts.responsavelTecnico ?? null,
+          usuario_email: user?.email ?? null,
+          pdf_storage_path: storagePath,
+          pdf_url: null,
+          hash_sha256: hash,
+          status: "congelado",
+          versao: proxVersao,
+          congelado_em: new Date().toISOString(),
+          congelado_por: user?.email ?? null,
+        } as never);
+      if (error) throw error;
+      return { versao: proxVersao, hash, modulo: opts.modulo, idRelatorio: opts.idRelatorio ?? "" };
+    },
+    onSuccess: (d) => {
+      qc.invalidateQueries({ queryKey: KEY_CONGELADO(d.modulo, d.idRelatorio) });
+      qc.invalidateQueries({ queryKey: KEY() });
+      toast.success(`Versão ${d.versao} aprovada e congelada`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 }
 
 export function useRegistrarPdf() {
