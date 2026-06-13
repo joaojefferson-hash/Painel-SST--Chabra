@@ -21,18 +21,21 @@ Responda APENAS com JSON válido (sem markdown, sem cercas, sem texto fora do JS
   "tensao": "tensão elétrica se visível (ex: 220V, 380V, 220/380V) — string ou null",
   "potencia": "potência se visível (ex: 5 CV, 3.7 kW, 1.5 HP) — string ou null",
   "tag": "TAG ou número de patrimônio se visível em etiqueta/plaqueta — string ou null",
-  "descricao_tecnica": "breve descrição técnica da máquina com base no que é visível (1-2 frases) — string ou null",
-  "protecao_fixa": "true se proteções fixas (grades, carenagens parafusadas) são claramente visíveis, false se claramente ausentes em zona de risco exposta, null se não dá pra avaliar — boolean ou null",
-  "protecao_movel": "true se proteções móveis (portas, tampas articuladas) são claramente visíveis — boolean ou null",
-  "intertravamento": "true se dispositivos de intertravamento (chaves de segurança em portas/proteções) são claramente visíveis — boolean ou null",
-  "botao_emergencia": "true se botão de emergência (cogumelo vermelho) é claramente visível — boolean ou null",
-  "sistema_bloqueio": "true se sistema de bloqueio/LOTO (cadeado, seccionadora bloqueável) é claramente visível — boolean ou null",
-  "aterramento": "true se aterramento elétrico (cabo terra, ponto de aterramento) é claramente visível — boolean ou null",
-  "sinalizacao": "true se sinalização de segurança (placas, pictogramas, faixas) é claramente visível na máquina ou em volta — boolean ou null"
+  "descricao_tecnica": "descrição técnica elaborada (3 a 5 frases): função/finalidade da máquina, principais partes móveis e/ou cortantes (ex: rosca sem-fim, lâminas, eixos, polias), e as ZONAS DE PERIGO segundo a NR-12 (pontos de prensagem, corte, arrasto, esmagamento — ex: boca de alimentação, área de descarga). Seja específico para o tipo de máquina identificado. — string ou null",
+  "protecao_fixa": "true se proteções fixas (grades, carenagens parafusadas) são INEQUIVOCAMENTE visíveis cobrindo zonas de risco; false se a zona de risco está claramente exposta sem proteção; null se não dá pra avaliar — boolean ou null",
+  "protecao_movel": "true se proteções móveis (portas, tampas articuladas sobre zona de risco) são INEQUIVOCAMENTE visíveis — boolean ou null",
+  "intertravamento": "true SOMENTE se a chave/dispositivo de intertravamento for visível na proteção — boolean ou null",
+  "botao_emergencia": "true SOMENTE se o botão de emergência (cogumelo vermelho sobre fundo amarelo) for claramente visível — boolean ou null",
+  "sistema_bloqueio": "true SOMENTE se cadeado/seccionadora bloqueável (LOTO) for claramente visível — boolean ou null",
+  "aterramento": "true SOMENTE se cabo/ponto de aterramento for claramente visível — boolean ou null",
+  "sinalizacao": "true SOMENTE se sinalização de segurança (placas, pictogramas, faixas de advertência) for claramente visível — boolean ou null",
+  "necessita_adequacao_nr12": "true se a máquina aparenta NÃO atender plenamente à NR-12 (zonas de risco expostas, proteções/dispositivos de segurança ausentes ou insuficientes); false somente se aparenta estar plenamente adequada; null se não der pra avaliar — boolean ou null",
+  "grau_risco": "grau de risco estimado da máquina conforme a gravidade dos perigos visíveis e o tipo de equipamento: 'BAIXO', 'MEDIO', 'ALTO' ou 'CRITICO' — string ou null"
 }
 
-Se não conseguir identificar um campo, use null. Não invente dados que não aparecem na imagem.
-Para os campos booleanos de segurança NR-12, seja conservador: só responda true/false com evidência visual clara; na dúvida, null.`;
+REGRA CRÍTICA dos campos booleanos de segurança: a AUSÊNCIA de evidência NÃO é evidência de presença. Só responda true se o dispositivo estiver inequivocamente visível e identificável na imagem. Se você não consegue VER o dispositivo, responda null (NUNCA true). É preferível deixar null e o técnico preencher do que afirmar uma proteção que não existe.
+Para 'necessita_adequacao_nr12' e 'grau_risco': baseie-se nos perigos visíveis e no tipo de máquina (ex: serras, prensas, máquinas com rosca sem-fim ou lâminas expostas tendem a ALTO/CRITICO). Na dúvida, null.
+Não invente dados de identificação (modelo, série, ano, potência, tensão) que não estejam legíveis na plaqueta — use null.`;
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();

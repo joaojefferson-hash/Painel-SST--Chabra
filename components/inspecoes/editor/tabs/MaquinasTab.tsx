@@ -520,6 +520,7 @@ export default function MaquinasTab({
         { key: "sistema_bloqueio", label: "Sistema de bloqueio/LOTO" },
         { key: "aterramento", label: "Aterramento elétrico" },
         { key: "sinalizacao", label: "Sinalização de segurança" },
+        { key: "necessita_adequacao_nr12", label: "Necessita adequação NR-12?" },
       ];
 
       const campos: CampoRevisaoIA[] = [];
@@ -543,6 +544,20 @@ export default function MaquinasTab({
           valorSugerido: boolParaTexto(v),
           valorAtual: boolParaTexto(form[b.key]) || null,
           options: SIM_NAO,
+        });
+      }
+      // grau de risco (select com os 4 níveis)
+      const grau = data.grau_risco;
+      if (typeof grau === "string" && grau in GRAU_LABELS) {
+        campos.push({
+          key: "grau_risco",
+          label: "Grau de risco",
+          valorSugerido: grau,
+          valorAtual: form.grau_risco || null,
+          options: (Object.keys(GRAU_LABELS) as GrauRisco[]).map((g) => ({
+            value: g,
+            label: GRAU_LABELS[g],
+          })),
         });
       }
       if (campos.length === 0) {
