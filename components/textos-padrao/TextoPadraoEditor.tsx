@@ -94,13 +94,63 @@ export default function TextoPadraoEditor({ modulo }: Props) {
     }
   }
 
+  // Reordena DENTRO do grupo lógico: editáveis entre si por posição (é o
+  // `ordem` dentro da posição que define a ordem no PDF), e fixos entre si.
+  // Os fixos não são impressos como texto (são o corpo do laudo), então
+  // reordená-los é só visual.
   async function mover(cap: TextoPadraoCapitulo, direcao: "up" | "down") {
-    const idx = capitulos.findIndex((c) => c.id_capitulo === cap.id_capitulo);
+    const grupo = capitulos
+      .filter((c) =>
+        cap.tipo === "fixo"
+          ? c.tipo === "fixo"
+          : c.tipo !== "fixo" &&
+            (c.posicao_pdf ?? "inicio") === (cap.posicao_pdf ?? "inicio")
+      )
+      .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+    const idx = grupo.findIndex((c) => c.id_capitulo === cap.id_capitulo);
     const novoIdx = direcao === "up" ? idx - 1 : idx + 1;
-    if (novoIdx < 0 || novoIdx >= capitulos.length) return;
-    const outro = capitulos[novoIdx];
+    if (novoIdx < 0 || novoIdx >= grupo.length) return;
+    const outro = grupo[novoIdx];
     await salvar.mutateAsync({ id_capitulo: cap.id_capitulo, ordem: outro.ordem });
     await salvar.mutateAsync({ id_capitulo: outro.id_capitulo, ordem: cap.ordem });
+  }
+
+  // Editáveis agrupados por posição no laudo (reflete a ordem real do PDF):
+  // tudo que não for "fim" entra antes do corpo do laudo; "fim" vai depois.
+  const aplicaBusca = (lista: TextoPadraoCapitulo[]) =>
+    busca.trim()
+      ? lista.filter((c) =>
+          c.titulo.toLowerCase().includes(busca.trim().toLowerCase())
+        )
+      : lista;
+  const editavelInicio = aplicaBusca(
+    capitulosEditaveis.filter((c) => (c.posicao_pdf ?? "inicio") !== "fim")
+  );
+  const editavelFim = aplicaBusca(
+    capitulosEditaveis.filter((c) => (c.posicao_pdf ?? "inicio") === "fim")
+  );
+
+  function renderCardEditavel(cap: TextoPadraoCapitulo, idx: number, total: number) {
+    return (
+      <CapituloCard
+        key={cap.id_capitulo}
+        capitulo={cap}
+        indice={idx}
+        total={total}
+        salvando={salvar.isPending}
+        storagePrefix={`textos-padrao/${modulo}`}
+        contagensPorPosicao={contagensPorPosicao}
+        posicoesMod={config.posicoesDisponiveis}
+        onSalvar={(patch) =>
+          salvar.mutate({ id_capitulo: cap.id_capitulo, ...patch })
+        }
+        onMover={(dir) => mover(cap, dir)}
+        onExcluir={() => setConfirmExcluir(cap)}
+        onToggleMostrar={() =>
+          salvar.mutate({ id_capitulo: cap.id_capitulo, ativo: !cap.ativo })
+        }
+      />
+    );
   }
 
   // Contagem apenas de capítulos editáveis por posição para o Stepper
@@ -111,12 +161,6 @@ export default function TextoPadraoEditor({ modulo }: Props) {
     acc[p] = (acc[p] ?? 0) + 1;
     return acc;
   }, {});
-
-  const capitulosFiltrados = busca.trim()
-    ? capitulosEditaveis.filter((c) =>
-        c.titulo.toLowerCase().includes(busca.trim().toLowerCase())
-      )
-    : capitulosEditaveis;
 
   return (
     <div className="space-y-4">
@@ -240,16 +284,35 @@ export default function TextoPadraoEditor({ modulo }: Props) {
         </div>
       ) : (
         <div className="space-y-3">
-          {/* Capítulos SISTEMA */}
+          {/* Resumo */}
+          <p className="text-xs text-gray-500">
+            {capitulosFixos.length > 0 && (
+              <>{capitulosFixos.length} seção{capitulosFixos.length !== 1 ? "ões" : ""} do sistema · </>
+            )}
+            {capitulosEditaveis.length} capítulo{capitulosEditaveis.length !== 1 ? "s" : ""} editáveis
+            {capitulosEditaveis.filter((c) => !c.ativo).length > 0 && (
+              <> · {capitulosEditaveis.filter((c) => !c.ativo).length} oculto{capitulosEditaveis.filter((c) => !c.ativo).length !== 1 ? "s" : ""}</>
+            )}
+          </p>
+
+          {/* 1) Editáveis posicionados no INÍCIO (antes do corpo do laudo) */}
+          {editavelInicio.length > 0 && (
+            <>
+              <div className="rounded-md bg-verde-light/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-verde-primary">
+                Texto editável — início (sai antes do laudo)
+              </div>
+              {editavelInicio.map((cap, idx) =>
+                renderCardEditavel(cap, idx, editavelInicio.length)
+              )}
+            </>
+          )}
+
+          {/* 2) Corpo do laudo — seções geradas pelo sistema (posição fixa) */}
           {capitulosFixos.length > 0 && (
             <>
-              <p className="text-xs text-gray-500">
-                {capitulosFixos.length} seção{capitulosFixos.length !== 1 ? "ões" : ""} do sistema ·{" "}
-                {capitulosEditaveis.length} capítulo{capitulosEditaveis.length !== 1 ? "s" : ""} editáveis
-                {capitulosEditaveis.filter((c) => !c.ativo).length > 0 && (
-                  <> · {capitulosEditaveis.filter((c) => !c.ativo).length} oculto{capitulosEditaveis.filter((c) => !c.ativo).length !== 1 ? "s" : ""}</>
-                )}
-              </p>
+              <div className="rounded-md bg-gray-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Corpo do laudo — seções do sistema (posição fixa, entre início e fim)
+              </div>
               {capitulosFixos.map((cap, idx) => {
                 const descricao = config.fixos.find((f) => f.slug_fixo === cap.slug_fixo)?.descricao ?? "";
                 return (
@@ -269,51 +332,22 @@ export default function TextoPadraoEditor({ modulo }: Props) {
             </>
           )}
 
-          {/* Capítulos EDITÁVEIS */}
-          {capitulosEditaveis.length > 0 && (
+          {/* 3) Editáveis posicionados no FIM (depois do corpo do laudo) */}
+          {editavelFim.length > 0 && (
             <>
-              {capitulosFixos.length === 0 && (
-                <p className="text-xs text-gray-500">
-                  {capitulosEditaveis.length} capítulo{capitulosEditaveis.length !== 1 ? "s" : ""}
-                  {capitulosEditaveis.filter((c) => !c.ativo).length > 0 && (
-                    <> · {capitulosEditaveis.filter((c) => !c.ativo).length} oculto{capitulosEditaveis.filter((c) => !c.ativo).length !== 1 ? "s" : ""}</>
-                  )}
-                </p>
-              )}
-              {capitulosFiltrados.length === 0 && busca ? (
-                <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
-                  Nenhum capítulo encontrado para <strong>&ldquo;{busca}&rdquo;</strong>.
-                </div>
-              ) : (
-                <>
-                  {busca && (
-                    <p className="text-xs text-gray-500">
-                      {capitulosFiltrados.length} de {capitulosEditaveis.length} capítulo{capitulosEditaveis.length !== 1 ? "s" : ""}
-                    </p>
-                  )}
-                  {capitulosFiltrados.map((cap) => (
-                    <CapituloCard
-                      key={cap.id_capitulo}
-                      capitulo={cap}
-                      indice={capitulos.findIndex((c) => c.id_capitulo === cap.id_capitulo)}
-                      total={capitulos.length}
-                      salvando={salvar.isPending}
-                      storagePrefix={`textos-padrao/${modulo}`}
-                      contagensPorPosicao={contagensPorPosicao}
-                      posicoesMod={config.posicoesDisponiveis}
-                      onSalvar={(patch) =>
-                        salvar.mutate({ id_capitulo: cap.id_capitulo, ...patch })
-                      }
-                      onMover={(dir) => mover(cap, dir)}
-                      onExcluir={() => setConfirmExcluir(cap)}
-                      onToggleMostrar={() =>
-                        salvar.mutate({ id_capitulo: cap.id_capitulo, ativo: !cap.ativo })
-                      }
-                    />
-                  ))}
-                </>
+              <div className="rounded-md bg-verde-light/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-verde-primary">
+                Texto editável — fim (sai depois do laudo)
+              </div>
+              {editavelFim.map((cap, idx) =>
+                renderCardEditavel(cap, idx, editavelFim.length)
               )}
             </>
+          )}
+
+          {busca && editavelInicio.length === 0 && editavelFim.length === 0 && (
+            <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
+              Nenhum capítulo editável encontrado para <strong>&ldquo;{busca}&rdquo;</strong>.
+            </div>
           )}
         </div>
       )}
