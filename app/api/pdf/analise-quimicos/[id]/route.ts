@@ -6,6 +6,8 @@ import type { Empresa, ConclusaoRapidaQuimico, CondicoesUsoQuimico } from "@/lib
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 
+import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
@@ -128,7 +130,9 @@ ${bodyWithoutStyle}
       margens: { top: "20mm", bottom: "20mm", left: "18mm", right: "15mm" },
     });
 
-    return new NextResponse(new Uint8Array(pdfBuffer), {
+    const pdfFinal = await aplicarAnexosNoPdf(supabase, "analise_quimicos", id, pdfBuffer);
+
+    return new NextResponse(pdfFinal, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="analise-quimico-${shortId}.pdf"`,

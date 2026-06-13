@@ -6,6 +6,7 @@ import { ArrowLeft, AlertTriangle, BadgeCheck, Download, Loader2, AlertCircle } 
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import AnexosManager from "@/components/anexos/AnexosManager";
 import toast from "react-hot-toast";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
@@ -133,6 +134,10 @@ export default function LaudoNaoConformidadePage({
             responsavelTecnico: relatorio.responsavel ?? undefined,
           }}
         />
+      </div>
+
+      <div className="px-4 pt-3">
+        <AnexosManager modulo="nao_conformidade" idReferencia={id} />
       </div>
 
       {/* Logo Chabra */}

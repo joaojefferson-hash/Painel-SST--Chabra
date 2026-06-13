@@ -5,6 +5,7 @@ import { BadgeCheck, Download, Loader2 } from "lucide-react";
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import AnexosManager from "@/components/anexos/AnexosManager";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DrpsFiltro from "@/components/drps/DrpsFiltro";
@@ -246,6 +247,10 @@ export default function PsicossocialLaudoPage({
             responsavelTecnico: relatorio?.responsavel_tecnico ?? undefined,
           }}
         />
+      </div>
+
+      <div className="pt-3 print:hidden">
+        <AnexosManager modulo="psicossocial" idReferencia={idRelatorio} />
       </div>
 
       {respondentes.length === 0 ? (

@@ -8,6 +8,7 @@ import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
+import AnexosManager from "@/components/anexos/AnexosManager";
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
@@ -358,6 +359,10 @@ export default function AepLaudoPage({
             }}
           />
         </div>
+      </div>
+
+      <div className="mx-auto max-w-4xl px-8 pt-4 print:hidden">
+        <AnexosManager modulo="aep" idReferencia={idRelatorio} />
       </div>
 
       {/* Laudo */}

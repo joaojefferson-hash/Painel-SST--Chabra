@@ -14,6 +14,8 @@ import type {
 } from "@/lib/drps/types";
 import { montarValoresVariaveis } from "@/lib/drps/variaveis";
 
+import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
@@ -173,7 +175,9 @@ ${bodyWithoutStyle}
       margens: { top: "14mm", bottom: "14mm", left: "12mm", right: "12mm" },
     });
 
-    return new NextResponse(new Uint8Array(pdfBuffer), {
+    const pdfFinal = await aplicarAnexosNoPdf(supabase, "psicossocial", id, pdfBuffer);
+
+    return new NextResponse(pdfFinal, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="laudo-drps-${shortId}.pdf"`,

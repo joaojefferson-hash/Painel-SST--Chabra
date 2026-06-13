@@ -5,6 +5,7 @@ import type { AepRelatorioLocal, AepSetorLocal } from "@/components/pdf/template
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
+import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -239,7 +240,9 @@ ${bodyWithoutStyle}
     margens: { top: "25mm", bottom: "25mm", left: "30mm", right: "20mm" },
   });
 
-  return new NextResponse(new Uint8Array(pdfBuffer), {
+  const pdfFinal = await aplicarAnexosNoPdf(supabase, "aep", id, pdfBuffer);
+
+  return new NextResponse(pdfFinal, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="laudo-aep-${shortId}.pdf"`,

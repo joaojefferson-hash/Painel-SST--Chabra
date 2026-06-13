@@ -6,6 +6,7 @@ import { ArrowLeft, BadgeCheck, Download, Loader2, AlertTriangle, Cog } from "lu
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import AnexosManager from "@/components/anexos/AnexosManager";
 import toast from "react-hot-toast";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
 import { useMaquina } from "@/lib/hooks/useInventarioMaquinas";
@@ -179,6 +180,10 @@ export default function LaudoApreciacaoMaquinasPage({
             responsavelTecnico: apreciacao.responsavel ?? undefined,
           }}
         />
+      </div>
+
+      <div className="px-4 pt-3">
+        <AnexosManager modulo="apreciacao_maquinas" idReferencia={id} />
       </div>
 
       {/* Logo Chabra */}
