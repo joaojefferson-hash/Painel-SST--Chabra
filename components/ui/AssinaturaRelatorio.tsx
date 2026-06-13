@@ -16,6 +16,7 @@ export default function AssinaturaRelatorio({
   tabelaNome,
   docId,
   hideAcoes = false,
+  seloSoQuandoAssinado = false,
 }: {
   nomeResponsavel?: string;
   cargoResponsavel?: string;
@@ -26,6 +27,11 @@ export default function AssinaturaRelatorio({
   docId?: string;
   /** Quando true, oculta a barra de ações (baixar + re-assinar) — usada quando a toolbar da página já exibe esses botões. */
   hideAcoes?: boolean;
+  /** Quando true, o selo "Assinado digitalmente" só aparece se o documento
+   *  estiver de fato assinado; caso contrário mostra uma linha de assinatura
+   *  em branco. Usar apenas em telas de PREVIEW cujo PDF assinado é gerado por
+   *  outro componente (ex: laudo AEP via Puppeteer/FolhaAssinaturas). */
+  seloSoQuandoAssinado?: boolean;
 }) {
   const user = useUserStore((s) => s.user);
   const { data: configs } = useConfiguracoes();
@@ -126,6 +132,10 @@ export default function AssinaturaRelatorio({
       })
     : null;
 
+  // Mostra o selo "Assinado digitalmente"? Quando seloSoQuandoAssinado está
+  // ligado, só após assinatura de fato; senão, comportamento padrão (sempre).
+  const mostrarSelo = !seloSoQuandoAssinado || !!pdfAssinado;
+
   return (
     <>
       {/* ── Rubrica fixada em cada página impressa ── */}
@@ -170,7 +180,14 @@ export default function AssinaturaRelatorio({
         <div className="flex flex-col gap-8 sm:flex-row sm:justify-around sm:gap-6">
           {/* ── Técnico responsável ── */}
           <div className="flex flex-col items-center gap-2">
-            {assinaturaUrl || certificado ? (
+            {!mostrarSelo ? (
+              <div className="flex h-24 w-72 flex-col items-center justify-end pb-1">
+                <div className="w-full border-t border-gray-400" />
+                <p className="mt-1 text-[10px] italic text-gray-400">
+                  Assinatura do responsável técnico
+                </p>
+              </div>
+            ) : assinaturaUrl || certificado ? (
               <div className="w-72 overflow-hidden rounded border border-blue-300 bg-white shadow-sm">
                 <div className="flex items-center gap-1.5 bg-blue-600 px-3 py-1.5">
                   {certificado === "A3" ? (

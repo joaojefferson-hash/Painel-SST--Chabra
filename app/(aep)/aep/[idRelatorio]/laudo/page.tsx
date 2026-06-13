@@ -457,6 +457,7 @@ export default function AepLaudoPage({
           tabelaNome="aep_relatorios"
           docId={idRelatorio}
           hideAcoes
+          seloSoQuandoAssinado
         />
       </div>
     </>
