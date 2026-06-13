@@ -179,10 +179,17 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     modulo: "aet",
     titulo: "Texto Padrão — AET (Análise Ergonômica do Trabalho)",
     descricao:
-      "Capítulos editáveis para os Laudos AET: capa, introdução, metodologia, considerações finais. Use variáveis dinâmicas para empresa, responsável técnico, data etc.",
-    destino: "Aparecem no Laudo AET antes e após as seções analíticas.",
+      "Monte o laudo AET como uma lista única: arraste/reordene livremente os capítulos editáveis e as seções do sistema. A ordem definida aqui é a ordem do laudo.",
+    destino: "A ordem definida aqui é exatamente a ordem do laudo AET gerado.",
     posicoesDisponiveis: ["inicio", "fim"],
-    fixos: [],
+    ordenacaoUnificada: true,
+    fixos: [
+      { titulo: "Agentes Ambientais por Setor", slug_fixo: "aet_agentes_ambientais", descricao: "Riscos ambientais por setor — gerado automaticamente.", ordem_base: 1090 },
+      { titulo: "Análise Ergonômica do Trabalho", slug_fixo: "aet_analise_ergonomica", descricao: "Análise por setor (OWAS, biomecânica) — gerado automaticamente.", ordem_base: 1100 },
+      { titulo: "Fatores Psicossociais (QPS)", slug_fixo: "aet_psicossocial", descricao: "Resultados do QPS Nordic — gerado automaticamente.", ordem_base: 2000 },
+      { titulo: "Considerações Finais", slug_fixo: "aet_consideracoes_finais", descricao: "Conclusão do laudo — gerado automaticamente.", ordem_base: 5000 },
+      { titulo: "Assinatura do Responsável Técnico", slug_fixo: "aet_assinatura", descricao: "Folha de assinatura — gerado automaticamente.", ordem_base: 5500 },
+    ],
   },
   psicossocial: {
     modulo: "psicossocial",

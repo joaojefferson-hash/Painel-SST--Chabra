@@ -20,6 +20,8 @@ import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
+import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
@@ -180,7 +182,10 @@ export default function AetLaudoPage({
   const [enderecoEmpresa, setEnderecoEmpresa] = useState("");
 
 
-  const { data: capitulos = [] } = useAetTextoPadrao();
+  // Lê os capítulos da tabela unificada textos_padrao (mesma que o editor
+  // grava). Antes lia aet_textos_padrao (dedicada) — após a unificação v79 o
+  // editor passou a gravar em textos_padrao, então o laudo tem que ler de lá.
+  const { data: capitulos = [] } = useTextosPadrao("aet");
   const { data: checklistPerguntas = [] } = useAetChecklistPerguntas();
   const { data: owasConfig = [] } = useAetOwasConfig();
   const { data: fatoresConfig = [] } = useAet13FatoresConfig();
@@ -274,8 +279,8 @@ export default function AetLaudoPage({
   const temCapitulosFixos = capitulos.some((c) => c.tipo === "fixo");
 
   const capitulosOrdenados = [...capitulos]
-    .filter((c) => c.mostrar !== false)
-    .sort((a, b) => (a.ordem_global ?? a.ordem * 10) - (b.ordem_global ?? b.ordem * 10));
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
 
   // Legado: grupos por posicao_pdf (usado quando não há capítulos fixos no banco)
   const capitulosInicio = capitulos.filter((c) => !c.posicao_pdf || c.posicao_pdf === "inicio");
@@ -765,8 +770,11 @@ export default function AetLaudoPage({
           <span className="text-[10px] text-gray-400">{dataFormatada}</span>
         </div>
 
-        {/* Capítulos de texto padrão — posição início */}
-        <TextosPadraoPrint modulo="aet" posicao="inicio" valores={valoresCapitulos} />
+        {/* Capítulos de texto padrão — posição início (só no modo legado sem
+            fixos; com fixos, capitulosOrdenados já renderiza tudo) */}
+        {!temCapitulosFixos && (
+          <TextosPadraoPrint modulo="aet" posicao="inicio" valores={valoresCapitulos} />
+        )}
 
         {/* ── RENDERIZAÇÃO PRINCIPAL ────────────────────────────────────────────── */}
         {temCapitulosFixos ? (
@@ -1039,7 +1047,9 @@ export default function AetLaudoPage({
         )}
 
         {/* Capítulos de texto padrão — posição fim */}
-        <TextosPadraoPrint modulo="aet" posicao="fim" valores={valoresCapitulos} />
+        {!temCapitulosFixos && (
+          <TextosPadraoPrint modulo="aet" posicao="fim" valores={valoresCapitulos} />
+        )}
 
         {/* Rodapé */}
         <p className="mt-8 text-center text-[9px] text-gray-400">
@@ -1078,7 +1088,7 @@ function CapituloLaudo({
   cap,
   valores = {},
 }: {
-  cap: AetTextoPadraoCapitulo;
+  cap: TextoPadraoCapitulo;
   valores?: Record<string, string>;
 }) {
   if (cap.bg_imagem_url) {
