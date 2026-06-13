@@ -123,6 +123,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .from("usuarios").select("nome, cpf").eq("email", user.email).single();
     const perfil = rawUsuario as { nome: string | null; cpf: string | null } | null;
 
+    valores.usuario_logado = perfil?.nome ?? user.email ?? "";
+    valores.tipo_relatorio = "Apreciação de Risco — Máquinas (NR-12)";
+
     const signatarios: Signatario[] = [{
       nomeCompleto: perfil?.nome ?? (ap.responsavel as string) ?? user.email,
       cargo: null,

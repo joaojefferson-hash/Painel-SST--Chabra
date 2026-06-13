@@ -42,7 +42,23 @@ export const VARIAVEIS: VariavelDef[] = [
   { chave: "importado", rotulo: "Data de importação (dd/mm/aaaa)", exemplo: "15/05/2026" },
   { chave: "data_carimbo_inicio", rotulo: "Período de coleta — data inicial (dd/mm/aaaa)", exemplo: "05/11/2026" },
   { chave: "data_carimbo_fim", rotulo: "Período de coleta — data final (dd/mm/aaaa)", exemplo: "13/05/2026" },
+  // Variáveis de documento comuns (Fase 1 expansão SGG, v0.3.172).
+  { chave: "grau_risco", rotulo: "Grau de risco (CNAE da empresa)", exemplo: "3" },
+  { chave: "ghe", rotulo: "GHE — Grupo Homogêneo de Exposição", exemplo: "GHE-01 Produção" },
+  { chave: "funcao", rotulo: "Função / cargo", exemplo: "Operador de Prensa" },
+  { chave: "registro_profissional", rotulo: "Registro profissional do responsável", exemplo: "CRP 06/12345" },
+  { chave: "usuario_logado", rotulo: "Usuário logado (quem gerou o PDF)", exemplo: "João Jefferson" },
+  { chave: "tipo_relatorio", rotulo: "Tipo de relatório", exemplo: "DRPS — Diagnóstico de Riscos Psicossociais" },
 ];
+
+/** Campos de documento preenchidos pela rota (contexto do request). */
+export interface ValoresDocExtras {
+  ghe?: string;
+  funcao?: string;
+  registro_profissional?: string;
+  usuario_logado?: string;
+  tipo_relatorio?: string;
+}
 
 function formatarDataBR(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -61,7 +77,8 @@ function formatarDataBR(iso: string | null | undefined): string {
  */
 export function montarValoresVariaveis(
   empresa: Empresa | null | undefined,
-  relatorio: DrpsRelatorio | null | undefined
+  relatorio: DrpsRelatorio | null | undefined,
+  extras?: ValoresDocExtras
 ): Record<string, string> {
   return {
     empresa_nome: empresa?.nome_empresa ?? "",
@@ -97,6 +114,14 @@ export function montarValoresVariaveis(
       .filter(Boolean)
       .join("\n"),
     importado: formatarDataBR(relatorio?.created_at),
+    // Variáveis de documento (Fase 1): grau_risco vem da empresa; o resto da rota.
+    grau_risco: empresa?.grau_risco != null ? String(empresa.grau_risco) : "",
+    ghe: extras?.ghe ?? "",
+    funcao: extras?.funcao ?? "",
+    registro_profissional:
+      extras?.registro_profissional ?? (relatorio?.crp ? `CRP ${relatorio.crp}` : ""),
+    usuario_logado: extras?.usuario_logado ?? "",
+    tipo_relatorio: extras?.tipo_relatorio ?? "",
   };
 }
 

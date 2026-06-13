@@ -59,5 +59,11 @@ export function montarValoresAet(
     carimbo,
     data_elaboracao: formatarDataBR(dataElab),
     data_atual: new Date().toLocaleDateString("pt-BR"),
+    // Variáveis de documento (Fase 1): sempre resolvem (default ""), não vazam token.
+    grau_risco: "",
+    ghe: "",
+    funcao: "",
+    usuario_logado: "",
+    tipo_relatorio: "AET — Análise Ergonômica do Trabalho",
   };
 }

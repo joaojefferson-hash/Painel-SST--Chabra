@@ -58,6 +58,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .from("usuarios").select("nome, cpf").eq("email", user.email).single();
     const perfil = rawUsuario as { nome: string | null; cpf: string | null } | null;
 
+    valores.usuario_logado = perfil?.nome ?? user.email ?? "";
+    valores.tipo_relatorio = "Análise de Risco Químico";
+
     const signatarios: Signatario[] = [{
       nomeCompleto: perfil?.nome ?? (ana.usuario_nome as string) ?? user.email,
       cargo: null,

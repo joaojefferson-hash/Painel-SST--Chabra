@@ -63,12 +63,47 @@ const VARIAVEIS_DATA_RESPONSAVEL: VariavelDef[] = [
   { chave: "importado", rotulo: "Data de importação (dd/mm/aaaa)", exemplo: "15/05/2026" },
 ];
 
+// Variáveis de documento comuns a todos os módulos (Fase 1 expansão SGG, v0.3.172).
+// Sempre resolvidas (default ""), nunca vazam o token literal no PDF.
+export const VARIAVEIS_DOC: VariavelDef[] = [
+  { chave: "grau_risco", rotulo: "Grau de risco (CNAE da empresa)", exemplo: "3" },
+  { chave: "ghe", rotulo: "GHE — Grupo Homogêneo de Exposição", exemplo: "GHE-01 Produção" },
+  { chave: "funcao", rotulo: "Função / cargo", exemplo: "Operador de Prensa" },
+  { chave: "registro_profissional", rotulo: "Registro profissional do responsável", exemplo: "CREA 12345-SP" },
+  { chave: "usuario_logado", rotulo: "Usuário logado (quem gerou o PDF)", exemplo: "João Jefferson" },
+  { chave: "tipo_relatorio", rotulo: "Tipo de relatório", exemplo: "Relatório de Conformidade" },
+];
+
+/** Campos de documento preenchidos pela rota (contexto do request). */
+export interface ValoresDocExtras {
+  ghe?: string;
+  funcao?: string;
+  registro_profissional?: string;
+  usuario_logado?: string;
+  tipo_relatorio?: string;
+}
+
+/** Concatena listas de variáveis ignorando chaves já presentes (1ª lista vence). */
+function mesclarVariaveis(...listas: VariavelDef[][]): VariavelDef[] {
+  const vistas = new Set<string>();
+  const out: VariavelDef[] = [];
+  for (const lista of listas) {
+    for (const v of lista) {
+      if (vistas.has(v.chave)) continue;
+      vistas.add(v.chave);
+      out.push(v);
+    }
+  }
+  return out;
+}
+
 export const VARIAVEIS_POR_MODULO: Record<ModuloTextoPadrao, VariavelDef[]> = {
   sst: [
     ...VARIAVEIS_EMPRESA,
     ...VARIAVEIS_DATA_RESPONSAVEL,
     { chave: "data_inspecao", rotulo: "Data da inspeção", exemplo: "15/05/2026" },
     { chave: "revisao", rotulo: "Número da revisão", exemplo: "1" },
+    ...VARIAVEIS_DOC,
   ],
   conformidade: [
     ...VARIAVEIS_EMPRESA,
@@ -78,6 +113,7 @@ export const VARIAVEIS_POR_MODULO: Record<ModuloTextoPadrao, VariavelDef[]> = {
     { chave: "setor", rotulo: "Setor auditado", exemplo: "Produção" },
     { chave: "responsavel_empresa", rotulo: "Responsável da empresa", exemplo: "Maria Silva" },
     { chave: "data_inspecao", rotulo: "Data da auditoria", exemplo: "15/05/2026" },
+    ...VARIAVEIS_DOC,
   ],
   nao_conformidade: [
     ...VARIAVEIS_EMPRESA,
@@ -88,6 +124,7 @@ export const VARIAVEIS_POR_MODULO: Record<ModuloTextoPadrao, VariavelDef[]> = {
     { chave: "data_inspecao", rotulo: "Data da auditoria", exemplo: "15/05/2026" },
     { chave: "total_ncs", rotulo: "Total de NCs encontradas", exemplo: "7" },
     { chave: "total_ncs_alta", rotulo: "NCs de criticidade ALTA", exemplo: "2" },
+    ...VARIAVEIS_DOC,
   ],
   analise_quimicos: [
     ...VARIAVEIS_EMPRESA,
@@ -95,6 +132,7 @@ export const VARIAVEIS_POR_MODULO: Record<ModuloTextoPadrao, VariavelDef[]> = {
     { chave: "titulo", rotulo: "Título da análise", exemplo: "MC-2BK106 MAKE-UP" },
     { chave: "nome_quimico", rotulo: "Nome químico", exemplo: "2-Butanone; Ethanol" },
     { chave: "numero_cas", rotulo: "Número CAS", exemplo: "78-93-3" },
+    ...VARIAVEIS_DOC,
   ],
   apreciacao_maquinas: [
     ...VARIAVEIS_EMPRESA,
@@ -107,9 +145,10 @@ export const VARIAVEIS_POR_MODULO: Record<ModuloTextoPadrao, VariavelDef[]> = {
     { chave: "total_itens", rotulo: "Total de itens avaliados", exemplo: "37" },
     { chave: "total_nao_conforme", rotulo: "Itens não conformes", exemplo: "8" },
     { chave: "risco_residual", rotulo: "Risco residual final", exemplo: "ALTO" },
+    ...VARIAVEIS_DOC,
   ],
-  aep: VARIAVEIS_AEP,
-  aet: VARIAVEIS_AET,
+  aep: mesclarVariaveis(VARIAVEIS_AEP, VARIAVEIS_DOC),
+  aet: mesclarVariaveis(VARIAVEIS_AET, VARIAVEIS_DOC),
   psicossocial: [
     { chave: "empresa_nome",        rotulo: "Nome da empresa",                   exemplo: "Metalúrgica Exemplo Ltda" },
     { chave: "cnpj",                rotulo: "CNPJ",                              exemplo: "31.427.455/0001-11" },
@@ -119,6 +158,7 @@ export const VARIAVEIS_POR_MODULO: Record<ModuloTextoPadrao, VariavelDef[]> = {
     { chave: "data_atual",          rotulo: "Data atual (geração do PDF)",       exemplo: "15/05/2026" },
     { chave: "data_carimbo_inicio", rotulo: "Início da coleta (QPS)",            exemplo: "01/04/2026" },
     { chave: "data_carimbo_fim",    rotulo: "Fim da coleta (QPS)",               exemplo: "30/04/2026" },
+    ...VARIAVEIS_DOC,
   ],
 };
 
@@ -162,7 +202,8 @@ function escapeHtml(s: string): string {
  * Cada módulo combina isso com suas variáveis específicas.
  */
 export function montarValoresEmpresa(
-  empresa: Empresa | null | undefined
+  empresa: Empresa | null | undefined,
+  extras?: ValoresDocExtras
 ): Record<string, string> {
   return {
     empresa_nome: empresa?.nome_empresa ?? "",
@@ -182,5 +223,13 @@ export function montarValoresEmpresa(
       .filter(Boolean)
       .join(" - "),
     data_atual: new Date().toLocaleDateString("pt-BR"),
+    // Variáveis de documento (Fase 1): grau_risco vem da empresa; o resto é
+    // preenchido pela rota via extras e sempre resolve (default "").
+    grau_risco: empresa?.grau_risco != null ? String(empresa.grau_risco) : "",
+    ghe: extras?.ghe ?? "",
+    funcao: extras?.funcao ?? "",
+    registro_profissional: extras?.registro_profissional ?? "",
+    usuario_logado: extras?.usuario_logado ?? "",
+    tipo_relatorio: extras?.tipo_relatorio ?? "",
   };
 }

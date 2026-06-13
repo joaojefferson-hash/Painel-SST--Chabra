@@ -160,6 +160,8 @@ export async function GET(
 
   const perfil = rawUsuario as { nome: string | null; cpf: string | null } | null;
 
+  valoresVars.usuario_logado = perfil?.nome ?? rel.responsavel_elaboracao ?? user.email ?? "";
+
   const signatarios: Signatario[] = [
     {
       nomeCompleto:

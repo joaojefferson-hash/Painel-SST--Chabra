@@ -91,6 +91,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .from("usuarios").select("nome, cpf").eq("email", user.email).single();
     const perfil = rawUsuario as { nome: string | null; cpf: string | null } | null;
 
+    valores.usuario_logado = perfil?.nome ?? rel.responsavel_tecnico ?? user.email ?? "";
+    valores.tipo_relatorio = "DRPS — Diagnóstico de Riscos Psicossociais";
+
     const signatarios: Signatario[] = [{
       nomeCompleto: perfil?.nome ?? rel.responsavel_tecnico ?? user.email,
       cargo: "Psicólogo(a)",
