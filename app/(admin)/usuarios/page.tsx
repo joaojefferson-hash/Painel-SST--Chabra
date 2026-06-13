@@ -317,12 +317,52 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
     mostrar_assinatura_imagem: true,
     tipo_certificado: null as "A1" | "A3" | null,
     certificado_pfx_path: null as string | null,
+    certificado_validade: null as string | null,
+    certificado_titular: null as string | null,
     crp: null as string | null,
     crm: null as string | null,
     registro_mte: null as string | null,
   });
   const [uploadingAssinatura, setUploadingAssinatura] = useState(false);
   const [uploadingPfx, setUploadingPfx] = useState(false);
+  const [senhaVerif, setSenhaVerif] = useState("");
+  const [verificandoCert, setVerificandoCert] = useState(false);
+
+  /** Verifica o .pfx no servidor com a senha e atualiza a validade exibida. */
+  async function verificarValidade() {
+    if (!senhaVerif) {
+      toast.error("Informe a senha do certificado para verificar.");
+      return;
+    }
+    setVerificandoCert(true);
+    try {
+      const res = await fetch("/api/cert/validar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: senhaVerif,
+          signatoryEmail: usuario?.email ?? null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      setForm((f) => ({
+        ...f,
+        certificado_validade: data.validade ?? null,
+        certificado_titular: data.titular ?? f.certificado_titular,
+      }));
+      setSenhaVerif("");
+      toast.success(
+        data.vencido
+          ? "Certificado VENCIDO — veja a data."
+          : "Certificado válido — validade atualizada."
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao verificar certificado");
+    } finally {
+      setVerificandoCert(false);
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -350,6 +390,8 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
         mostrar_assinatura_imagem: usuario?.mostrar_assinatura_imagem ?? true,
         tipo_certificado: usuario?.tipo_certificado ?? null,
         certificado_pfx_path: usuario?.certificado_pfx_path ?? null,
+        certificado_validade: usuario?.certificado_validade ?? null,
+        certificado_titular: usuario?.certificado_titular ?? null,
         crp: usuario?.crp ?? null,
         crm: usuario?.crm ?? null,
         registro_mte: usuario?.registro_mte ?? null,
@@ -1020,18 +1062,68 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
                 Arquivo do Certificado A1 (.pfx / .p12)
               </p>
               {form.certificado_pfx_path ? (
-                <div className="flex items-center gap-2 text-sm text-green-700">
-                  <BadgeCheck className="size-4" />
-                  <span>Certificado cadastrado</span>
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, certificado_pfx_path: null }))}
-                    className="ml-auto rounded p-0.5 text-gray-400 hover:text-red-500"
-                    title="Remover certificado"
-                  >
-                    <X className="size-4" />
-                  </button>
-                </div>
+                <>
+                  <div className="flex items-center gap-2 text-sm text-green-700">
+                    <BadgeCheck className="size-4" />
+                    <span>Certificado cadastrado</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          certificado_pfx_path: null,
+                          certificado_validade: null,
+                          certificado_titular: null,
+                        }))
+                      }
+                      className="ml-auto rounded p-0.5 text-gray-400 hover:text-red-500"
+                      title="Remover certificado"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                  {(() => {
+                    if (!form.certificado_validade)
+                      return (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Validade ainda não verificada.
+                        </p>
+                      );
+                    const dt = new Date(form.certificado_validade);
+                    const venceu = new Date() > dt;
+                    return (
+                      <p
+                        className={cn(
+                          "mt-1 text-xs font-medium",
+                          venceu ? "text-red-600" : "text-green-700"
+                        )}
+                      >
+                        {venceu ? "⚠ Vencido em " : "Válido até "}
+                        {dt.toLocaleDateString("pt-BR")}
+                        {form.certificado_titular ? ` — ${form.certificado_titular}` : ""}
+                      </p>
+                    );
+                  })()}
+                  {/* Verificar validade (lê o .pfx no servidor com a senha) */}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input
+                      type="password"
+                      value={senhaVerif}
+                      onChange={(e) => setSenhaVerif(e.target.value)}
+                      placeholder="Senha do certificado"
+                      autoComplete="off"
+                      className="w-44 rounded-md border border-blue-200 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={verificarValidade}
+                      disabled={verificandoCert}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                    >
+                      {verificandoCert ? "Verificando…" : "Verificar validade"}
+                    </button>
+                  </div>
+                </>
               ) : (
                 <p className="text-xs text-blue-600">Nenhum arquivo cadastrado</p>
               )}

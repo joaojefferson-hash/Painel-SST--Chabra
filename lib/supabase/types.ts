@@ -663,6 +663,10 @@ export interface Usuario {
   registro_mte?: string | null;
   /** CPF do profissional — exibido sempre mascarado (LGPD). */
   cpf?: string | null;
+  /** Validade (notAfter) do certificado A1, extraída do .pfx quando a senha é fornecida. */
+  certificado_validade?: string | null;
+  /** Titular (CN) do certificado A1. */
+  certificado_titular?: string | null;
 }
 
 export interface Configuracao {
