@@ -346,6 +346,7 @@ export default function AepLaudoPage({
           <BotaoGerarPdf
             tabelaNome="aep_relatorios"
             docId={idRelatorio}
+            apiPdfUrl={`/api/pdf/aep/${idRelatorio}`}
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
             registrarPdf={{
               modulo: "aep",

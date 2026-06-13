@@ -16,6 +16,10 @@ interface Props {
   docId?: string;
   defaultSignatoryEmail?: string;
   registrarPdf?: RegistrarPdfOpts;
+  /** Quando setado, gera o PDF pelo template Puppeteer server-side (rota
+   *  /api/pdf/...) em vez de capturar a página — PDF vetorial e idêntico ao
+   *  que é assinado. */
+  apiPdfUrl?: string;
 }
 
 export default function BotaoGerarPdf({
@@ -27,6 +31,7 @@ export default function BotaoGerarPdf({
   docId,
   defaultSignatoryEmail,
   registrarPdf,
+  apiPdfUrl,
 }: Props) {
   const [gerando, setGerando] = useState(false);
   const [buffer, setBuffer] = useState<ArrayBuffer | null>(null);
@@ -37,8 +42,16 @@ export default function BotaoGerarPdf({
     setGerando(true);
     setBuffer(null);
     try {
-      const { gerarHtmlParaPdf } = await import("@/lib/gerarHtmlParaPdf");
-      const ab = await gerarHtmlParaPdf();
+      // Template Puppeteer server-side (vetorial, idêntico ao assinado).
+      const ab = apiPdfUrl
+        ? await fetch(apiPdfUrl).then(async (res) => {
+            if (!res.ok) {
+              const e = await res.json().catch(() => ({ error: "Erro ao gerar PDF" }));
+              throw new Error((e as { error?: string }).error ?? "Erro ao gerar PDF");
+            }
+            return res.arrayBuffer();
+          })
+        : await (await import("@/lib/gerarHtmlParaPdf")).gerarHtmlParaPdf();
 
       // Abre o PDF: no Electron usa o leitor padrão do sistema (blob: não
       // pode ser aberto externamente); no browser abre em nova aba.
