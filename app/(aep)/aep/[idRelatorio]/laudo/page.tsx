@@ -104,6 +104,14 @@ function SetorBlock({ setor, idx }: { setor: AepSetor; idx: number }) {
             <td className="bg-gray-50 px-2 py-1 font-semibold w-1/4">Qtd. Expostos</td>
             <td className="px-2 py-1">{setor.qtd_expostos || "—"}</td>
           </tr>
+          {(setor.metodo_coleta || setor.trabalhadores_consultados) && (
+            <tr className="border-b border-gray-100">
+              <td className="bg-gray-50 px-2 py-1 font-semibold align-top">Método de coleta (NR-1)</td>
+              <td className="px-2 py-1">{setor.metodo_coleta || "—"}</td>
+              <td className="bg-gray-50 px-2 py-1 font-semibold align-top">Trabalhadores consultados</td>
+              <td className="px-2 py-1">{setor.trabalhadores_consultados || "—"}</td>
+            </tr>
+          )}
           {setor.descricao_atividade && (
             <tr>
               <td className="bg-gray-50 px-2 py-1 font-semibold align-top">Atividades</td>
@@ -120,10 +128,14 @@ function SetorBlock({ setor, idx }: { setor: AepSetor; idx: number }) {
           <div className="bg-blue-50 px-2 py-1 font-semibold text-blue-800 text-[10px] uppercase">Ergonomia Física</div>
           {CHECKLIST_FISICA_LABELS.map(([k, l]) => {
             const r = labelResposta(setor.checklist_fisica[k]);
+            const obs = setor.observacoes_checklist?.[k];
             return (
-              <div key={k} className="flex items-center justify-between border-t border-gray-100 px-2 py-0.5">
-                <span className="text-gray-600">{l}</span>
-                <span className={r.cls}>{r.label}</span>
+              <div key={k} className="border-t border-gray-100 px-2 py-0.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">{l}</span>
+                  <span className={r.cls}>{r.label}</span>
+                </div>
+                {obs && <p className="mt-0.5 text-[10px] italic text-gray-500">Obs.: {obs}</p>}
               </div>
             );
           })}
@@ -133,10 +145,14 @@ function SetorBlock({ setor, idx }: { setor: AepSetor; idx: number }) {
           <div className="bg-purple-50 px-2 py-1 font-semibold text-purple-800 text-[10px] uppercase">Ergonomia Cognitiva</div>
           {CHECKLIST_COG_LABELS.map(([k, l]) => {
             const r = labelResposta(setor.checklist_cognitiva[k]);
+            const obs = setor.observacoes_checklist?.[k];
             return (
-              <div key={k} className="flex items-center justify-between border-t border-gray-100 px-2 py-0.5">
-                <span className="text-gray-600">{l}</span>
-                <span className={r.cls}>{r.label}</span>
+              <div key={k} className="border-t border-gray-100 px-2 py-0.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">{l}</span>
+                  <span className={r.cls}>{r.label}</span>
+                </div>
+                {obs && <p className="mt-0.5 text-[10px] italic text-gray-500">Obs.: {obs}</p>}
               </div>
             );
           })}
@@ -146,10 +162,14 @@ function SetorBlock({ setor, idx }: { setor: AepSetor; idx: number }) {
           <div className="bg-amber-50 px-2 py-1 font-semibold text-amber-800 text-[10px] uppercase">Ergonomia Organizacional</div>
           {CHECKLIST_ORG_LABELS.map(([k, l]) => {
             const r = labelResposta(setor.checklist_organizacional[k]);
+            const obs = setor.observacoes_checklist?.[k];
             return (
-              <div key={k} className="flex items-center justify-between border-t border-gray-100 px-2 py-0.5">
-                <span className="text-gray-600">{l}</span>
-                <span className={r.cls}>{r.label}</span>
+              <div key={k} className="border-t border-gray-100 px-2 py-0.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">{l}</span>
+                  <span className={r.cls}>{r.label}</span>
+                </div>
+                {obs && <p className="mt-0.5 text-[10px] italic text-gray-500">Obs.: {obs}</p>}
               </div>
             );
           })}

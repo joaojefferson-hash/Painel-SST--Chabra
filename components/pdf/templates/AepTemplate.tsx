@@ -75,6 +75,9 @@ export interface AepSetorLocal {
   jornada: string;
   qtd_expostos: number;
   descricao_atividade: string;
+  metodo_coleta?: string;
+  trabalhadores_consultados?: string;
+  observacoes_checklist?: Record<string, string>;
   riscos: AepRisco[];
   checklist_fisica: AepChecklistFisica;
   checklist_cognitiva: AepChecklistCognitiva;
@@ -405,6 +408,18 @@ function SetorBlock({
             </td>
             <td style={{ padding: "4px 8px" }}>{setor.qtd_expostos || "—"}</td>
           </tr>
+          {(setor.metodo_coleta || setor.trabalhadores_consultados) && (
+            <tr>
+              <td style={{ backgroundColor: "#f9fafb", padding: "4px 8px", fontWeight: 600, verticalAlign: "top" }}>
+                Método de coleta (NR-1)
+              </td>
+              <td style={{ padding: "4px 8px" }}>{setor.metodo_coleta || "—"}</td>
+              <td style={{ backgroundColor: "#f9fafb", padding: "4px 8px", fontWeight: 600, verticalAlign: "top" }}>
+                Trabalhadores consultados
+              </td>
+              <td style={{ padding: "4px 8px" }}>{setor.trabalhadores_consultados || "—"}</td>
+            </tr>
+          )}
           {setor.descricao_atividade && (
             <tr>
               <td
@@ -454,20 +469,14 @@ function SetorBlock({
           </div>
           {CHECKLIST_FISICA_LABELS.map(([k, l]) => {
             const r = labelResposta(setor.checklist_fisica[k]);
+            const obs = setor.observacoes_checklist?.[k];
             return (
-              <div
-                key={k}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  borderTop: "1px solid #f3f4f6",
-                  padding: "2px 8px",
-                }}
-              >
-                <span style={{ color: "#4b5563", flex: 1, minWidth: 0, wordBreak: "break-word", marginRight: 4 }}>{l}</span>
-                <span style={{ color: r.color, fontWeight: r.fontWeight, flexShrink: 0 }}>
-                  {r.label}
-                </span>
+              <div key={k} style={{ borderTop: "1px solid #f3f4f6", padding: "2px 8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#4b5563", flex: 1, minWidth: 0, wordBreak: "break-word", marginRight: 4 }}>{l}</span>
+                  <span style={{ color: r.color, fontWeight: r.fontWeight, flexShrink: 0 }}>{r.label}</span>
+                </div>
+                {obs && <p style={{ margin: "2px 0 0", fontSize: 9, fontStyle: "italic", color: "#6b7280" }}>Obs.: {obs}</p>}
               </div>
             );
           })}
@@ -489,20 +498,14 @@ function SetorBlock({
           </div>
           {CHECKLIST_COG_LABELS.map(([k, l]) => {
             const r = labelResposta(setor.checklist_cognitiva[k]);
+            const obs = setor.observacoes_checklist?.[k];
             return (
-              <div
-                key={k}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  borderTop: "1px solid #f3f4f6",
-                  padding: "2px 8px",
-                }}
-              >
-                <span style={{ color: "#4b5563", flex: 1, minWidth: 0, wordBreak: "break-word", marginRight: 4 }}>{l}</span>
-                <span style={{ color: r.color, fontWeight: r.fontWeight, flexShrink: 0 }}>
-                  {r.label}
-                </span>
+              <div key={k} style={{ borderTop: "1px solid #f3f4f6", padding: "2px 8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#4b5563", flex: 1, minWidth: 0, wordBreak: "break-word", marginRight: 4 }}>{l}</span>
+                  <span style={{ color: r.color, fontWeight: r.fontWeight, flexShrink: 0 }}>{r.label}</span>
+                </div>
+                {obs && <p style={{ margin: "2px 0 0", fontSize: 9, fontStyle: "italic", color: "#6b7280" }}>Obs.: {obs}</p>}
               </div>
             );
           })}
@@ -524,20 +527,14 @@ function SetorBlock({
           </div>
           {CHECKLIST_ORG_LABELS.map(([k, l]) => {
             const r = labelResposta(setor.checklist_organizacional[k]);
+            const obs = setor.observacoes_checklist?.[k];
             return (
-              <div
-                key={k}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  borderTop: "1px solid #f3f4f6",
-                  padding: "2px 8px",
-                }}
-              >
-                <span style={{ color: "#4b5563", flex: 1, minWidth: 0, wordBreak: "break-word", marginRight: 4 }}>{l}</span>
-                <span style={{ color: r.color, fontWeight: r.fontWeight, flexShrink: 0 }}>
-                  {r.label}
-                </span>
+              <div key={k} style={{ borderTop: "1px solid #f3f4f6", padding: "2px 8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#4b5563", flex: 1, minWidth: 0, wordBreak: "break-word", marginRight: 4 }}>{l}</span>
+                  <span style={{ color: r.color, fontWeight: r.fontWeight, flexShrink: 0 }}>{r.label}</span>
+                </div>
+                {obs && <p style={{ margin: "2px 0 0", fontSize: 9, fontStyle: "italic", color: "#6b7280" }}>Obs.: {obs}</p>}
               </div>
             );
           })}

@@ -76,6 +76,10 @@ function normalizarSetor(s: unknown): AepSetorLocal {
     jornada: (setor.jornada as string) ?? "",
     qtd_expostos: typeof setor.qtd_expostos === "number" ? setor.qtd_expostos : 0,
     descricao_atividade: (setor.descricao_atividade as string) ?? "",
+    metodo_coleta: (setor.metodo_coleta as string) ?? "",
+    trabalhadores_consultados: (setor.trabalhadores_consultados as string) ?? "",
+    observacoes_checklist:
+      (setor.observacoes_checklist as Record<string, string>) ?? {},
     riscos: Array.isArray(setor.riscos) ? (setor.riscos as AepSetorLocal["riscos"]) : [],
     checklist_fisica: normalizarChecklistFisica(setor.checklist_fisica),
     checklist_cognitiva: normalizarChecklistCognitiva(setor.checklist_cognitiva),
