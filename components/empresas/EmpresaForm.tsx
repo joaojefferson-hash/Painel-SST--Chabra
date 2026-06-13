@@ -235,6 +235,10 @@ export default function EmpresaForm({
       toast.error("Nome é obrigatório");
       return;
     }
+    if (!form.id_unidade) {
+      toast.error("Selecione a unidade da empresa");
+      return;
+    }
     mutation.mutate();
   }
 
@@ -343,15 +347,19 @@ export default function EmpresaForm({
           </div>
         </div>
 
-        {/* Unidade — controla quais usuários enxergam esta empresa */}
+        {/* Unidade — controla quais usuários enxergam esta empresa (obrigatória) */}
         <div>
-          <label className="text-sm font-medium text-gray-700">Unidade</label>
+          <label className="text-sm font-medium text-gray-700">
+            Unidade <span className="text-red-500">*</span>
+          </label>
           <select
             value={form.id_unidade}
             onChange={(e) => setForm({ ...form, id_unidade: e.target.value })}
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
           >
-            <option value="">Sem unidade (visível para todos)</option>
+            <option value="" disabled>
+              Selecione a unidade…
+            </option>
             {unidades.map((u) => (
               <option key={u.id_unidade} value={u.id_unidade}>
                 {u.nome}
@@ -359,9 +367,13 @@ export default function EmpresaForm({
             ))}
           </select>
           <p className="mt-1 text-xs text-gray-500">
-            Só usuários com esta unidade verão a empresa. Sem unidade = todos veem.
-            Cadastre unidades em Configurações → Unidades.
+            Só usuários com esta unidade (e Admins) verão a empresa.
           </p>
+          {unidades.length === 0 && (
+            <p className="mt-1 text-xs text-amber-600">
+              Nenhuma unidade cadastrada. Cadastre em Configurações → Unidades antes.
+            </p>
+          )}
         </div>
 
         {/* Endereço e contato — preenchidos pela busca por CNPJ, editáveis */}

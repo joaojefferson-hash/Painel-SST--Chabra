@@ -575,6 +575,13 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
       toast.error("Nome e e-mail são obrigatórios");
       return;
     }
+    if (
+      (form.perfil === "Tecnico" || form.perfil === "Visualizador") &&
+      form.unidades.length === 0
+    ) {
+      toast.error("Selecione ao menos uma unidade para Técnico/Visualizador");
+      return;
+    }
     mutation.mutate();
   }
 
@@ -827,12 +834,11 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
 
         {(form.perfil === "Tecnico" || form.perfil === "Visualizador") && (
           <Field
-            label={`Unidades — ${form.unidades.length === 0 ? "nenhuma (vê só empresas sem unidade)" : `${form.unidades.length} selecionada(s)`}`}
+            label={`Unidades * — ${form.unidades.length === 0 ? "obrigatório (selecione ao menos uma)" : `${form.unidades.length} selecionada(s)`}`}
           >
             <p className="mb-2 text-xs text-gray-500">
-              O usuário vê as empresas destas unidades + as empresas sem unidade.
-              Sem nenhuma marcada, vê apenas empresas sem unidade. Cadastre em
-              Configurações → Unidades.
+              O usuário vê as empresas destas unidades. Obrigatório para
+              Técnico/Visualizador. Cadastre em Configurações → Unidades.
             </p>
             <div className="max-h-48 overflow-auto rounded-md border border-gray-200 bg-white p-2">
               {unidades.length === 0 ? (
