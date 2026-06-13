@@ -188,6 +188,21 @@ export interface Empresa {
   grau_risco: number | null;
   status: StatusEmpresa | null;
   observacao: string | null;
+  // Endereço e contato (preenchidos pela busca por CNPJ na Receita)
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  municipio: string | null;
+  uf: string | null;
+  cep: string | null;
+  telefone: string | null;
+  email: string | null;
+  // Dados cadastrais da Receita
+  cnae_principal: string | null;
+  cnae_descricao: string | null;
+  situacao_cadastral: string | null;
+  porte: string | null;
   /** Lista de módulos em que a empresa está habilitada (aparece nos selects). */
   modulos_habilitados: ModuloEmpresa[];
   created_at: string;

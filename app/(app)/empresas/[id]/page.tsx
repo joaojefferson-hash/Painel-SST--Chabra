@@ -86,6 +86,30 @@ export default function EmpresaDetalhePage({ params }: Props) {
                   !empresa.caepf &&
                   !empresa.cno && <span>Sem identificador cadastrado</span>}
               </div>
+              {(() => {
+                const endereco = [
+                  [empresa.logradouro, empresa.numero].filter(Boolean).join(", "),
+                  empresa.bairro,
+                  [empresa.municipio, empresa.uf].filter(Boolean).join(" - "),
+                  empresa.cep ? `CEP ${empresa.cep}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(", ");
+                const contato = [empresa.telefone, empresa.email]
+                  .filter(Boolean)
+                  .join(" · ");
+                const atividade = [empresa.cnae_principal, empresa.cnae_descricao]
+                  .filter(Boolean)
+                  .join(" - ");
+                if (!endereco && !contato && !atividade) return null;
+                return (
+                  <div className="mt-1.5 space-y-0.5 text-xs text-gray-500">
+                    {endereco && <p>{endereco}</p>}
+                    {contato && <p>{contato}</p>}
+                    {atividade && <p>Atividade: {atividade}</p>}
+                  </div>
+                );
+              })()}
             </div>
           </div>
           <div className="flex flex-col items-start gap-2 md:items-end">

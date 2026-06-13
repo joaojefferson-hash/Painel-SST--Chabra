@@ -26,6 +26,12 @@ export const VARIAVEIS: VariavelDef[] = [
   { chave: "cei", rotulo: "CEI", exemplo: "00.000.00000/00" },
   { chave: "caepf", rotulo: "CAEPF", exemplo: "000.000.000/000-00" },
   { chave: "cno", rotulo: "CNO", exemplo: "00.000.00000/00" },
+  { chave: "empresa_endereco", rotulo: "Endereço completo", exemplo: "Av. Paulista, 37, Bela Vista, São Paulo - SP, CEP 01311-902" },
+  { chave: "empresa_municipio", rotulo: "Município", exemplo: "São Paulo" },
+  { chave: "empresa_uf", rotulo: "UF", exemplo: "SP" },
+  { chave: "empresa_telefone", rotulo: "Telefone", exemplo: "(11) 2385-1939" },
+  { chave: "empresa_email", rotulo: "E-mail", exemplo: "contato@empresa.com.br" },
+  { chave: "empresa_cnae", rotulo: "CNAE / atividade principal", exemplo: "94.30-8-00 - Atividades de associações" },
   { chave: "data_elaboracao", rotulo: "Data de elaboração", exemplo: "13/05/2026" },
   { chave: "data_conclusao", rotulo: "Data da conclusão (quando virou CONCLUÍDO)", exemplo: "19/05/2026" },
   { chave: "data_atual", rotulo: "Data atual (geração do PDF)", exemplo: "13/05/2026" },
@@ -65,6 +71,22 @@ export function montarValoresVariaveis(
     cei: empresa?.cei ? formatCEI(empresa.cei) : "",
     caepf: empresa?.caepf ? formatCAEPF(empresa.caepf) : "",
     cno: empresa?.cno ? formatCNO(empresa.cno) : "",
+    empresa_endereco: [
+      [empresa?.logradouro, empresa?.numero].filter(Boolean).join(", "),
+      empresa?.complemento,
+      empresa?.bairro,
+      [empresa?.municipio, empresa?.uf].filter(Boolean).join(" - "),
+      empresa?.cep ? `CEP ${empresa.cep}` : "",
+    ]
+      .filter(Boolean)
+      .join(", "),
+    empresa_municipio: empresa?.municipio ?? "",
+    empresa_uf: empresa?.uf ?? "",
+    empresa_telefone: empresa?.telefone ?? "",
+    empresa_email: empresa?.email ?? "",
+    empresa_cnae: [empresa?.cnae_principal, empresa?.cnae_descricao]
+      .filter(Boolean)
+      .join(" - "),
     data_elaboracao: formatarDataBR(relatorio?.data_elaboracao),
     data_conclusao: formatarDataBR(relatorio?.data_conclusao),
     data_atual: new Date().toLocaleDateString("pt-BR"),

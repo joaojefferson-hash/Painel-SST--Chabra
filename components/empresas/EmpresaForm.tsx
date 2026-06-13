@@ -45,6 +45,19 @@ export default function EmpresaForm({
     cei: "",
     caepf: "",
     cno: "",
+    logradouro: "",
+    numero: "",
+    complemento: "",
+    bairro: "",
+    municipio: "",
+    uf: "",
+    cep: "",
+    telefone: "",
+    email: "",
+    cnae_principal: "",
+    cnae_descricao: "",
+    situacao_cadastral: "",
+    porte: "",
     status: "Ativo" as "Ativo" | "Inativa",
     observacao: "",
     modulos_habilitados: [...DEFAULT_MODULOS] as ModuloEmpresa[],
@@ -60,6 +73,19 @@ export default function EmpresaForm({
         cei: empresa?.cei ?? "",
         caepf: empresa?.caepf ?? "",
         cno: empresa?.cno ?? "",
+        logradouro: empresa?.logradouro ?? "",
+        numero: empresa?.numero ?? "",
+        complemento: empresa?.complemento ?? "",
+        bairro: empresa?.bairro ?? "",
+        municipio: empresa?.municipio ?? "",
+        uf: empresa?.uf ?? "",
+        cep: empresa?.cep ?? "",
+        telefone: empresa?.telefone ?? "",
+        email: empresa?.email ?? "",
+        cnae_principal: empresa?.cnae_principal ?? "",
+        cnae_descricao: empresa?.cnae_descricao ?? "",
+        situacao_cadastral: empresa?.situacao_cadastral ?? "",
+        porte: empresa?.porte ?? "",
         status: (empresa?.status as "Ativo" | "Inativa") ?? "Ativo",
         observacao: empresa?.observacao ?? "",
         modulos_habilitados:
@@ -72,9 +98,9 @@ export default function EmpresaForm({
 
   /**
    * Busca os dados da empresa na base da Receita Federal (via BrasilAPI,
-   * dados públicos). Preenche nome fantasia + razão social e, se a observação
-   * estiver vazia, um resumo dos dados cadastrais relevantes (sem capital
-   * social). Nada é salvo aqui — o usuário revisa e confirma.
+   * dados públicos) e preenche os campos estruturados (razão social, nome
+   * fantasia, endereço, contato, CNAE, situação, porte). Capital social não
+   * é trazido. Nada é salvo aqui — o usuário revisa e confirma.
    */
   async function buscarCnpj() {
     const digitos = form.cnpj.replace(/\D/g, "");
@@ -92,45 +118,29 @@ export default function EmpresaForm({
       const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
       const razao = str(d.razao_social);
       const fantasia = str(d.nome_fantasia);
-
-      // Resumo dos dados cadastrais relevantes (capital social omitido)
-      const cep = str(d.cep).replace(/\D/g, "");
-      const cepFmt = cep.length === 8 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : str(d.cep);
-      const endereco = [
-        [str(d.logradouro), str(d.numero)].filter(Boolean).join(", "),
-        str(d.complemento),
-        str(d.bairro),
-        [str(d.municipio), str(d.uf)].filter(Boolean).join(" - "),
-        cepFmt && `CEP ${cepFmt}`,
-      ]
-        .filter(Boolean)
-        .join(" | ");
-      const tel = str(d.ddd_telefone_1);
+      const cepDig = str(d.cep).replace(/\D/g, "");
+      const cepFmt = cepDig.length === 8 ? `${cepDig.slice(0, 5)}-${cepDig.slice(5)}` : str(d.cep);
       const cnaeCod =
         d.cnae_fiscal != null && d.cnae_fiscal !== "" ? String(d.cnae_fiscal) : "";
-      const cnae = [cnaeCod, str(d.cnae_fiscal_descricao)]
-        .filter(Boolean)
-        .join(" - ");
-      const resumo = [
-        fantasia && `Nome fantasia: ${fantasia}`,
-        str(d.descricao_situacao_cadastral) &&
-          `Situação cadastral: ${str(d.descricao_situacao_cadastral)}`,
-        str(d.porte) && `Porte: ${str(d.porte)}`,
-        cnae && `Atividade principal (CNAE): ${cnae}`,
-        endereco && `Endereço: ${endereco}`,
-        tel && `Telefone: ${tel}`,
-        str(d.email) && `E-mail: ${str(d.email)}`,
-        `Dados consultados na Receita Federal (BrasilAPI) em ${new Date().toLocaleDateString("pt-BR")}.`,
-      ]
-        .filter(Boolean)
-        .join("\n");
 
+      // Mantém o que já houver preenchido como fallback (?? f.campo).
       setForm((f) => ({
         ...f,
         razao_social: razao || f.razao_social,
         nome_empresa: f.nome_empresa.trim() || fantasia || razao || f.nome_empresa,
-        // só preenche a observação se estiver vazia (não apaga anotações)
-        observacao: f.observacao.trim() ? f.observacao : resumo,
+        logradouro: str(d.logradouro) || f.logradouro,
+        numero: str(d.numero) || f.numero,
+        complemento: str(d.complemento) || f.complemento,
+        bairro: str(d.bairro) || f.bairro,
+        municipio: str(d.municipio) || f.municipio,
+        uf: str(d.uf) || f.uf,
+        cep: cepFmt || f.cep,
+        telefone: str(d.ddd_telefone_1) || f.telefone,
+        email: str(d.email) || f.email,
+        cnae_principal: cnaeCod || f.cnae_principal,
+        cnae_descricao: str(d.cnae_fiscal_descricao) || f.cnae_descricao,
+        situacao_cadastral: str(d.descricao_situacao_cadastral) || f.situacao_cadastral,
+        porte: str(d.porte) || f.porte,
       }));
       toast.success("Dados da Receita carregados — revise e salve.");
     } catch (err) {
@@ -163,6 +173,19 @@ export default function EmpresaForm({
         cei: form.cei.replace(/\D/g, "") || null,
         caepf: form.caepf.replace(/\D/g, "") || null,
         cno: form.cno.replace(/\D/g, "") || null,
+        logradouro: form.logradouro.trim() || null,
+        numero: form.numero.trim() || null,
+        complemento: form.complemento.trim() || null,
+        bairro: form.bairro.trim() || null,
+        municipio: form.municipio.trim() || null,
+        uf: form.uf.trim().toUpperCase() || null,
+        cep: form.cep.trim() || null,
+        telefone: form.telefone.trim() || null,
+        email: form.email.trim() || null,
+        cnae_principal: form.cnae_principal.trim() || null,
+        cnae_descricao: form.cnae_descricao.trim() || null,
+        situacao_cadastral: form.situacao_cadastral.trim() || null,
+        porte: form.porte.trim() || null,
         status: form.status,
         observacao: form.observacao.trim() || null,
         modulos_habilitados: form.modulos_habilitados,
@@ -309,6 +332,143 @@ export default function EmpresaForm({
                 value={form.cno}
                 onChange={(e) => setForm({ ...form, cno: e.target.value })}
                 placeholder="00.000.00000/00"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Endereço e contato — preenchidos pela busca por CNPJ, editáveis */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+            Endereço e contato
+          </p>
+          <div className="grid gap-3 md:grid-cols-6">
+            <div className="md:col-span-4">
+              <label className="text-xs font-medium text-gray-700">Logradouro</label>
+              <input
+                type="text"
+                value={form.logradouro}
+                onChange={(e) => setForm({ ...form, logradouro: e.target.value })}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700">Número</label>
+              <input
+                type="text"
+                value={form.numero}
+                onChange={(e) => setForm({ ...form, numero: e.target.value })}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700">CEP</label>
+              <input
+                type="text"
+                value={form.cep}
+                onChange={(e) => setForm({ ...form, cep: e.target.value })}
+                placeholder="00000-000"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-xs font-medium text-gray-700">Complemento</label>
+              <input
+                type="text"
+                value={form.complemento}
+                onChange={(e) => setForm({ ...form, complemento: e.target.value })}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-xs font-medium text-gray-700">Bairro</label>
+              <input
+                type="text"
+                value={form.bairro}
+                onChange={(e) => setForm({ ...form, bairro: e.target.value })}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+            <div className="md:col-span-1">
+              <label className="text-xs font-medium text-gray-700">Município</label>
+              <input
+                type="text"
+                value={form.municipio}
+                onChange={(e) => setForm({ ...form, municipio: e.target.value })}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+            <div className="md:col-span-1">
+              <label className="text-xs font-medium text-gray-700">UF</label>
+              <input
+                type="text"
+                maxLength={2}
+                value={form.uf}
+                onChange={(e) => setForm({ ...form, uf: e.target.value.toUpperCase() })}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm uppercase focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="text-xs font-medium text-gray-700">Telefone</label>
+              <input
+                type="text"
+                value={form.telefone}
+                onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="text-xs font-medium text-gray-700">E-mail</label>
+              <input
+                type="text"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Dados cadastrais da Receita */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+            Atividade e situação (Receita)
+          </p>
+          <div className="grid gap-3 md:grid-cols-6">
+            <div className="md:col-span-1">
+              <label className="text-xs font-medium text-gray-700">CNAE</label>
+              <input
+                type="text"
+                value={form.cnae_principal}
+                onChange={(e) => setForm({ ...form, cnae_principal: e.target.value })}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+            <div className="md:col-span-5">
+              <label className="text-xs font-medium text-gray-700">Atividade principal</label>
+              <input
+                type="text"
+                value={form.cnae_descricao}
+                onChange={(e) => setForm({ ...form, cnae_descricao: e.target.value })}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="text-xs font-medium text-gray-700">Situação cadastral</label>
+              <input
+                type="text"
+                value={form.situacao_cadastral}
+                onChange={(e) => setForm({ ...form, situacao_cadastral: e.target.value })}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="text-xs font-medium text-gray-700">Porte</label>
+              <input
+                type="text"
+                value={form.porte}
+                onChange={(e) => setForm({ ...form, porte: e.target.value })}
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
               />
             </div>

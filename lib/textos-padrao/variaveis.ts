@@ -31,7 +31,29 @@ const VARIAVEIS_EMPRESA: VariavelDef[] = [
   { chave: "cei", rotulo: "CEI", exemplo: "00.000.00000/00" },
   { chave: "caepf", rotulo: "CAEPF", exemplo: "000.000.000/000-00" },
   { chave: "cno", rotulo: "CNO", exemplo: "00.000.00000/00" },
+  { chave: "empresa_endereco", rotulo: "Endereço completo", exemplo: "Av. Paulista, 37, Bela Vista, São Paulo - SP, CEP 01311-902" },
+  { chave: "empresa_municipio", rotulo: "Município", exemplo: "São Paulo" },
+  { chave: "empresa_uf", rotulo: "UF", exemplo: "SP" },
+  { chave: "empresa_cep", rotulo: "CEP", exemplo: "01311-902" },
+  { chave: "empresa_telefone", rotulo: "Telefone", exemplo: "(11) 2385-1939" },
+  { chave: "empresa_email", rotulo: "E-mail", exemplo: "contato@empresa.com.br" },
+  { chave: "empresa_cnae", rotulo: "CNAE / atividade principal", exemplo: "94.30-8-00 - Atividades de associações" },
 ];
+
+/** Monta o endereço completo da empresa em uma linha (campos estruturados). */
+export function montarEnderecoEmpresa(empresa: Empresa | null | undefined): string {
+  if (!empresa) return "";
+  const cep = empresa.cep?.trim();
+  return [
+    [empresa.logradouro, empresa.numero].filter(Boolean).join(", "),
+    empresa.complemento,
+    empresa.bairro,
+    [empresa.municipio, empresa.uf].filter(Boolean).join(" - "),
+    cep && `CEP ${cep}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
 
 const VARIAVEIS_DATA_RESPONSAVEL: VariavelDef[] = [
   { chave: "data_atual", rotulo: "Data atual (geração do PDF)", exemplo: "15/05/2026" },
@@ -150,6 +172,15 @@ export function montarValoresEmpresa(
     cei: empresa?.cei ? formatCEI(empresa.cei) : "",
     caepf: empresa?.caepf ? formatCAEPF(empresa.caepf) : "",
     cno: empresa?.cno ? formatCNO(empresa.cno) : "",
+    empresa_endereco: montarEnderecoEmpresa(empresa),
+    empresa_municipio: empresa?.municipio ?? "",
+    empresa_uf: empresa?.uf ?? "",
+    empresa_cep: empresa?.cep ?? "",
+    empresa_telefone: empresa?.telefone ?? "",
+    empresa_email: empresa?.email ?? "",
+    empresa_cnae: [empresa?.cnae_principal, empresa?.cnae_descricao]
+      .filter(Boolean)
+      .join(" - "),
     data_atual: new Date().toLocaleDateString("pt-BR"),
   };
 }
