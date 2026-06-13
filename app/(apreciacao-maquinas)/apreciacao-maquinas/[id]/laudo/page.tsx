@@ -159,12 +159,13 @@ export default function LaudoApreciacaoMaquinasPage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/apreciacao/${id}`} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
           </>
         ) : (
-          <BotaoAssinarPdf tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
+          <BotaoAssinarPdf apiPdfUrl={`/api/pdf/apreciacao/${id}`} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
         )}
         <BotaoGerarPdf
+          apiPdfUrl={`/api/pdf/apreciacao/${id}`}
           tabelaNome="apreciacoes_maquinas"
           docId={id}
           className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"

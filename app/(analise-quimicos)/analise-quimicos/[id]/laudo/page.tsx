@@ -100,12 +100,13 @@ export default function LaudoAnaliseQuimicoPage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/analise-quimicos/${id}`} tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />
           </>
         ) : (
-          <BotaoAssinarPdf tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />
+          <BotaoAssinarPdf apiPdfUrl={`/api/pdf/analise-quimicos/${id}`} tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />
         )}
         <BotaoGerarPdf
+          apiPdfUrl={`/api/pdf/analise-quimicos/${id}`}
           tabelaNome="analises_quimicos"
           docId={id}
           className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-verde-accent"

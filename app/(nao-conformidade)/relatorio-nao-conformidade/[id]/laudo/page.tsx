@@ -113,12 +113,13 @@ export default function LaudoNaoConformidadePage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/nao-conformidade/${id}`} tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
           </>
         ) : (
-          <BotaoAssinarPdf tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
+          <BotaoAssinarPdf apiPdfUrl={`/api/pdf/nao-conformidade/${id}`} tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
         )}
         <BotaoGerarPdf
+          apiPdfUrl={`/api/pdf/nao-conformidade/${id}`}
           tabelaNome="relatorios_nao_conformidade"
           docId={id}
           className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
