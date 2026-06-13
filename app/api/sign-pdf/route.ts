@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
 const forge: any = require("node-forge");
-import { createSupabaseServerClient } from "@/lib/supabase/client";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/lib/supabase/client";
 import type { Usuario } from "@/lib/supabase/types";
 import { assinarPdf } from "@/lib/pdf/assinar-pdf";
 
@@ -80,8 +83,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "PDF muito grande (máx. 50 MB)" }, { status: 400 });
   }
 
-  // Baixa o certificado .pfx do bucket privado
-  const { data: certBlob, error: certError } = await supabase.storage
+  // Baixa o certificado .pfx do bucket privado via SERVICE_ROLE (o bucket é
+  // travado para acesso direto do cliente; só o servidor, após validar
+  // auth + permissão acima, pode ler o .pfx).
+  const serviceClient = createSupabaseServiceClient();
+  const { data: certBlob, error: certError } = await serviceClient.storage
     .from("certificados")
     .download(usuario.certificado_pfx_path);
 
