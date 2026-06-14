@@ -3,10 +3,11 @@
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck, Download, Loader2, AlertCircle } from "lucide-react";
-import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import AnexosManager from "@/components/anexos/AnexosManager";
+import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
 import toast from "react-hot-toast";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
@@ -27,6 +28,8 @@ export default function LaudoConformidadePage({
   const { data: empresa } = useEmpresa(data?.relatorio.id_empresa ?? null);
 
   const { pdfAssinado, recarregar } = usePdfAssinado("relatorios_conformidade", id);
+  const { data: pdfCongelado } = usePdfCongelado("conformidade", id);
+  const baseCongeladaUrl = pdfCongelado?.pdf_url ?? undefined;
   const [baixando, setBaixando] = useState(false);
 
   async function handleBaixarPdf() {
@@ -113,10 +116,10 @@ export default function LaudoConformidadePage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} tabelaNome="relatorios_conformidade" docId={id} onAssinado={recarregar} apiPdfUrl={`/api/pdf/conformidade/${id}`} />
+            <BotaoAssinarPdf reAssinatura={true} tabelaNome="relatorios_conformidade" docId={id} onAssinado={recarregar} apiPdfUrl={`/api/pdf/conformidade/${id}`} baseCongeladaUrl={baseCongeladaUrl} />
           </>
         ) : (
-          <BotaoAssinarPdf tabelaNome="relatorios_conformidade" docId={id} onAssinado={recarregar} apiPdfUrl={`/api/pdf/conformidade/${id}`} />
+          <BotaoAssinarPdf tabelaNome="relatorios_conformidade" docId={id} onAssinado={recarregar} apiPdfUrl={`/api/pdf/conformidade/${id}`} baseCongeladaUrl={baseCongeladaUrl} />
         )}
         <BotaoGerarPdf
           tabelaNome="relatorios_conformidade"
@@ -131,6 +134,22 @@ export default function LaudoConformidadePage({
             empresaNome: empresa?.nome_empresa ?? undefined,
             empresaCnpj: empresa?.cnpj ?? undefined,
             responsavelTecnico: relatorio.responsavel ?? undefined,
+          }}
+        />
+      </div>
+
+      <div className="px-4 pt-3">
+        <PainelCongelamentoPdf
+          modulo="conformidade"
+          idReferencia={id}
+          apiPdfUrl={`/api/pdf/conformidade/${id}`}
+          opts={{
+            tipoDocumento: "Relatório de Conformidade",
+            empresaId: relatorio.id_empresa ?? undefined,
+            empresaNome: empresa?.nome_empresa ?? undefined,
+            empresaCnpj: empresa?.cnpj ?? undefined,
+            responsavelTecnico: relatorio.responsavel ?? undefined,
+            setor: relatorio.setor ?? undefined,
           }}
         />
       </div>

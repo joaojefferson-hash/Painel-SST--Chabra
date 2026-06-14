@@ -3,10 +3,11 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck, Download, Loader2, FlaskConical, FileText, Pencil } from "lucide-react";
-import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import AnexosManager from "@/components/anexos/AnexosManager";
+import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
 import toast from "react-hot-toast";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
@@ -28,6 +29,8 @@ export default function LaudoAnaliseQuimicoPage({
   const { data: empresa } = useEmpresa(analise?.id_empresa ?? null);
 
   const { pdfAssinado, recarregar } = usePdfAssinado("analises_quimicos", id);
+  const { data: pdfCongelado } = usePdfCongelado("analises_quimicos", id);
+  const baseCongeladaUrl = pdfCongelado?.pdf_url ?? undefined;
   const [baixando, setBaixando] = useState(false);
 
   async function handleBaixarPdf() {
@@ -101,10 +104,10 @@ export default function LaudoAnaliseQuimicoPage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/analise-quimicos/${id}`} tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/analise-quimicos/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />
           </>
         ) : (
-          <BotaoAssinarPdf apiPdfUrl={`/api/pdf/analise-quimicos/${id}`} tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />
+          <BotaoAssinarPdf apiPdfUrl={`/api/pdf/analise-quimicos/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />
         )}
         <BotaoGerarPdf
           apiPdfUrl={`/api/pdf/analise-quimicos/${id}`}
@@ -115,6 +118,21 @@ export default function LaudoAnaliseQuimicoPage({
             modulo: "analises_quimicos",
             tipoDocumento: "Análise de Agente Químico",
             idRelatorio: id,
+            empresaId: analise.id_empresa ?? undefined,
+            empresaNome: empresa?.nome_empresa ?? undefined,
+            empresaCnpj: empresa?.cnpj ?? undefined,
+            responsavelTecnico: analise.usuario_nome ?? undefined,
+          }}
+        />
+      </div>
+
+      <div className="px-4 pt-3">
+        <PainelCongelamentoPdf
+          modulo="analises_quimicos"
+          idReferencia={id}
+          apiPdfUrl={`/api/pdf/analise-quimicos/${id}`}
+          opts={{
+            tipoDocumento: "Análise de Agente Químico",
             empresaId: analise.id_empresa ?? undefined,
             empresaNome: empresa?.nome_empresa ?? undefined,
             empresaCnpj: empresa?.cnpj ?? undefined,

@@ -9,7 +9,8 @@ import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import AnexosManager from "@/components/anexos/AnexosManager";
-import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
+import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
 import { formatarDataBR, substituirVariaveis, substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
@@ -261,6 +262,8 @@ export default function AepLaudoPage({
   const { data: rel } = useAepRelatorio(idRelatorio);
   const { data: capsAep = [] } = useTextosPadrao("aep");
   const { pdfAssinado, recarregar } = usePdfAssinado("aep_relatorios", idRelatorio);
+  const { data: pdfCongelado } = usePdfCongelado("aep", idRelatorio);
+  const baseCongeladaUrl = pdfCongelado?.pdf_url ?? undefined;
   const [baixando, setBaixando] = useState(false);
 
   async function handleBaixarPdf() {
@@ -334,6 +337,7 @@ export default function AepLaudoPage({
                 docId={idRelatorio}
                 onAssinado={recarregar}
                 apiPdfUrl={`/api/pdf/aep/${idRelatorio}`}
+                baseCongeladaUrl={baseCongeladaUrl}
               />
             </>
           ) : (
@@ -342,6 +346,7 @@ export default function AepLaudoPage({
               docId={idRelatorio}
               onAssinado={recarregar}
               apiPdfUrl={`/api/pdf/aep/${idRelatorio}`}
+              baseCongeladaUrl={baseCongeladaUrl}
             />
           )}
           <BotaoGerarPdf
@@ -359,6 +364,20 @@ export default function AepLaudoPage({
             }}
           />
         </div>
+      </div>
+
+      <div className="mx-auto max-w-4xl px-8 pt-4 print:hidden">
+        <PainelCongelamentoPdf
+          modulo="aep"
+          idReferencia={idRelatorio}
+          apiPdfUrl={`/api/pdf/aep/${idRelatorio}`}
+          opts={{
+            tipoDocumento: "Análise Ergonômica Preliminar",
+            empresaNome: empresa?.nome_empresa ?? undefined,
+            empresaCnpj: empresa?.cnpj ?? undefined,
+            responsavelTecnico: rel.responsavel_elaboracao ?? undefined,
+          }}
+        />
       </div>
 
       <div className="mx-auto max-w-4xl px-8 pt-4 print:hidden">

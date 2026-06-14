@@ -2,10 +2,11 @@
 
 import { useMemo, useState, use } from "react";
 import { BadgeCheck, Download, Loader2 } from "lucide-react";
-import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import AnexosManager from "@/components/anexos/AnexosManager";
+import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DrpsFiltro from "@/components/drps/DrpsFiltro";
@@ -113,6 +114,8 @@ export default function PsicossocialLaudoPage({
   }, [setoresParaRelatorio, respondentes, probabilidades]);
 
   const { pdfAssinado, recarregar } = usePdfAssinado("drps_relatorios_analise", idRelatorio);
+  const { data: pdfCongelado } = usePdfCongelado("drps", idRelatorio);
+  const baseCongeladaUrl = pdfCongelado?.pdf_url ?? undefined;
   const [baixando, setBaixando] = useState(false);
 
   async function handleBaixarPdf() {
@@ -221,11 +224,12 @@ export default function PsicossocialLaudoPage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/drps/${idRelatorio}`} tabelaNome="drps_relatorios_analise" docId={idRelatorio} onAssinado={recarregar} />
+            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/drps/${idRelatorio}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="drps_relatorios_analise" docId={idRelatorio} onAssinado={recarregar} />
           </>
         ) : (
           <BotaoAssinarPdf
             apiPdfUrl={`/api/pdf/drps/${idRelatorio}`}
+            baseCongeladaUrl={baseCongeladaUrl}
             tabelaNome="drps_relatorios_analise"
             docId={idRelatorio}
             onAssinado={recarregar}
@@ -241,6 +245,21 @@ export default function PsicossocialLaudoPage({
             modulo: "drps",
             tipoDocumento: "Diagnóstico de Riscos Psicossociais",
             idRelatorio,
+            empresaId: relatorio?.id_empresa ?? undefined,
+            empresaNome: empresa?.nome_empresa ?? undefined,
+            empresaCnpj: empresa?.cnpj ?? undefined,
+            responsavelTecnico: relatorio?.responsavel_tecnico ?? undefined,
+          }}
+        />
+      </div>
+
+      <div className="pt-3 print:hidden">
+        <PainelCongelamentoPdf
+          modulo="drps"
+          idReferencia={idRelatorio}
+          apiPdfUrl={`/api/pdf/drps/${idRelatorio}`}
+          opts={{
+            tipoDocumento: "Diagnóstico de Riscos Psicossociais",
             empresaId: relatorio?.id_empresa ?? undefined,
             empresaNome: empresa?.nome_empresa ?? undefined,
             empresaCnpj: empresa?.cnpj ?? undefined,

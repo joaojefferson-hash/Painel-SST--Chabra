@@ -3,10 +3,11 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle, BadgeCheck, Download, Loader2, AlertCircle } from "lucide-react";
-import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
+import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import AnexosManager from "@/components/anexos/AnexosManager";
+import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
 import toast from "react-hot-toast";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
@@ -31,6 +32,8 @@ export default function LaudoNaoConformidadePage({
   const { data: empresa } = useEmpresa(data?.relatorio.id_empresa ?? null);
 
   const { pdfAssinado, recarregar } = usePdfAssinado("relatorios_nao_conformidade", id);
+  const { data: pdfCongelado } = usePdfCongelado("nao_conformidade", id);
+  const baseCongeladaUrl = pdfCongelado?.pdf_url ?? undefined;
   const [baixando, setBaixando] = useState(false);
 
   async function handleBaixarPdf() {
@@ -114,10 +117,10 @@ export default function LaudoNaoConformidadePage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/nao-conformidade/${id}`} tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/nao-conformidade/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
           </>
         ) : (
-          <BotaoAssinarPdf apiPdfUrl={`/api/pdf/nao-conformidade/${id}`} tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
+          <BotaoAssinarPdf apiPdfUrl={`/api/pdf/nao-conformidade/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
         )}
         <BotaoGerarPdf
           apiPdfUrl={`/api/pdf/nao-conformidade/${id}`}
@@ -132,6 +135,22 @@ export default function LaudoNaoConformidadePage({
             empresaNome: empresa?.nome_empresa ?? undefined,
             empresaCnpj: empresa?.cnpj ?? undefined,
             responsavelTecnico: relatorio.responsavel ?? undefined,
+          }}
+        />
+      </div>
+
+      <div className="px-4 pt-3">
+        <PainelCongelamentoPdf
+          modulo="nao_conformidade"
+          idReferencia={id}
+          apiPdfUrl={`/api/pdf/nao-conformidade/${id}`}
+          opts={{
+            tipoDocumento: "Relatório de Não Conformidade",
+            empresaId: relatorio.id_empresa ?? undefined,
+            empresaNome: empresa?.nome_empresa ?? undefined,
+            empresaCnpj: empresa?.cnpj ?? undefined,
+            responsavelTecnico: relatorio.responsavel ?? undefined,
+            setor: relatorio.setor ?? undefined,
           }}
         />
       </div>
