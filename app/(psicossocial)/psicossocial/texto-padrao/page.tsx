@@ -195,39 +195,41 @@ export default function TextoPadraoPage() {
             )}
           </p>
 
-          {/* Seções SISTEMA */}
-          {capitulosFixos.map((cap, idx) => {
-            const descricao = DRPS_FIXOS.find((f) => f.slug_fixo === cap.slug_fixo)?.descricao ?? "";
-            return (
+          {/* Lista ÚNICA (igual AEP): seções do sistema + capítulos editáveis na
+              ordem do laudo. Use as setas para mover qualquer bloco livremente —
+              um texto editável pode ficar antes, entre ou depois das seções. */}
+          <div className="rounded-md bg-verde-light/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-verde-primary">
+            Ordem do laudo — reordene livremente (seções do sistema e textos editáveis juntos)
+          </div>
+          {capitulos.map((cap, idx) =>
+            cap.tipo === "fixo" ? (
               <FixoCard
                 key={cap.id_capitulo}
                 capitulo={cap}
                 indice={idx}
-                total={capitulosFixos.length}
+                total={capitulos.length}
                 salvando={salvar.isPending}
-                descricao={descricao}
+                descricao={DRPS_FIXOS.find((f) => f.slug_fixo === cap.slug_fixo)?.descricao ?? ""}
                 onMover={(dir) => mover(cap, dir)}
                 onToggleMostrar={() => salvar.mutate({ id_capitulo: cap.id_capitulo, ativo: !cap.ativo })}
                 onSalvar={(patch) => salvar.mutate({ id_capitulo: cap.id_capitulo, ...patch })}
               />
-            );
-          })}
-
-          {/* Capítulos EDITÁVEIS */}
-          {capitulosEditaveis.map((cap, i) => (
-            <CapituloCard
-              key={cap.id_capitulo}
-              capitulo={cap}
-              indice={i}
-              total={capitulosEditaveis.length}
-              salvando={salvar.isPending}
-              contagensPorPosicao={contagensPorPosicao}
-              onSalvar={(patch) => salvar.mutate({ id_capitulo: cap.id_capitulo, ...patch })}
-              onMover={(dir) => mover(cap, dir)}
-              onExcluir={() => setConfirmExcluir(cap)}
-              onToggleMostrar={() => salvar.mutate({ id_capitulo: cap.id_capitulo, ativo: !cap.ativo })}
-            />
-          ))}
+            ) : (
+              <CapituloCard
+                key={cap.id_capitulo}
+                capitulo={cap}
+                indice={idx}
+                total={capitulos.length}
+                salvando={salvar.isPending}
+                contagensPorPosicao={contagensPorPosicao}
+                ocultarPosicao
+                onSalvar={(patch) => salvar.mutate({ id_capitulo: cap.id_capitulo, ...patch })}
+                onMover={(dir) => mover(cap, dir)}
+                onExcluir={() => setConfirmExcluir(cap)}
+                onToggleMostrar={() => salvar.mutate({ id_capitulo: cap.id_capitulo, ativo: !cap.ativo })}
+              />
+            ),
+          )}
         </div>
       )}
 
@@ -358,6 +360,7 @@ function CapituloCard({
   total,
   salvando,
   contagensPorPosicao,
+  ocultarPosicao,
   onSalvar,
   onMover,
   onExcluir,
@@ -368,6 +371,7 @@ function CapituloCard({
   total: number;
   salvando: boolean;
   contagensPorPosicao: Partial<Record<DrpsPosicaoPdf, number>>;
+  ocultarPosicao?: boolean;
   onSalvar: (patch: {
     titulo?: string;
     conteudo?: string | null;
@@ -544,17 +548,19 @@ function CapituloCard({
             : "A4 vertical em folha nova (ABNT)."}
         </span>
 
-        <div className="w-full">
-          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-600">
-            📍 Posição no Relatório
-          </p>
-          <PosicaoPdfStepper
-            valor={(capitulo.posicao_pdf ?? "inicio") as DrpsPosicaoPdf}
-            onChange={(p) => onSalvar({ posicao_pdf: p as DrpsPosicaoPdf })}
-            contagens={contagensPorPosicao}
-            disabled={salvando}
-          />
-        </div>
+        {!ocultarPosicao && (
+          <div className="w-full">
+            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-600">
+              📍 Posição no Relatório
+            </p>
+            <PosicaoPdfStepper
+              valor={(capitulo.posicao_pdf ?? "inicio") as DrpsPosicaoPdf}
+              onChange={(p) => onSalvar({ posicao_pdf: p as DrpsPosicaoPdf })}
+              contagens={contagensPorPosicao}
+              disabled={salvando}
+            />
+          </div>
+        )}
       </div>
 
       {/* Imagem de capa */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, use } from "react";
+import React, { useMemo, useState, use } from "react";
 import { BadgeCheck, Download, Loader2 } from "lucide-react";
 import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
@@ -20,17 +20,18 @@ import {
   useDrpsProbabilidades,
   useDrpsRelatorio,
   useDrpsRespondentes,
+  useDrpsTextoPadrao,
 } from "@/lib/hooks/useDrps";
+import type { DrpsTextoPadraoCapitulo } from "@/lib/drps/types";
 import {
   aplicarMatriz,
   calcularResumoCompleto,
   filtrarPorSetor,
   listarSetores,
 } from "@/lib/drps/calculos";
-import { montarValoresVariaveis } from "@/lib/drps/variaveis";
+import { montarValoresVariaveis, substituirVariaveis, substituirVariaveisTexto } from "@/lib/drps/variaveis";
 import { detectRegistroTipo } from "@/lib/registro-profissional";
 import { TOPICOS } from "@/lib/drps/topicos";
-import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import {
   formatCNPJ,
   formatCPF,
@@ -116,6 +117,7 @@ export default function PsicossocialLaudoPage({
   const { pdfAssinado, recarregar } = usePdfAssinado("drps_relatorios_analise", idRelatorio);
   const { data: pdfCongelado } = usePdfCongelado("drps", idRelatorio);
   const baseCongeladaUrl = pdfCongelado?.pdf_url ?? undefined;
+  const { data: capitulosDrps = [] } = useDrpsTextoPadrao();
   const [baixando, setBaixando] = useState(false);
 
   async function handleBaixarPdf() {
@@ -136,6 +138,100 @@ export default function PsicossocialLaudoPage({
   }
 
   const podeImprimir = !!relatorio && respondentes.length > 0 && setoresParaRelatorio.length > 0;
+
+  // Ordenação unificada do laudo DRPS (igual AEP): se houver seções do sistema
+  // (tipo fixo) em drps_texto_padrao, o corpo é montado por `ordem` (editáveis +
+  // seções intercalados). Sem fixos, mantém o layout posicional legado.
+  const temFixos = capitulosDrps.some((c) => c.tipo === "fixo");
+  const ordenados = [...capitulosDrps]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+  const sumarioScreenNode = (
+    <DrpsSumarioPrint
+      setores={relatoriosPorSetor.map((r) => r.setor)}
+      valores={valoresVars}
+      temConclusaoGeral={!!relatorio?.conclusao_geral}
+      temMedidas={true}
+      temMonitoramento={true}
+      temRevisao={true}
+    />
+  );
+
+  const setoresScreenNode = relatoriosPorSetor.map((r, idx) => (
+    <BlocoSetorLaudo
+      key={r.setor}
+      relatorio={r}
+      drpsRel={relatorio ?? null}
+      empresa={empresa ?? null}
+      indice={idx + 1}
+      total={relatoriosPorSetor.length}
+      ehConsolidado={setor === "Todos"}
+    />
+  ));
+
+  const conclusaoScreenNode = relatorio?.conclusao_geral ? (
+    <section className="drps-conclusao-geral-print">
+      <style>{`
+        .drps-conclusao-geral-print { page-break-before: always; font-family: 'Times New Roman', Times, serif; }
+        .drps-conclusao-geral-print h2 { font-size: 16pt; font-weight: 700; color: #1e4d28; border-bottom: 2px solid #006B54; padding-bottom: 6px; margin: 0 0 14pt 0; text-transform: uppercase; letter-spacing: 0.05em; }
+        .drps-conclusao-geral-print p { font-size: 12pt; line-height: 1.6; text-align: justify; color: #1f2937; margin: 0 0 12pt 0; text-indent: 1.25cm; white-space: pre-wrap; }
+      `}</style>
+      <h2>Conclusão Geral</h2>
+      <p>{relatorio.conclusao_geral}</p>
+    </section>
+  ) : null;
+
+  function renderSecaoScreen(slug: string): React.ReactNode {
+    switch (slug) {
+      case "drps_analise_setor": return <>{setoresScreenNode}</>;
+      case "drps_conclusao":     return conclusaoScreenNode;
+      case "drps_plano_medidas": return <DrpsGestaoResumoPrint idRelatorio={idRelatorio} />;
+      case "drps_revisao":       return <DrpsRelatorioExtrasPrint idRelatorio={idRelatorio} />;
+      default:                   return null;
+    }
+  }
+
+  function renderEditavelScreen(c: DrpsTextoPadraoCapitulo): React.ReactNode {
+    if (c.bg_imagem_url) {
+      return (
+        <div style={{ position: "relative", width: "100%", marginBottom: 16, breakAfter: "page" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={c.bg_imagem_url} alt="" style={{ width: "100%", height: "auto", display: "block" }} />
+          {(c.caixas_texto ?? []).map((cx) => (
+            <div
+              key={cx.id}
+              style={{
+                position: "absolute",
+                left: `${cx.x}%`,
+                top: `${cx.y}%`,
+                width: `${cx.w ?? 40}%`,
+                fontSize: cx.fontSize ?? 16,
+                fontWeight: cx.bold ? 700 : 400,
+                color: cx.color ?? "#ffffff",
+                textAlign: cx.align ?? "left",
+                whiteSpace: "pre-wrap",
+                lineHeight: 1.3,
+              }}
+            >
+              {substituirVariaveisTexto(cx.conteudo, valoresVars)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className="mb-6 break-inside-avoid">
+        <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+          {substituirVariaveisTexto(c.titulo, valoresVars)}
+        </h2>
+        <div
+          className="prose prose-sm max-w-none text-xs leading-relaxed text-gray-700 [&_p]:mb-2 [&_table]:w-full [&_td]:border [&_td]:border-gray-300 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-gray-300 [&_th]:bg-gray-50 [&_th]:px-2 [&_th]:py-1"
+          dangerouslySetInnerHTML={{ __html: substituirVariaveis(c.conteudo, valoresVars) }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -278,52 +374,29 @@ export default function PsicossocialLaudoPage({
         </div>
       ) : (
         <div className="drps-print-container rounded border border-gray-300 bg-white p-6 shadow-sm">
-          <TextosPadraoPrint modulo="psicossocial" posicao="inicio" valores={valoresVars} />
-
-          <DrpsSumarioPrint
-            setores={relatoriosPorSetor.map((r) => r.setor)}
-            valores={valoresVars}
-            temConclusaoGeral={!!relatorio?.conclusao_geral}
-            temMedidas={true}
-            temMonitoramento={true}
-            temRevisao={true}
-          />
-
-          <TextosPadraoPrint modulo="psicossocial" posicao="apos_sumario" valores={valoresVars} />
-
-          {relatoriosPorSetor.map((r, idx) => (
-            <BlocoSetorLaudo
-              key={r.setor}
-              relatorio={r}
-              drpsRel={relatorio ?? null}
-              empresa={empresa ?? null}
-              indice={idx + 1}
-              total={relatoriosPorSetor.length}
-              ehConsolidado={setor === "Todos"}
-            />
-          ))}
-
-          <TextosPadraoPrint modulo="psicossocial" posicao="apos_setores" valores={valoresVars} />
-
-          {relatorio?.conclusao_geral && (
-            <section className="drps-conclusao-geral-print">
-              <style>{`
-                .drps-conclusao-geral-print { page-break-before: always; font-family: 'Times New Roman', Times, serif; }
-                .drps-conclusao-geral-print h2 { font-size: 16pt; font-weight: 700; color: #1e4d28; border-bottom: 2px solid #006B54; padding-bottom: 6px; margin: 0 0 14pt 0; text-transform: uppercase; letter-spacing: 0.05em; }
-                .drps-conclusao-geral-print p { font-size: 12pt; line-height: 1.6; text-align: justify; color: #1f2937; margin: 0 0 12pt 0; text-indent: 1.25cm; white-space: pre-wrap; }
-              `}</style>
-              <h2>Conclusão Geral</h2>
-              <p>{relatorio.conclusao_geral}</p>
-            </section>
+          {temFixos ? (
+            <>
+              {/* Sumário sempre no topo (não é um bloco reordenável) */}
+              {sumarioScreenNode}
+              {ordenados.map((c) =>
+                c.tipo === "fixo" ? (
+                  <React.Fragment key={c.id_capitulo}>
+                    {renderSecaoScreen(c.slug_fixo ?? "")}
+                  </React.Fragment>
+                ) : (
+                  <React.Fragment key={c.id_capitulo}>{renderEditavelScreen(c)}</React.Fragment>
+                ),
+              )}
+            </>
+          ) : (
+            <>
+              {sumarioScreenNode}
+              {setoresScreenNode}
+              {conclusaoScreenNode}
+              <DrpsGestaoResumoPrint idRelatorio={idRelatorio} />
+              <DrpsRelatorioExtrasPrint idRelatorio={idRelatorio} />
+            </>
           )}
-
-          <TextosPadraoPrint modulo="psicossocial" posicao="apos_conclusao" valores={valoresVars} />
-
-          <DrpsGestaoResumoPrint idRelatorio={idRelatorio} />
-          <DrpsRelatorioExtrasPrint idRelatorio={idRelatorio} />
-
-          <TextosPadraoPrint modulo="psicossocial" posicao="apos_medidas" valores={valoresVars} />
-          <TextosPadraoPrint modulo="psicossocial" posicao="fim" valores={valoresVars} />
 
           <AssinaturaRelatorio
             nomeResponsavel={relatorio?.responsavel_tecnico ?? undefined}

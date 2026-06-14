@@ -2,7 +2,7 @@ import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
-import { renderEditaveis } from "./shared";
+import { renderEditaveis, renderEditavelUm } from "./shared";
 import {
   aplicarMatriz,
   calcularResumoCompleto,
@@ -268,128 +268,162 @@ export default function DrpsTemplate({
   const equipe = (revisao?.equipe as Record<string, boolean>) ?? {};
   const anotacoes = revisao?.anotacoes ?? "";
 
+  // Seções do sistema como nós nomeados (reutilizados nos dois modos).
+  const setoresNode = blocos.map((b) => (
+    <BlocoSetor key={b.setor} {...b} rel={relatorio} empresa={empresa} />
+  ));
+
+  const conclusaoNode = relatorio.conclusao_geral ? (
+    <section className="drps-sec">
+      <h2>Conclusão Geral</h2>
+      <p style={{ whiteSpace: "pre-wrap", textIndent: "1.25cm" }}>{relatorio.conclusao_geral}</p>
+    </section>
+  ) : null;
+
+  const medidasNode = planoComConteudo.length > 0 ? (
+    <section className="drps-sec">
+      <h2>Medidas de Controle — Plano Anual {anoMedidas}</h2>
+      <p style={{ textIndent: "1.25cm" }}>
+        Cronograma das ações de controle dos riscos psicossociais identificados, com indicação dos meses de execução e responsáveis.
+      </p>
+      <table className="drps-ex-table">
+        <thead>
+          <tr>
+            <th style={{ width: "44%" }}>Ação</th>
+            <th style={{ width: "20%" }}>Responsável</th>
+            {MESES.map((m) => <th key={m} style={{ textAlign: "center", padding: "4pt 2pt" }}>{m.slice(0, 3)}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {planoComConteudo.map(([acao, p]) => (
+            <tr key={acao}>
+              <td>{acao}</td>
+              <td>{p.responsavel || "—"}</td>
+              {p.meses.map((marcado, idx) => <td key={idx} className="mes">{marcado ? "✓" : ""}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p style={{ fontSize: "10pt", fontStyle: "italic", textIndent: 0 }}>
+        Total de ações catalogadas: {MEDIDAS_CONTROLE.length}. Foram cronogramadas {planoComConteudo.length} ação(ões) para este período.
+      </p>
+    </section>
+  ) : null;
+
+  const monitNode = topicosPorSetorMon.length > 0 ? (
+    <section className="drps-sec">
+      <h2>Monitoramento do Desempenho</h2>
+      <p style={{ textIndent: "1.25cm" }}>
+        Acompanhamento das intervenções por tópico psicossocial, por setor, com status de execução e data da próxima reavaliação.
+      </p>
+      {topicosPorSetorMon.map((grupo) => (
+        <div key={grupo.setor}>
+          <h3>Setor: {grupo.setor}</h3>
+          <table className="drps-ex-table">
+            <thead>
+              <tr>
+                <th style={{ width: "32%" }}>Tópico</th>
+                <th style={{ width: "10%" }}>Matriz</th>
+                <th>Responsável</th>
+                <th>Status</th>
+                <th>Data interv.</th>
+                <th>Próxima reaval.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {grupo.topicos.map((t) => {
+                const mon = monitoramentos.find((m) => m.setor === grupo.setor && m.topico_idx === t.idx);
+                return (
+                  <tr key={t.idx}>
+                    <td>{t.nome.replace(/^Tópico \d+ - /, "")}</td>
+                    <td><span className="drps-badge" style={{ backgroundColor: corMatriz(t.matriz) }}>{t.matriz}</span></td>
+                    <td>{mon?.responsavel || "—"}</td>
+                    <td>{mon?.status || "Pendente"}</td>
+                    <td>{fmtData(mon?.data_intervencao ?? null)}</td>
+                    <td>{fmtData(mon?.proxima_avaliacao ?? null)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </section>
+  ) : null;
+
+  const revisaoNode = revisao ? (
+    <section className="drps-sec">
+      <h2>Revisão e Melhoria Contínua</h2>
+      <p style={{ textIndent: "1.25cm" }}>
+        Compromissos de gestão para manter o ciclo PDCA do programa de riscos psicossociais ativo, com equipe técnica designada e anotações da coordenação.
+      </p>
+      <h3>Ações de revisão obrigatórias</h3>
+      <ul className="drps-ex-list">
+        {ACOES_OBRIGATORIAS.map((a) => <li key={a.id}>{checklist[a.id] ? "☑" : "☐"} {a.texto}</li>)}
+      </ul>
+      <h3>Equipe técnica designada</h3>
+      <ul className="drps-ex-list">
+        {EQUIPE_REVISAO.map((e) => <li key={e.id}>{equipe[e.id] ? "☑" : "☐"} {e.texto}</li>)}
+      </ul>
+      {anotacoes && (
+        <>
+          <h3>Anotações da coordenação</h3>
+          <p style={{ textIndent: 0, whiteSpace: "pre-wrap" }}>{anotacoes}</p>
+        </>
+      )}
+    </section>
+  ) : null;
+
+  // Mapeia um slug fixo do DRPS (DRPS_FIXOS) para o nó de seção correspondente.
+  function renderSecao(slug: string): React.ReactNode {
+    switch (slug) {
+      case "drps_analise_setor": return <>{setoresNode}</>;
+      case "drps_conclusao":     return conclusaoNode;
+      case "drps_plano_medidas": return medidasNode;
+      case "drps_revisao":       return <>{monitNode}{revisaoNode}</>;
+      // drps_caracterizacao e drps_assinatura não têm seção no corpo do PDF
+      // (a folha de assinatura é renderizada sempre ao final).
+      default:                   return null;
+    }
+  }
+
+  // Modo unificado: se houver seções do sistema (fixo) cadastradas em
+  // drps_texto_padrao, o corpo é montado por `ordem` (editáveis + seções
+  // intercalados). Sem fixos, usa o layout posicional legado (fallback que
+  // garante que o PDF nunca perca as seções do sistema).
+  const temFixos = capitulos.some((c) => c.tipo === "fixo");
+  const ordenados = [...capitulos]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: STYLE_BLOCK }} />
 
-      {renderEditaveis(capitulos, valores, "inicio")}
-      {renderEditaveis(capitulos, valores, "apos_sumario")}
-
-      {blocos.map((b) => (
-        <BlocoSetor key={b.setor} {...b} rel={relatorio} empresa={empresa} />
-      ))}
-
-      {renderEditaveis(capitulos, valores, "apos_setores")}
-
-      {relatorio.conclusao_geral && (
-        <section className="drps-sec">
-          <h2>Conclusão Geral</h2>
-          <p style={{ whiteSpace: "pre-wrap", textIndent: "1.25cm" }}>{relatorio.conclusao_geral}</p>
-        </section>
+      {temFixos ? (
+        ordenados.map((c) =>
+          c.tipo === "fixo" ? (
+            <React.Fragment key={c.id_capitulo}>{renderSecao(c.slug_fixo ?? "")}</React.Fragment>
+          ) : (
+            <React.Fragment key={c.id_capitulo}>{renderEditavelUm(c, valores)}</React.Fragment>
+          ),
+        )
+      ) : (
+        <>
+          {renderEditaveis(capitulos, valores, "inicio")}
+          {renderEditaveis(capitulos, valores, "apos_sumario")}
+          {setoresNode}
+          {renderEditaveis(capitulos, valores, "apos_setores")}
+          {conclusaoNode}
+          {renderEditaveis(capitulos, valores, "apos_conclusao")}
+          {medidasNode}
+          {monitNode}
+          {revisaoNode}
+          {renderEditaveis(capitulos, valores, "apos_medidas")}
+          {renderEditaveis(capitulos, valores, "fim")}
+        </>
       )}
-
-      {renderEditaveis(capitulos, valores, "apos_conclusao")}
-
-      {/* Medidas de Controle — Plano Anual */}
-      {planoComConteudo.length > 0 && (
-        <section className="drps-sec">
-          <h2>Medidas de Controle — Plano Anual {anoMedidas}</h2>
-          <p style={{ textIndent: "1.25cm" }}>
-            Cronograma das ações de controle dos riscos psicossociais identificados, com indicação dos meses de execução e responsáveis.
-          </p>
-          <table className="drps-ex-table">
-            <thead>
-              <tr>
-                <th style={{ width: "44%" }}>Ação</th>
-                <th style={{ width: "20%" }}>Responsável</th>
-                {MESES.map((m) => <th key={m} style={{ textAlign: "center", padding: "4pt 2pt" }}>{m.slice(0, 3)}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {planoComConteudo.map(([acao, p]) => (
-                <tr key={acao}>
-                  <td>{acao}</td>
-                  <td>{p.responsavel || "—"}</td>
-                  {p.meses.map((marcado, idx) => <td key={idx} className="mes">{marcado ? "✓" : ""}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p style={{ fontSize: "10pt", fontStyle: "italic", textIndent: 0 }}>
-            Total de ações catalogadas: {MEDIDAS_CONTROLE.length}. Foram cronogramadas {planoComConteudo.length} ação(ões) para este período.
-          </p>
-        </section>
-      )}
-
-      {/* Monitoramento do Desempenho */}
-      {topicosPorSetorMon.length > 0 && (
-        <section className="drps-sec">
-          <h2>Monitoramento do Desempenho</h2>
-          <p style={{ textIndent: "1.25cm" }}>
-            Acompanhamento das intervenções por tópico psicossocial, por setor, com status de execução e data da próxima reavaliação.
-          </p>
-          {topicosPorSetorMon.map((grupo) => (
-            <div key={grupo.setor}>
-              <h3>Setor: {grupo.setor}</h3>
-              <table className="drps-ex-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: "32%" }}>Tópico</th>
-                    <th style={{ width: "10%" }}>Matriz</th>
-                    <th>Responsável</th>
-                    <th>Status</th>
-                    <th>Data interv.</th>
-                    <th>Próxima reaval.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {grupo.topicos.map((t) => {
-                    const mon = monitoramentos.find((m) => m.setor === grupo.setor && m.topico_idx === t.idx);
-                    return (
-                      <tr key={t.idx}>
-                        <td>{t.nome.replace(/^Tópico \d+ - /, "")}</td>
-                        <td><span className="drps-badge" style={{ backgroundColor: corMatriz(t.matriz) }}>{t.matriz}</span></td>
-                        <td>{mon?.responsavel || "—"}</td>
-                        <td>{mon?.status || "Pendente"}</td>
-                        <td>{fmtData(mon?.data_intervencao ?? null)}</td>
-                        <td>{fmtData(mon?.proxima_avaliacao ?? null)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {/* Revisão e Melhoria Contínua */}
-      {revisao && (
-        <section className="drps-sec">
-          <h2>Revisão e Melhoria Contínua</h2>
-          <p style={{ textIndent: "1.25cm" }}>
-            Compromissos de gestão para manter o ciclo PDCA do programa de riscos psicossociais ativo, com equipe técnica designada e anotações da coordenação.
-          </p>
-          <h3>Ações de revisão obrigatórias</h3>
-          <ul className="drps-ex-list">
-            {ACOES_OBRIGATORIAS.map((a) => <li key={a.id}>{checklist[a.id] ? "☑" : "☐"} {a.texto}</li>)}
-          </ul>
-          <h3>Equipe técnica designada</h3>
-          <ul className="drps-ex-list">
-            {EQUIPE_REVISAO.map((e) => <li key={e.id}>{equipe[e.id] ? "☑" : "☐"} {e.texto}</li>)}
-          </ul>
-          {anotacoes && (
-            <>
-              <h3>Anotações da coordenação</h3>
-              <p style={{ textIndent: 0, whiteSpace: "pre-wrap" }}>{anotacoes}</p>
-            </>
-          )}
-        </section>
-      )}
-
-      {renderEditaveis(capitulos, valores, "apos_medidas")}
-      {renderEditaveis(capitulos, valores, "fim")}
 
       <FolhaAssinaturas
         signatarios={signatarios}

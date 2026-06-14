@@ -55,7 +55,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       supabase.from("drps_plano_medidas").select("*").eq("id_relatorio", id).eq("ano", anoMedidas).maybeSingle(),
       supabase.from("drps_monitoramento").select("*").eq("id_relatorio", id),
       supabase.from("drps_revisao").select("*").eq("id_relatorio", id).maybeSingle(),
-      supabase.from("textos_padrao").select("*").eq("modulo", "psicossocial").order("ordem", { ascending: true }),
+      supabase.from("drps_texto_padrao").select("*").order("ordem", { ascending: true }),
     ]);
 
     const respondentes = (rawResp ?? []) as unknown as DrpsRespondente[];

@@ -44,6 +44,47 @@ export function editaveisPorPosicao(
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
 }
 
+/** Renderiza UM capítulo editável (título + HTML, ou capa). */
+export function renderEditavelUm(
+  c: TextoPadraoCapitulo,
+  valores: Record<string, string>,
+): React.ReactNode {
+  if (c.bg_imagem_url) {
+    return (
+      <div key={c.id_capitulo} className="tp-capa">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="bg" src={c.bg_imagem_url} alt="" />
+        {(c.caixas_texto ?? []).map((cx) => (
+          <div
+            key={cx.id}
+            className="caixa"
+            style={{
+              left: `${cx.x}%`,
+              top: `${cx.y}%`,
+              width: `${cx.w ?? 40}%`,
+              fontSize: cx.fontSize ?? 16,
+              fontWeight: cx.bold ? 700 : 400,
+              color: cx.color ?? "#ffffff",
+              textAlign: cx.align ?? "left",
+            }}
+          >
+            {substituirVariaveisTexto(cx.conteudo, valores)}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div key={c.id_capitulo} className="tp-cap">
+      <h2>{substituirVariaveisTexto(c.titulo, valores)}</h2>
+      <div
+        className="corpo"
+        dangerouslySetInnerHTML={{ __html: substituirVariaveis(c.conteudo, valores) }}
+      />
+    </div>
+  );
+}
+
 /** Renderiza os capítulos editáveis de uma posição (título + HTML, ou capa). */
 export function renderEditaveis(
   capitulos: TextoPadraoCapitulo[],
@@ -52,42 +93,7 @@ export function renderEditaveis(
 ): React.ReactNode {
   const caps = editaveisPorPosicao(capitulos, posicao);
   if (caps.length === 0) return null;
-  return caps.map((c) => {
-    if (c.bg_imagem_url) {
-      return (
-        <div key={c.id_capitulo} className="tp-capa">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="bg" src={c.bg_imagem_url} alt="" />
-          {(c.caixas_texto ?? []).map((cx) => (
-            <div
-              key={cx.id}
-              className="caixa"
-              style={{
-                left: `${cx.x}%`,
-                top: `${cx.y}%`,
-                width: `${cx.w ?? 40}%`,
-                fontSize: cx.fontSize ?? 16,
-                fontWeight: cx.bold ? 700 : 400,
-                color: cx.color ?? "#ffffff",
-                textAlign: cx.align ?? "left",
-              }}
-            >
-              {substituirVariaveisTexto(cx.conteudo, valores)}
-            </div>
-          ))}
-        </div>
-      );
-    }
-    return (
-      <div key={c.id_capitulo} className="tp-cap">
-        <h2>{substituirVariaveisTexto(c.titulo, valores)}</h2>
-        <div
-          className="corpo"
-          dangerouslySetInnerHTML={{ __html: substituirVariaveis(c.conteudo, valores) }}
-        />
-      </div>
-    );
-  });
+  return caps.map((c) => renderEditavelUm(c, valores));
 }
 
 /** Cabeçalho padrão dos laudos (faixa colorida + grid de dados). */
