@@ -218,9 +218,17 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     modulo: "psicossocial",
     titulo: "Texto Padrão — DRPS (Psicossocial)",
     descricao:
-      "Capítulos editáveis para os Relatórios DRPS. Suporta todas as 6 posições no PDF: início, após sumário, após setores, após conclusão, após medidas e fim.",
-    destino: "Aparecem no Relatório DRPS na posição configurada em cada capítulo.",
-    posicoesDisponiveis: ["inicio", "apos_sumario", "apos_setores", "apos_conclusao", "apos_medidas", "fim"],
-    fixos: [],
+      "Monte o laudo DRPS como uma lista única: arraste/reordene livremente os capítulos editáveis e as seções do sistema. A ordem definida aqui é a ordem do laudo.",
+    destino: "A ordem definida aqui é exatamente a ordem do laudo DRPS gerado.",
+    posicoesDisponiveis: ["inicio", "fim"],
+    ordenacaoUnificada: true,
+    fixos: [
+      { titulo: "Caracterização dos Trabalhadores", slug_fixo: "drps_caracterizacao", descricao: "Dados quantitativos de trabalhadores por setor — gerado automaticamente.", ordem_base: 1500 },
+      { titulo: "Análise por Setor", slug_fixo: "drps_analise_setor", descricao: "Tópicos × setores com matriz Gravidade × Probabilidade — gerado automaticamente.", ordem_base: 2000 },
+      { titulo: "Conclusão Técnica Consolidada", slug_fixo: "drps_conclusao", descricao: "Consolidação dos riscos críticos e altos de todos os setores — gerada automaticamente.", ordem_base: 4000 },
+      { titulo: "Plano de Medidas de Controle", slug_fixo: "drps_plano_medidas", descricao: "Plano anual de ações com responsáveis e prazos — gerado automaticamente.", ordem_base: 4500 },
+      { titulo: "Revisão e Monitoramento", slug_fixo: "drps_revisao", descricao: "Checklist de revisão e equipe responsável — gerado automaticamente.", ordem_base: 5000 },
+      { titulo: "Assinatura Técnica", slug_fixo: "drps_assinatura", descricao: "Rodapé de assinatura do responsável técnico — gerado automaticamente.", ordem_base: 9000 },
+    ],
   },
 };

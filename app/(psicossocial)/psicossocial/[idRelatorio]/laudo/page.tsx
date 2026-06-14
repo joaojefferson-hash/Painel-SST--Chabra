@@ -20,9 +20,9 @@ import {
   useDrpsProbabilidades,
   useDrpsRelatorio,
   useDrpsRespondentes,
-  useDrpsTextoPadrao,
 } from "@/lib/hooks/useDrps";
-import type { DrpsTextoPadraoCapitulo } from "@/lib/drps/types";
+import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
+import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import {
   aplicarMatriz,
   calcularResumoCompleto,
@@ -117,7 +117,7 @@ export default function PsicossocialLaudoPage({
   const { pdfAssinado, recarregar } = usePdfAssinado("drps_relatorios_analise", idRelatorio);
   const { data: pdfCongelado } = usePdfCongelado("drps", idRelatorio);
   const baseCongeladaUrl = pdfCongelado?.pdf_url ?? undefined;
-  const { data: capitulosDrps = [] } = useDrpsTextoPadrao();
+  const { data: capitulosDrps = [] } = useTextosPadrao("psicossocial");
   const [baixando, setBaixando] = useState(false);
 
   async function handleBaixarPdf() {
@@ -192,7 +192,7 @@ export default function PsicossocialLaudoPage({
     }
   }
 
-  function renderEditavelScreen(c: DrpsTextoPadraoCapitulo): React.ReactNode {
+  function renderEditavelScreen(c: TextoPadraoCapitulo): React.ReactNode {
     if (c.bg_imagem_url) {
       return (
         <div style={{ position: "relative", width: "100%", marginBottom: 16, breakAfter: "page" }}>
