@@ -12,6 +12,8 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  Star,
+  AlertTriangle,
 } from "lucide-react";
 import {
   useAnexos,
@@ -19,7 +21,7 @@ import {
   useAtualizarAnexo,
   useExcluirAnexo,
 } from "@/lib/hooks/useAnexos";
-import type { Anexo, ModuloAnexo, TipoAnexo } from "@/lib/anexos/types";
+import { VINCULOS_ANEXO, type Anexo, type ModuloAnexo, type TipoAnexo } from "@/lib/anexos/types";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { cn } from "@/lib/utils";
 
@@ -115,10 +117,11 @@ export default function AnexosManager({ modulo, idReferencia }: Props) {
             <li
               key={a.id_anexo}
               className={cn(
-                "flex flex-wrap items-center gap-2 rounded-lg border p-2.5",
+                "rounded-lg border p-2.5",
                 a.incluir_no_pdf ? "border-gray-200 bg-white" : "border-gray-200 bg-gray-50 opacity-70",
               )}
             >
+            <div className="flex flex-wrap items-center gap-2">
               <span className="shrink-0">{iconePorTipo(a.tipo)}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-gray-800">{a.nome}</p>
@@ -167,6 +170,56 @@ export default function AnexosManager({ modulo, idReferencia }: Props) {
               >
                 <Trash2 className="size-3.5" />
               </button>
+            </div>
+
+            {/* Controles E2: vínculo técnico, validade, obrigatório */}
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-dashed border-gray-200 pt-2 text-[11px]">
+              <label className="flex items-center gap-1 text-gray-500">
+                Vínculo:
+                <select
+                  defaultValue={a.vinculo_tipo ?? ""}
+                  onChange={(e) =>
+                    atualizar.mutate({ id_anexo: a.id_anexo, vinculo_tipo: e.target.value || null })
+                  }
+                  className="rounded border border-gray-300 bg-white px-1 py-0.5 text-[11px] text-gray-700 focus:border-verde-primary focus:outline-none"
+                >
+                  <option value="">—</option>
+                  {VINCULOS_ANEXO.map((v) => (
+                    <option key={v.value} value={v.value}>{v.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-1 text-gray-500">
+                Validade:
+                <input
+                  type="date"
+                  defaultValue={a.validade ?? ""}
+                  onChange={(e) =>
+                    atualizar.mutate({ id_anexo: a.id_anexo, validade: e.target.value || null })
+                  }
+                  className="rounded border border-gray-300 bg-white px-1 py-0.5 text-[11px] text-gray-700 focus:border-verde-primary focus:outline-none"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => atualizar.mutate({ id_anexo: a.id_anexo, obrigatorio: !a.obrigatorio })}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-semibold transition-colors",
+                  a.obrigatorio
+                    ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    : "border-gray-300 bg-white text-gray-500 hover:bg-gray-50",
+                )}
+                title="Marcar como anexo obrigatório"
+              >
+                {a.obrigatorio ? <Star className="size-3 fill-amber-500 text-amber-500" /> : <Star className="size-3" />}
+                Obrigatório
+              </button>
+              {a.obrigatorio && !a.incluir_no_pdf && (
+                <span className="inline-flex items-center gap-1 rounded bg-red-50 px-1.5 py-0.5 font-semibold text-red-alert">
+                  <AlertTriangle className="size-3" /> obrigatório fora do PDF
+                </span>
+              )}
+            </div>
             </li>
           ))}
         </ul>

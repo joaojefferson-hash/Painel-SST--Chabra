@@ -79,6 +79,12 @@ export function useAtualizarAnexo(modulo: ModuloAnexo, idReferencia: string) {
       descricao?: string | null;
       incluir_no_pdf?: boolean;
       ordem?: number;
+      validade?: string | null;
+      obrigatorio?: boolean;
+      vinculo_tipo?: string | null;
+      vinculo_id?: string | null;
+      capitulo_destino?: string | null;
+      mostrar_no_corpo?: boolean;
     }) => {
       const supabase = createSupabaseBrowserClient();
       const { id_anexo, ...rest } = args;
