@@ -5,6 +5,7 @@ import type { AepRelatorioLocal, AepSetorLocal } from "@/components/pdf/template
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
+import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
 
 export const runtime = "nodejs";
@@ -152,29 +153,28 @@ export async function GET(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const valoresVars = montarValoresAep(rel as any);
 
-  // Signatário: usuário logado (dados do perfil) + cargo do relatório
+  // usuario_logado ainda é usado em variáveis de texto do template.
   const { data: rawUsuario } = await supabase
     .from("usuarios")
-    .select("nome, cpf")
+    .select("nome")
     .eq("email", user.email)
     .single();
+  const perfilLogado = rawUsuario as { nome: string | null } | null;
 
-  const perfil = rawUsuario as { nome: string | null; cpf: string | null } | null;
+  valoresVars.usuario_logado = perfilLogado?.nome ?? rel.responsavel_elaboracao ?? user.email ?? "";
 
-  valoresVars.usuario_logado = perfil?.nome ?? rel.responsavel_elaboracao ?? user.email ?? "";
-
-  const signatarios: Signatario[] = [
-    {
-      nomeCompleto:
-        perfil?.nome ?? rel.responsavel_elaboracao ?? user.email ?? "",
-      cargo: rel.titulo_profissional ?? null,
-      registroProfissional: rel.registro_profissional
-        ? `Reg. ${rel.registro_profissional}`
-        : null,
-      cpf: perfil?.cpf ?? null,
-      funcaoNoDocumento: "Responsável Técnico — Chabra SST",
-    },
-  ];
+  // Folha de assinaturas: técnico = responsável do documento; selo só quando
+  // assinado de fato, senão linha manual. Ver montarSignatarioTecnico.
+  const { signatario, dataHoraAssinatura } = await montarSignatarioTecnico(supabase, {
+    tabela: "aep_relatorios",
+    docId: id,
+    responsavelNome: rel.responsavel_elaboracao as string | null,
+    cargo: rel.titulo_profissional ?? null,
+    registroProfissional: rel.registro_profissional
+      ? `Reg. ${rel.registro_profissional}`
+      : null,
+  });
+  const signatarios: Signatario[] = [signatario];
 
   // Empresa para o campo de assinatura física
   const folhaEmpresa =
@@ -185,16 +185,8 @@ export async function GET(
         }
       : null;
 
-  // Timestamp de geração — próximo ao momento da assinatura
-  const now = new Date();
-  const dataHoraAssinatura =
-    now.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) +
-    " " +
-    now.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" }) +
-    " -03:00";
-
   const shortId = id.replace(/-/g, "").slice(0, 8);
-  const identificadorDocumento = `AEP-${now.getFullYear()}-${shortId}`;
+  const identificadorDocumento = `AEP-${new Date().getFullYear()}-${shortId}`;
 
   // Dynamic imports — Next.js 15 bloqueia react-dom/server em import estático no App Router
   const [{ default: React }, { renderToStaticMarkup }, { default: AepTemplate }] =

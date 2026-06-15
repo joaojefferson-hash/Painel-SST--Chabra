@@ -36,6 +36,14 @@ export interface Signatario {
    * (ex: "Responsável Técnico — Chabra SST").
    */
   funcaoNoDocumento?: string;
+  /**
+   * Quando `false`, renderiza um espaço de assinatura MANUAL (retângulo em
+   * branco + nome/cargo embaixo) em vez do selo "ASSINADO DIGITALMENTE A1".
+   * O selo só deve aparecer quando o documento foi de fato assinado com
+   * certificado A1. Default (undefined/true) mantém o selo — compatível com
+   * chamadores existentes.
+   */
+  assinadoDigitalmente?: boolean;
 }
 
 export interface FolhaAssinaturasProps {
@@ -217,6 +225,62 @@ function CarimboSignatario({
   );
 }
 
+function CampoManualSignatario({
+  signatario,
+}: {
+  signatario: Signatario;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Retângulo tracejado para assinatura física do profissional */}
+      <div
+        style={{
+          border: "1.5px dashed #9CA3AF",
+          borderRadius: 6,
+          minHeight: 90,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#9CA3AF",
+          fontSize: 11,
+          fontFamily: "Arial, Helvetica, sans-serif",
+          fontStyle: "italic",
+          padding: "12px 16px",
+        }}
+      >
+        (assinatura)
+      </div>
+
+      {/* Identificação do profissional */}
+      <div
+        style={{
+          textAlign: "center",
+          lineHeight: 1.4,
+          fontFamily: "Arial, Helvetica, sans-serif",
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: 11,
+            color: CINZA_TEXTO,
+            textTransform: "uppercase",
+          }}
+        >
+          {signatario.nomeCompleto}
+        </div>
+        {(signatario.cargo || signatario.registroProfissional) && (
+          <div style={{ fontSize: 10, color: CINZA_LEVE }}>
+            {[signatario.cargo, signatario.registroProfissional]
+              .filter(Boolean)
+              .join(" · ")}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CampoEmpresa({
   empresa,
 }: {
@@ -314,13 +378,17 @@ export default function FolhaAssinaturas({
           marginBottom: 24,
         }}
       >
-        {signatarios.map((s, i) => (
-          <CarimboSignatario
-            key={i}
-            signatario={s}
-            dataHora={dataHoraAssinatura}
-          />
-        ))}
+        {signatarios.map((s, i) =>
+          s.assinadoDigitalmente === false ? (
+            <CampoManualSignatario key={i} signatario={s} />
+          ) : (
+            <CarimboSignatario
+              key={i}
+              signatario={s}
+              dataHora={dataHoraAssinatura}
+            />
+          )
+        )}
 
         {empresa && <CampoEmpresa empresa={empresa} />}
       </div>

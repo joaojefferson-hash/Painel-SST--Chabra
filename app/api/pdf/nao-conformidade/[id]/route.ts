@@ -6,6 +6,7 @@ import type { NaoConformidadeItemLocal } from "@/components/pdf/templates/NaoCon
 import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
+import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
 
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
 
@@ -81,30 +82,27 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     };
 
     const { data: rawUsuario } = await supabase
-      .from("usuarios").select("nome, cpf").eq("email", user.email).single();
-    const perfil = rawUsuario as { nome: string | null; cpf: string | null } | null;
+      .from("usuarios").select("nome").eq("email", user.email).single();
+    const perfilLogado = rawUsuario as { nome: string | null } | null;
 
-    valores.usuario_logado = perfil?.nome ?? user.email ?? "";
+    valores.usuario_logado = perfilLogado?.nome ?? user.email ?? "";
     valores.tipo_relatorio = "Relatório de Não Conformidade";
 
-    const signatarios: Signatario[] = [{
-      nomeCompleto: perfil?.nome ?? (rel.responsavel as string) ?? user.email,
-      cargo: null,
-      registroProfissional: null,
-      cpf: perfil?.cpf ?? null,
-      funcaoNoDocumento: "Responsável Técnico — Chabra SST",
-    }];
+    // Folha de assinaturas: técnico = responsável do documento; selo só quando
+    // assinado de fato, senão linha manual. Ver montarSignatarioTecnico.
+    const { signatario, dataHoraAssinatura } = await montarSignatarioTecnico(supabase, {
+      tabela: "relatorios_nao_conformidade",
+      docId: id,
+      responsavelNome: rel.responsavel as string | null,
+    });
+    const signatarios: Signatario[] = [signatario];
 
     const folhaEmpresa = empresa
       ? { razaoSocial: empresa.nome_empresa, cnpj: empresa.cnpj ?? "" }
       : null;
 
-    const now = new Date();
-    const dataHoraAssinatura =
-      now.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) + " " +
-      now.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" }) + " -03:00";
     const shortId = String(id).replace(/-/g, "").slice(0, 8);
-    const identificadorDocumento = `RNC-${now.getFullYear()}-${shortId}`;
+    const identificadorDocumento = `RNC-${new Date().getFullYear()}-${shortId}`;
 
     const [{ default: React }, { renderToStaticMarkup }, { default: NaoConformidadeTemplate }] =
       await Promise.all([

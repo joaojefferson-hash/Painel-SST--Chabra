@@ -13,6 +13,7 @@ import type {
   DrpsRevisao,
 } from "@/lib/drps/types";
 import { montarValoresVariaveis } from "@/lib/drps/variaveis";
+import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
 
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
 
@@ -90,30 +91,27 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     };
 
     const { data: rawUsuario } = await supabase
-      .from("usuarios").select("nome, cpf").eq("email", user.email).single();
-    const perfil = rawUsuario as { nome: string | null; cpf: string | null } | null;
+      .from("usuarios").select("nome").eq("email", user.email).single();
+    const perfilLogado = rawUsuario as { nome: string | null } | null;
 
-    valores.usuario_logado = perfil?.nome ?? rel.responsavel_tecnico ?? user.email ?? "";
+    valores.usuario_logado = perfilLogado?.nome ?? rel.responsavel_tecnico ?? user.email ?? "";
     valores.tipo_relatorio = "DRPS — Diagnóstico de Riscos Psicossociais";
 
-    const signatarios: Signatario[] = [{
-      nomeCompleto: perfil?.nome ?? rel.responsavel_tecnico ?? user.email,
+    const { signatario, dataHoraAssinatura } = await montarSignatarioTecnico(supabase, {
+      tabela: "drps_relatorios_analise",
+      docId: String(id),
+      responsavelNome: rel.responsavel_tecnico as string | null,
       cargo: "Psicólogo(a)",
       registroProfissional: rel.crp ? `CRP ${rel.crp}` : null,
-      cpf: perfil?.cpf ?? null,
-      funcaoNoDocumento: "Responsável Técnico — Chabra SST",
-    }];
+    });
+    const signatarios: Signatario[] = [signatario];
 
     const folhaEmpresa = empresa
       ? { razaoSocial: empresa.nome_empresa, cnpj: empresa.cnpj ?? "" }
       : null;
 
-    const now = new Date();
-    const dataHoraAssinatura =
-      now.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) + " " +
-      now.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" }) + " -03:00";
     const shortId = String(id).replace(/-/g, "").slice(0, 8);
-    const identificadorDocumento = `DRPS-${now.getFullYear()}-${shortId}`;
+    const identificadorDocumento = `DRPS-${new Date().getFullYear()}-${shortId}`;
 
     const [{ default: React }, { renderToStaticMarkup }, { default: DrpsTemplate }] =
       await Promise.all([
