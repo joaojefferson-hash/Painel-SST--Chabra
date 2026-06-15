@@ -120,8 +120,10 @@ export default function InspecoesConcluidasDashboard() {
                 dataKey="total"
                 radius={[6, 6, 0, 0]}
                 cursor="pointer"
-                onClick={(_d, index) => {
-                  const k = porMes[index]?.chave ?? null;
+                onClick={(d: { chave?: string; payload?: { chave?: string } }) => {
+                  // Usa a chave do próprio dado clicado (o index do recharts não é confiável).
+                  const k = d?.chave ?? d?.payload?.chave ?? null;
+                  if (!k) return;
                   setMesSel((atual) => (atual === k ? null : k));
                 }}
               >
