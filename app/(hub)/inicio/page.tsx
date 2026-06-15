@@ -9,7 +9,7 @@ import {
   LogOut,
   CheckCircle2,
   AlertTriangle,
-  Users,
+  Settings,
   Cog,
   Boxes,
   FlaskConical,
@@ -350,10 +350,10 @@ function InicioContent() {
             <Link
               href="/usuarios"
               className="flex items-center gap-2 rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
-              title="Gerenciar usuários"
+              title="Administração do sistema (usuários, configurações, lixeira)"
             >
-              <Users className="size-4" />
-              <span className="hidden sm:inline">Usuários</span>
+              <Settings className="size-4" />
+              <span className="hidden sm:inline">Sistema</span>
             </Link>
           )}
           <button
