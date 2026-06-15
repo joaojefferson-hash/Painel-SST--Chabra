@@ -65,5 +65,13 @@ export function montarValoresAet(
     funcao: "",
     usuario_logado: "",
     tipo_relatorio: "AET — Análise Ergonômica do Trabalho",
+    // E1 (Módulo Documentos SST): sempre resolvem (default "").
+    unidade: "",
+    cargo: "",
+    formacao_responsavel: "",
+    data_emissao: "",
+    data_inicio_vigencia: "",
+    data_fim_vigencia: "",
+    numero_revisao: "",
   };
 }

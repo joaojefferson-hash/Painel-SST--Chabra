@@ -38,6 +38,9 @@ const VARIAVEIS_EMPRESA: VariavelDef[] = [
   { chave: "empresa_telefone", rotulo: "Telefone", exemplo: "(11) 2385-1939" },
   { chave: "empresa_email", rotulo: "E-mail", exemplo: "contato@empresa.com.br" },
   { chave: "empresa_cnae", rotulo: "CNAE / atividade principal", exemplo: "94.30-8-00 - Atividades de associações" },
+  { chave: "empresa_bairro", rotulo: "Bairro", exemplo: "Bela Vista" },
+  { chave: "empresa_atividade", rotulo: "Atividade principal (descrição do CNAE)", exemplo: "Atividades de associações de defesa de direitos sociais" },
+  { chave: "empresa_porte", rotulo: "Porte da empresa", exemplo: "DEMAIS" },
 ];
 
 /** Monta o endereço completo da empresa em uma linha (campos estruturados). */
@@ -72,6 +75,15 @@ export const VARIAVEIS_DOC: VariavelDef[] = [
   { chave: "registro_profissional", rotulo: "Registro profissional do responsável", exemplo: "CREA 12345-SP" },
   { chave: "usuario_logado", rotulo: "Usuário logado (quem gerou o PDF)", exemplo: "João Jefferson" },
   { chave: "tipo_relatorio", rotulo: "Tipo de relatório", exemplo: "Relatório de Conformidade" },
+  // E1 (Módulo Documentos SST): variáveis de documento adicionais. Sempre
+  // resolvem (default ""); preenchidas pela rota quando houver dado.
+  { chave: "unidade", rotulo: "Unidade / filial", exemplo: "Unidade Centro" },
+  { chave: "cargo", rotulo: "Cargo", exemplo: "Operador de Máquinas" },
+  { chave: "formacao_responsavel", rotulo: "Formação do responsável técnico", exemplo: "Engenheiro de Segurança do Trabalho" },
+  { chave: "data_emissao", rotulo: "Data de emissão do documento", exemplo: "15/05/2026" },
+  { chave: "data_inicio_vigencia", rotulo: "Início da vigência", exemplo: "15/05/2026" },
+  { chave: "data_fim_vigencia", rotulo: "Fim da vigência", exemplo: "15/05/2027" },
+  { chave: "numero_revisao", rotulo: "Número da revisão", exemplo: "1" },
 ];
 
 /** Campos de documento preenchidos pela rota (contexto do request). */
@@ -81,6 +93,13 @@ export interface ValoresDocExtras {
   registro_profissional?: string;
   usuario_logado?: string;
   tipo_relatorio?: string;
+  unidade?: string;
+  cargo?: string;
+  formacao_responsavel?: string;
+  data_emissao?: string;
+  data_inicio_vigencia?: string;
+  data_fim_vigencia?: string;
+  numero_revisao?: string;
 }
 
 /** Concatena listas de variáveis ignorando chaves já presentes (1ª lista vence). */
@@ -223,6 +242,9 @@ export function montarValoresEmpresa(
       .filter(Boolean)
       .join(" - "),
     data_atual: new Date().toLocaleDateString("pt-BR"),
+    empresa_bairro: empresa?.bairro ?? "",
+    empresa_atividade: empresa?.cnae_descricao ?? "",
+    empresa_porte: empresa?.porte ?? "",
     // Variáveis de documento (Fase 1): grau_risco vem da empresa; o resto é
     // preenchido pela rota via extras e sempre resolve (default "").
     grau_risco: empresa?.grau_risco != null ? String(empresa.grau_risco) : "",
@@ -231,5 +253,13 @@ export function montarValoresEmpresa(
     registro_profissional: extras?.registro_profissional ?? "",
     usuario_logado: extras?.usuario_logado ?? "",
     tipo_relatorio: extras?.tipo_relatorio ?? "",
+    // E1 (Módulo Documentos SST): sempre resolvem (default "").
+    unidade: extras?.unidade ?? "",
+    cargo: extras?.cargo ?? "",
+    formacao_responsavel: extras?.formacao_responsavel ?? "",
+    data_emissao: extras?.data_emissao ?? "",
+    data_inicio_vigencia: extras?.data_inicio_vigencia ?? "",
+    data_fim_vigencia: extras?.data_fim_vigencia ?? "",
+    numero_revisao: extras?.numero_revisao ?? "",
   };
 }

@@ -49,6 +49,14 @@ export const VARIAVEIS: VariavelDef[] = [
   { chave: "registro_profissional", rotulo: "Registro profissional do responsável", exemplo: "CRP 06/12345" },
   { chave: "usuario_logado", rotulo: "Usuário logado (quem gerou o PDF)", exemplo: "João Jefferson" },
   { chave: "tipo_relatorio", rotulo: "Tipo de relatório", exemplo: "DRPS — Diagnóstico de Riscos Psicossociais" },
+  // E1 (Módulo Documentos SST): variáveis de documento adicionais.
+  { chave: "unidade", rotulo: "Unidade / filial", exemplo: "Unidade Centro" },
+  { chave: "cargo", rotulo: "Cargo", exemplo: "Operador de Máquinas" },
+  { chave: "formacao_responsavel", rotulo: "Formação do responsável técnico", exemplo: "Psicólogo(a)" },
+  { chave: "data_emissao", rotulo: "Data de emissão do documento", exemplo: "15/05/2026" },
+  { chave: "data_inicio_vigencia", rotulo: "Início da vigência", exemplo: "15/05/2026" },
+  { chave: "data_fim_vigencia", rotulo: "Fim da vigência", exemplo: "15/05/2027" },
+  { chave: "numero_revisao", rotulo: "Número da revisão", exemplo: "1" },
 ];
 
 /** Campos de documento preenchidos pela rota (contexto do request). */
@@ -58,6 +66,13 @@ export interface ValoresDocExtras {
   registro_profissional?: string;
   usuario_logado?: string;
   tipo_relatorio?: string;
+  unidade?: string;
+  cargo?: string;
+  formacao_responsavel?: string;
+  data_emissao?: string;
+  data_inicio_vigencia?: string;
+  data_fim_vigencia?: string;
+  numero_revisao?: string;
 }
 
 function formatarDataBR(iso: string | null | undefined): string {
@@ -113,6 +128,16 @@ export function montarValoresVariaveis(
     carimbo: [relatorio?.responsavel_tecnico, relatorio?.crp ? `CRP ${relatorio.crp}` : ""]
       .filter(Boolean)
       .join("\n"),
+    empresa_bairro: empresa?.bairro ?? "",
+    empresa_atividade: empresa?.cnae_descricao ?? "",
+    empresa_porte: empresa?.porte ?? "",
+    unidade: extras?.unidade ?? "",
+    cargo: extras?.cargo ?? "",
+    formacao_responsavel: extras?.formacao_responsavel ?? "",
+    data_emissao: extras?.data_emissao ?? "",
+    data_inicio_vigencia: extras?.data_inicio_vigencia ?? "",
+    data_fim_vigencia: extras?.data_fim_vigencia ?? "",
+    numero_revisao: extras?.numero_revisao ?? (relatorio?.revisao != null ? String(relatorio.revisao) : ""),
     importado: formatarDataBR(relatorio?.created_at),
     // Variáveis de documento (Fase 1): grau_risco vem da empresa; o resto da rota.
     grau_risco: empresa?.grau_risco != null ? String(empresa.grau_risco) : "",
