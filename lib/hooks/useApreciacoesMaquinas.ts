@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import { useUserStore } from "@/lib/store";
 import { gerarId } from "@/lib/utils";
 import { CATALOGO_NR12 } from "@/lib/apreciacao-maquinas/catalogo-nr12";
@@ -274,23 +275,14 @@ export function useExcluirApreciacaoMaquina() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id_apreciacao: string) => {
-      const supabase = createSupabaseBrowserClient();
-      // Best-effort: limpa fotos de TODOS os itens antes do delete em cascata
-      const { data: itens } = await supabase
-        .from("apreciacoes_maquinas_itens")
-        .select("foto_storage_paths")
-        .eq("id_apreciacao", id_apreciacao);
-      const paths = (
-        (itens ?? []) as { foto_storage_paths: string[] }[]
-      ).flatMap((i) => i.foto_storage_paths ?? []);
-      if (paths.length > 0) {
-        await supabase.storage.from("fotos").remove(paths);
-      }
-      const { error } = await supabase
-        .from("apreciacoes_maquinas")
-        .delete()
-        .eq("id_apreciacao", id_apreciacao);
-      if (error) throw error;
+      // Vai para a lixeira (snapshot + auditoria). Fotos mantidas para restore.
+      await excluirComLixeiraPorId({
+        tabela: "apreciacoes_maquinas",
+        chave: "id_apreciacao",
+        id: id_apreciacao,
+        modulo: "apreciacao_maquinas",
+        rotuloCol: "titulo",
+      });
       return id_apreciacao;
     },
     onSuccess: () => {

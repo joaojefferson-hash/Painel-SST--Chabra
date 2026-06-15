@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import { useUserStore } from "@/lib/store";
 import type { Aet13FatorConfig, Aet13FatorPergunta, Aet13FatorSemaforo, AetCargo, AetChecklist, AetChecklistPergunta, AetLaudoFatorPsi, AetLaudoQpsMeta, AetLaudoQpsResposta, AetOwas, AetOwasCategoria, AetOwasSelectCampo, AetPerfilOwas, AetRelatorio, AetSetor, AetTextoPadraoCapitulo, RespostaChecklist, StatusAET, ZonaPsi } from "@/lib/supabase/types";
 
@@ -170,12 +171,12 @@ export function useExcluirAet() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase
-        .from("aet_relatorios")
-        .delete()
-        .eq("id_relatorio", id);
-      if (error) throw error;
+      await excluirComLixeiraPorId({
+        tabela: "aet_relatorios",
+        chave: "id_relatorio",
+        id,
+        modulo: "aet",
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["aet-relatorios"] });

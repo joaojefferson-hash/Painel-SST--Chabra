@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import { gerarId } from "@/lib/utils";
 import type { Unidade } from "@/lib/supabase/types";
 
@@ -71,13 +72,14 @@ export function useExcluirUnidade() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id_unidade: string) => {
-      const supabase = createSupabaseBrowserClient();
       // empresas.id_unidade vira null (ON DELETE SET NULL) → voltam a ser visíveis a todos
-      const { error } = await supabase
-        .from("unidades")
-        .delete()
-        .eq("id_unidade", id_unidade);
-      if (error) throw error;
+      await excluirComLixeiraPorId({
+        tabela: "unidades",
+        chave: "id_unidade",
+        id: id_unidade,
+        modulo: "unidades",
+        rotuloCol: "nome",
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });

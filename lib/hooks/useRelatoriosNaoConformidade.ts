@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import { useUserStore } from "@/lib/store";
 import { gerarId } from "@/lib/utils";
 import { getChecklistNR } from "@/lib/conformidade/checklists";
@@ -213,12 +214,13 @@ export function useExcluirRelatorioNaoConformidade() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id_relatorio: string) => {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase
-        .from("relatorios_nao_conformidade")
-        .delete()
-        .eq("id_relatorio", id_relatorio);
-      if (error) throw error;
+      await excluirComLixeiraPorId({
+        tabela: "relatorios_nao_conformidade",
+        chave: "id_relatorio",
+        id: id_relatorio,
+        modulo: "nao_conformidade",
+        rotuloCol: "titulo",
+      });
       return id_relatorio;
     },
     onSuccess: () => {

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import { useUserStore } from "@/lib/store";
 import { gerarId } from "@/lib/utils";
 import type {
@@ -285,12 +286,13 @@ export function useExcluirAnaliseQuimico() {
 
   return useMutation({
     mutationFn: async (id_analise: string) => {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase
-        .from("analises_quimicos")
-        .delete()
-        .eq("id_analise", id_analise);
-      if (error) throw error;
+      await excluirComLixeiraPorId({
+        tabela: "analises_quimicos",
+        chave: "id_analise",
+        id: id_analise,
+        modulo: "analise_quimicos",
+        rotuloCol: "titulo",
+      });
       return id_analise;
     },
     onSuccess: () => {

@@ -64,6 +64,39 @@ export async function excluirComLixeira(args: ExcluirComLixeiraArgs): Promise<vo
   });
 }
 
+/**
+ * Versão que busca o registro pelo id antes de excluir (para hooks que só têm
+ * o id em mãos). Faz select * → snapshot → exclui.
+ */
+export async function excluirComLixeiraPorId(args: {
+  tabela: string;
+  chave: string;
+  id: string;
+  modulo?: string;
+  /** Coluna usada como rótulo amigável na lixeira (ex.: "titulo", "nome"). */
+  rotuloCol?: string;
+}): Promise<void> {
+  const supabase = createSupabaseBrowserClient();
+  const { data: row } = await supabase
+    .from(args.tabela)
+    .select("*")
+    .eq(args.chave, args.id)
+    .maybeSingle();
+  const dados = (row ?? { [args.chave]: args.id }) as Record<string, unknown>;
+  const rotulo =
+    args.rotuloCol && dados[args.rotuloCol] != null
+      ? String(dados[args.rotuloCol])
+      : args.id;
+  await excluirComLixeira({
+    tabela: args.tabela,
+    chave: args.chave,
+    id: args.id,
+    dados,
+    rotulo,
+    modulo: args.modulo,
+  });
+}
+
 const KEY = ["lixeira"] as const;
 
 /** Lista os registros na lixeira (não restaurados), mais recentes primeiro. */

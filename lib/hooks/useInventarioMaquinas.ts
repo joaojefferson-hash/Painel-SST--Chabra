@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import { useUserStore } from "@/lib/store";
 import { gerarId } from "@/lib/utils";
 import type {
@@ -187,23 +188,15 @@ export function useExcluirMaquina() {
 
   return useMutation({
     mutationFn: async (id_maquina: string) => {
-      const supabase = createSupabaseBrowserClient();
-      // 1) Recupera foto_storage_path pra limpar o storage primeiro
-      const { data: atual } = await supabase
-        .from("inventario_maquinas")
-        .select("foto_storage_path")
-        .eq("id_maquina", id_maquina)
-        .single();
-      const path = (atual as { foto_storage_path: string | null } | null)
-        ?.foto_storage_path;
-      if (path) {
-        await supabase.storage.from("fotos").remove([path]);
-      }
-      const { error } = await supabase
-        .from("inventario_maquinas")
-        .delete()
-        .eq("id_maquina", id_maquina);
-      if (error) throw error;
+      // Vai para a lixeira (snapshot + auditoria). A foto no storage é mantida
+      // para que a restauração reabra a imagem.
+      await excluirComLixeiraPorId({
+        tabela: "inventario_maquinas",
+        chave: "id_maquina",
+        id: id_maquina,
+        modulo: "inventario_maquinas",
+        rotuloCol: "descricao",
+      });
       return id_maquina;
     },
     onSuccess: () => {
