@@ -7,6 +7,7 @@ import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import AnexosManager from "@/components/anexos/AnexosManager";
 import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
+import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DrpsFiltro from "@/components/drps/DrpsFiltro";
@@ -362,6 +363,10 @@ export default function PsicossocialLaudoPage({
             responsavelTecnico: relatorio?.responsavel_tecnico ?? undefined,
           }}
         />
+      </div>
+
+      <div className="pt-3 print:hidden">
+        <EmpresaInfoPanel empresa={empresa ?? null} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm" />
       </div>
 
       <div className="pt-3 print:hidden">

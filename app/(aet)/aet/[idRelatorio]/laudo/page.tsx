@@ -47,6 +47,8 @@ import {
   SLUG_TO_OWAS_FIELD,
 } from "@/lib/hooks/useAet";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
+import { useEmpresa } from "@/lib/hooks/useEmpresas";
+import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import RichTextEditor from "@/components/drps/RichTextEditor";
 import { cn } from "@/lib/utils";
 import {
@@ -172,6 +174,7 @@ export default function AetLaudoPage({
 }) {
   const { idRelatorio } = use(params);
   const { data: rel, isLoading } = useAetRelatorio(idRelatorio);
+  const { data: empresaFull } = useEmpresa((rel as { id_empresa?: string })?.id_empresa ?? null);
   const salvar = useSalvarAet();
   const canEdit = useCanEdit();
   const [consideracoes, setConsideracoes] = useState("");
@@ -535,6 +538,11 @@ export default function AetLaudoPage({
             </p>
           </div>
         </div>
+      </div>
+
+      {/* ═══ DADOS DA EMPRESA (print:hidden) ═══ */}
+      <div className="print:hidden mb-5">
+        <EmpresaInfoPanel empresa={empresaFull ?? null} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm" />
       </div>
 
       {/* ═══ DADOS DO LAUDO (print:hidden) ═══ */}

@@ -10,6 +10,8 @@ import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import AnexosManager from "@/components/anexos/AnexosManager";
 import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
+import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
+import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
@@ -260,6 +262,7 @@ export default function AepLaudoPage({
 }) {
   const { idRelatorio } = use(params);
   const { data: rel } = useAepRelatorio(idRelatorio);
+  const { data: empresaFull } = useEmpresa((rel as { id_empresa?: string })?.id_empresa ?? null);
   const { data: capsAep = [] } = useTextosPadrao("aep");
   const { pdfAssinado, recarregar } = usePdfAssinado("aep_relatorios", idRelatorio);
   const { data: pdfCongelado } = usePdfCongelado("aep", idRelatorio);
@@ -378,6 +381,10 @@ export default function AepLaudoPage({
             responsavelTecnico: rel.responsavel_elaboracao ?? undefined,
           }}
         />
+      </div>
+
+      <div className="mx-auto max-w-4xl px-8 pt-4 print:hidden">
+        <EmpresaInfoPanel empresa={empresaFull ?? null} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm" />
       </div>
 
       <div className="mx-auto max-w-4xl px-8 pt-4 print:hidden">
