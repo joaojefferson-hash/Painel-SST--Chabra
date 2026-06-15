@@ -16,7 +16,7 @@ export default function AssinaturaRelatorio({
   tabelaNome,
   docId,
   hideAcoes = false,
-  seloSoQuandoAssinado = false,
+  seloSoQuandoAssinado = true,
 }: {
   nomeResponsavel?: string;
   cargoResponsavel?: string;
@@ -27,10 +27,12 @@ export default function AssinaturaRelatorio({
   docId?: string;
   /** Quando true, oculta a barra de ações (baixar + re-assinar) — usada quando a toolbar da página já exibe esses botões. */
   hideAcoes?: boolean;
-  /** Quando true, o selo "Assinado digitalmente" só aparece se o documento
-   *  estiver de fato assinado; caso contrário mostra uma linha de assinatura
-   *  em branco. Usar apenas em telas de PREVIEW cujo PDF assinado é gerado por
-   *  outro componente (ex: laudo AEP via Puppeteer/FolhaAssinaturas). */
+  /** Quando true (PADRÃO), o selo "Assinado digitalmente" só aparece se o
+   *  documento estiver de fato assinado; caso contrário mostra uma linha de
+   *  assinatura em branco (para assinatura manual). Mantém a folha de tela
+   *  coerente com o PDF (que só carimba o selo após assinatura real).
+   *  Passe `false` apenas se quiser o selo antecipado quando o responsável tem
+   *  certificado cadastrado. */
   seloSoQuandoAssinado?: boolean;
 }) {
   const user = useUserStore((s) => s.user);
