@@ -23,7 +23,9 @@ import {
   Layers,
   History,
   RotateCcw,
+  Star,
 } from "lucide-react";
+import { useIsAdmin } from "@/lib/hooks/useUsuario";
 import toast from "react-hot-toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -67,6 +69,7 @@ interface Props {
 export default function TextoPadraoEditor({ modulo }: Props) {
   const config = MODULO_CONFIGS[modulo];
   const variaveis = VARIAVEIS_POR_MODULO[modulo];
+  const isAdmin = useIsAdmin();
   const { data: capitulos = [], isLoading } = useTextosPadrao(modulo);
   const criar = useCriarCapituloTexto(modulo);
   const salvar = useSalvarCapituloTexto(modulo);
@@ -146,6 +149,7 @@ export default function TextoPadraoEditor({ modulo }: Props) {
         key={cap.id_capitulo}
         capitulo={cap}
         modulo={modulo}
+        isAdmin={isAdmin}
         indice={idx}
         total={total}
         salvando={salvar.isPending}
@@ -533,6 +537,7 @@ function FixoCard({
 function CapituloCard({
   capitulo,
   modulo,
+  isAdmin,
   indice,
   total,
   salvando,
@@ -547,6 +552,7 @@ function CapituloCard({
 }: {
   capitulo: TextoPadraoCapitulo;
   modulo: ModuloTextoPadrao;
+  isAdmin: boolean;
   indice: number;
   total: number;
   salvando: boolean;
@@ -565,11 +571,15 @@ function CapituloCard({
     quebra_pagina?: QuebraPagina;
     posicao_pdf?: PosicaoPdf;
     ativo?: boolean;
+    bloqueado?: boolean;
+    obrigatorio?: boolean;
   }) => void;
   onMover: (dir: "up" | "down") => void;
   onExcluir: () => void;
   onToggleMostrar: () => void;
 }) {
+  // E5: texto travado — só admin edita. Obrigatório não pode ser ocultado.
+  const travado = capitulo.bloqueado && !isAdmin;
   const [titulo, setTitulo] = useState(capitulo.titulo);
   const [conteudo, setConteudo] = useState(capitulo.conteudo ?? "");
   const [caixas, setCaixas] = useState<CaixaTexto[]>(
@@ -661,21 +671,68 @@ function CapituloCard({
         <span className="inline-flex shrink-0 items-center rounded bg-verde-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-verde-primary mt-2">
           Editável
         </span>
+        {capitulo.bloqueado && (
+          <span className="mt-2 inline-flex shrink-0 items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700" title="Texto travado — só admin edita">
+            <Lock className="size-2.5" /> Travado
+          </span>
+        )}
+        {capitulo.obrigatorio && (
+          <span className="mt-2 inline-flex shrink-0 items-center rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700" title="Obrigatório — não pode ser ocultado">
+            Obrigatório
+          </span>
+        )}
         <input
           type="text"
           value={titulo}
+          readOnly={travado}
           onChange={(e) => {
             setTitulo(e.target.value);
             setDirty(true);
           }}
           placeholder="Título do capítulo"
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-semibold focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+          className={cn(
+            "flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-semibold focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30",
+            travado && "bg-gray-50 text-gray-500",
+          )}
         />
+        {/* Admin: travar / marcar obrigatório */}
+        {isAdmin && (
+          <>
+            <button
+              type="button"
+              onClick={() => onSalvar({ bloqueado: !capitulo.bloqueado })}
+              disabled={salvando}
+              title={capitulo.bloqueado ? "Destravar (permitir edição por todos)" : "Travar (só admin edita)"}
+              className={cn(
+                "inline-flex items-center rounded-md border px-2 py-2 transition-colors disabled:opacity-50",
+                capitulo.bloqueado
+                  ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                  : "border-gray-300 bg-white text-gray-400 hover:bg-gray-50",
+              )}
+            >
+              <Lock className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onSalvar({ obrigatorio: !capitulo.obrigatorio })}
+              disabled={salvando}
+              title={capitulo.obrigatorio ? "Tornar opcional" : "Tornar obrigatório (não pode ocultar)"}
+              className={cn(
+                "inline-flex items-center rounded-md border px-2 py-2 transition-colors disabled:opacity-50",
+                capitulo.obrigatorio
+                  ? "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                  : "border-gray-300 bg-white text-gray-400 hover:bg-gray-50",
+              )}
+            >
+              <Star className={cn("size-3.5", capitulo.obrigatorio && "fill-blue-500 text-blue-500")} />
+            </button>
+          </>
+        )}
         <button
           type="button"
           onClick={onToggleMostrar}
-          disabled={salvando}
-          title={capitulo.ativo ? "Ocultar no laudo" : "Mostrar no laudo"}
+          disabled={salvando || capitulo.obrigatorio}
+          title={capitulo.obrigatorio ? "Obrigatório — não pode ocultar" : capitulo.ativo ? "Ocultar no laudo" : "Mostrar no laudo"}
           className={cn(
             "inline-flex items-center gap-1 rounded-md border px-2 py-2 text-xs font-semibold transition-colors disabled:opacity-50",
             capitulo.ativo
@@ -694,7 +751,7 @@ function CapituloCard({
               caixas_texto: caixas,
             })
           }
-          disabled={!dirty || salvando || !titulo.trim()}
+          disabled={!dirty || salvando || !titulo.trim() || travado}
           className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-2 text-xs font-semibold text-white hover:bg-verde-accent disabled:opacity-50"
         >
           {salvando ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
@@ -708,14 +765,16 @@ function CapituloCard({
         >
           <History className="size-4" />
         </button>
-        <button
-          type="button"
-          onClick={onExcluir}
-          className="rounded-md border border-gray-300 bg-white p-2 text-gray-500 hover:bg-red-50 hover:text-red-alert"
-          title="Excluir"
-        >
-          <Trash2 className="size-4" />
-        </button>
+        {!travado && (
+          <button
+            type="button"
+            onClick={onExcluir}
+            className="rounded-md border border-gray-300 bg-white p-2 text-gray-500 hover:bg-red-50 hover:text-red-alert"
+            title="Excluir"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        )}
       </div>
 
       {histAberto && (
@@ -913,6 +972,7 @@ function CapituloCard({
       ) : (
         <RichTextEditor
           value={conteudo}
+          readOnly={travado}
           onChange={(html) => {
             setConteudo(html);
             setDirty(true);

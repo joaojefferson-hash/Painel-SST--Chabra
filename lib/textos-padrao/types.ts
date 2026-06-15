@@ -61,6 +61,10 @@ export interface TextoPadraoCapitulo {
   ativo: boolean;
   tipo: "fixo" | "editavel";
   slug_fixo: string | null;
+  /** E5: texto travado — só admin edita o conteúdo. */
+  bloqueado: boolean;
+  /** E5: não pode ser ocultado/desativado no laudo. */
+  obrigatorio: boolean;
   created_at: string;
   updated_at: string | null;
 }

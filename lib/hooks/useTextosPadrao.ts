@@ -83,6 +83,8 @@ export function useSalvarCapituloTexto(modulo: ModuloTextoPadrao) {
       orientacao?: OrientacaoPagina;
       quebra_pagina?: QuebraPagina;
       posicao_pdf?: PosicaoPdf;
+      bloqueado?: boolean;
+      obrigatorio?: boolean;
     }) => {
       const supabase = createSupabaseBrowserClient();
       const { id_capitulo, ...rest } = args;
