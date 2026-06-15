@@ -80,6 +80,7 @@ async function fetchInspecoesPorMes(): Promise<MesData[]> {
   const { data } = await supabase
     .from("inspecoes")
     .select("created_at")
+    .eq("status", "CONCLUIDA")
     .gte("created_at", sixAgo.toISOString());
 
   // Skeleton dos últimos 6 meses
@@ -233,12 +234,18 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-start justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-gray-800">Inspeções por Mês</h2>
+              <h2 className="text-sm font-semibold text-gray-800">Inspeções Concluídas por Mês</h2>
               <p className="mt-0.5 text-xs text-gray-400">Últimos 6 meses</p>
             </div>
-            <div className="flex size-8 items-center justify-center rounded-lg bg-verde-light">
-              <TrendingUp className="size-4 text-verde-primary" />
-            </div>
+            <Link
+              href="/dashboard/inspecoes-concluidas"
+              className="inline-flex items-center gap-1 rounded-lg bg-verde-light px-2.5 py-1.5 text-xs font-semibold text-verde-primary transition-colors hover:bg-verde-primary hover:text-white"
+              title="Abrir dashboard de inspeções concluídas (por mês e por técnico)"
+            >
+              <TrendingUp className="size-3.5" />
+              Ver por técnico
+              <ArrowRight className="size-3" />
+            </Link>
           </div>
           {loadingMes ? (
             <div className="h-52 animate-pulse rounded-xl bg-gray-100" />
