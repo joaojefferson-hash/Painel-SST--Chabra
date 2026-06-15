@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import React, { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck, Download, Loader2, AlertTriangle, Cog } from "lucide-react";
 import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
@@ -13,6 +13,7 @@ import { useEmpresas } from "@/lib/hooks/useEmpresas";
 import { useMaquina } from "@/lib/hooks/useInventarioMaquinas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import { useApreciacaoMaquina } from "@/lib/hooks/useApreciacoesMaquinas";
 import ItemApreciacaoCard from "@/components/apreciacao-maquinas/ItemApreciacaoCard";
@@ -103,6 +104,8 @@ export default function LaudoApreciacaoMaquinasPage({
     };
   }, [apreciacao, empresa, maquinaNome, itens]);
 
+  const { data: capitulosAp = [] } = useTextosPadrao("apreciacao_maquinas");
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16 text-gray-500">
@@ -129,6 +132,81 @@ export default function LaudoApreciacaoMaquinasPage({
   }
 
   const finalizada = apreciacao.status === "FINALIZADO";
+
+  // Seções do sistema (reusadas nos dois modos de render).
+  const checklistScreenNode = (
+    <section className="space-y-4">
+      <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700">Checklist NR-12</h2>
+      {itensPorCategoria.map((grupo) => (
+        <div key={grupo.categoria} className="space-y-2 print:break-inside-avoid">
+          <h3 className="rounded-md bg-orange-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-orange-700 print:bg-transparent print:border-b print:border-orange-300 print:rounded-none print:text-orange-900">
+            {grupo.label} <span className="text-orange-500/70">({grupo.itens.length})</span>
+          </h3>
+          <div className="space-y-2">
+            {grupo.itens.map((it) => (
+              <ItemApreciacaoCard key={it.id_item} item={it} disabled={true} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+
+  const conclusaoScreenNode = (apreciacao.conclusao_tecnica || apreciacao.recomendacoes) ? (
+    <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">Conclusão Técnica</h2>
+      {apreciacao.conclusao_tecnica && (
+        <div className="mb-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Parecer técnico</p>
+          <p className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap">{apreciacao.conclusao_tecnica}</p>
+        </div>
+      )}
+      {apreciacao.recomendacoes && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Recomendações finais</p>
+          <p className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap">{apreciacao.recomendacoes}</p>
+        </div>
+      )}
+    </section>
+  ) : null;
+
+  const planoScreenNode = (
+    <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">Plano de Ação</h2>
+      <PlanoAcaoTable idApreciacao={apreciacao.id_apreciacao} apreciacao={apreciacao} itens={itens} readOnly={true} />
+    </section>
+  );
+
+  function renderSecaoApScreen(slug: string): React.ReactNode {
+    switch (slug) {
+      case "apreciacao_checklist": return checklistScreenNode;
+      case "apreciacao_risco":     return conclusaoScreenNode;
+      case "apreciacao_plano":     return planoScreenNode;
+      default:                     return null;
+    }
+  }
+
+  const temFixosAp = capitulosAp.some((c) => c.tipo === "fixo");
+  const corpoScreen = temFixosAp ? (
+    [...capitulosAp]
+      .filter((c) => c.ativo !== false)
+      .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+      .map((c) =>
+        c.tipo === "fixo" ? (
+          <React.Fragment key={c.id_capitulo}>{renderSecaoApScreen(c.slug_fixo ?? "")}</React.Fragment>
+        ) : (
+          <TextosPadraoPrint key={c.id_capitulo} modulo="apreciacao_maquinas" capituloId={c.id_capitulo} valores={valoresTextosPadrao} />
+        ),
+      )
+  ) : (
+    <>
+      <TextosPadraoPrint modulo="apreciacao_maquinas" valores={valoresTextosPadrao} posicao="inicio" />
+      {checklistScreenNode}
+      {conclusaoScreenNode}
+      {planoScreenNode}
+      <TextosPadraoPrint modulo="apreciacao_maquinas" valores={valoresTextosPadrao} posicao="fim" />
+    </>
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 print:max-w-none print:space-y-3">
@@ -238,10 +316,7 @@ export default function LaudoApreciacaoMaquinasPage({
         </span>
       </div>
 
-      {/* Textos Padrão inicio */}
-      <TextosPadraoPrint modulo="apreciacao_maquinas" valores={valoresTextosPadrao} posicao="inicio" />
-
-      {/* Dados gerais — somente leitura */}
+      {/* Dados gerais — somente leitura (cabeçalho fixo no topo) */}
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">Dados Gerais</h2>
         <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
@@ -271,56 +346,8 @@ export default function LaudoApreciacaoMaquinasPage({
         )}
       </section>
 
-      {/* Checklist NR-12 — somente leitura */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700">Checklist NR-12</h2>
-        {itensPorCategoria.map((grupo) => (
-          <div key={grupo.categoria} className="space-y-2 print:break-inside-avoid">
-            <h3 className="rounded-md bg-orange-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-orange-700 print:bg-transparent print:border-b print:border-orange-300 print:rounded-none print:text-orange-900">
-              {grupo.label}{" "}
-              <span className="text-orange-500/70">({grupo.itens.length})</span>
-            </h3>
-            <div className="space-y-2">
-              {grupo.itens.map((it) => (
-                <ItemApreciacaoCard key={it.id_item} item={it} disabled={true} />
-              ))}
-            </div>
-          </div>
-        ))}
-      </section>
-
-      {/* Conclusão Técnica */}
-      {(apreciacao.conclusao_tecnica || apreciacao.recomendacoes) && (
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">Conclusão Técnica</h2>
-          {apreciacao.conclusao_tecnica && (
-            <div className="mb-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Parecer técnico</p>
-              <p className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap">{apreciacao.conclusao_tecnica}</p>
-            </div>
-          )}
-          {apreciacao.recomendacoes && (
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Recomendações finais</p>
-              <p className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap">{apreciacao.recomendacoes}</p>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Plano de Ação */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">Plano de Ação</h2>
-        <PlanoAcaoTable
-          idApreciacao={apreciacao.id_apreciacao}
-          apreciacao={apreciacao}
-          itens={itens}
-          readOnly={true}
-        />
-      </section>
-
-      {/* Textos Padrão depois */}
-      <TextosPadraoPrint modulo="apreciacao_maquinas" valores={valoresTextosPadrao} posicao="fim" />
+      {/* Corpo do laudo — ordem unificada (sistema + editáveis) ou layout legado */}
+      {corpoScreen}
 
       {/* Assinatura */}
       <div className="print:break-inside-avoid">

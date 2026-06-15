@@ -177,9 +177,10 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     modulo: "apreciacao_maquinas",
     titulo: "Texto Padrão — Apreciação de Máquinas (NR-12)",
     descricao:
-      "Capítulos reutilizáveis para os laudos de Apreciação NR-12: introdução, fundamentação legal (ISOs 12100/13849), metodologia, considerações finais.",
-    destino: "Aparecem no PDF do laudo da Apreciação NR-12, após a conclusão técnica.",
+      "Monte o laudo como lista única: arraste/reordene livremente os capítulos editáveis e as seções do sistema (checklist, apreciação de risco, plano de ação). A ordem definida aqui é a ordem do laudo.",
+    destino: "A ordem definida aqui é exatamente a ordem do laudo de Apreciação NR-12.",
     posicoesDisponiveis: ["inicio", "fim"],
+    ordenacaoUnificada: true,
     fixos: [
       { titulo: "Identificação da Máquina/Equipamento",  slug_fixo: "apreciacao_identificacao", descricao: "Dados de identificação: fabricante, modelo, ano, função — gerados automaticamente.", ordem_base: 2000 },
       { titulo: "Checklist NR-12",                       slug_fixo: "apreciacao_checklist",     descricao: "Resultado do checklist NR-12 por item e zona — gerado automaticamente.", ordem_base: 2500 },

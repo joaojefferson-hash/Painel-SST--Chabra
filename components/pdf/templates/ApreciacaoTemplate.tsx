@@ -2,7 +2,7 @@ import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
-import { TP_STYLE, renderEditaveis } from "./shared";
+import { TP_STYLE, renderEditaveis, temSecoesSistema, renderUnificado } from "./shared";
 import {
   CATEGORIAS_NR12_LABELS,
   CATEGORIAS_NR12_ORDEM,
@@ -251,6 +251,45 @@ export default function ApreciacaoTemplate({
   const dataAp = apreciacao.data_apreciacao
     ? new Date(apreciacao.data_apreciacao + "T00:00").toLocaleDateString("pt-BR")
     : "—";
+
+  // Seções do sistema como nós nomeados (reutilizados nos dois modos).
+  const checklistNode = <ChecklistSection itens={itens} />;
+  const conclusaoNode = (apreciacao.conclusao_tecnica || apreciacao.recomendacoes) ? (
+    <div>
+      <p className="sec-titulo">Conclusão Técnica</p>
+      {apreciacao.conclusao_tecnica && (
+        <div className="campo"><p className="rot">Parecer técnico</p><p className="val">{apreciacao.conclusao_tecnica}</p></div>
+      )}
+      {apreciacao.recomendacoes && (
+        <div className="campo"><p className="rot">Recomendações finais</p><p className="val">{apreciacao.recomendacoes}</p></div>
+      )}
+    </div>
+  ) : null;
+  const planoNode = <PlanoAcaoSection acoes={acoes} />;
+
+  // Mapeia os slugs fixos do módulo às seções (cabeçalho fica fixo no topo;
+  // a folha de assinatura, sempre ao final).
+  function renderSecaoApreciacao(slug: string): React.ReactNode {
+    switch (slug) {
+      case "apreciacao_checklist": return checklistNode;
+      case "apreciacao_risco":     return conclusaoNode;
+      case "apreciacao_plano":     return planoNode;
+      default:                     return null;
+    }
+  }
+
+  const corpo = temSecoesSistema(capitulos)
+    ? renderUnificado(capitulos, valores, renderSecaoApreciacao)
+    : (
+      <>
+        {renderEditaveis(capitulos, valores, "inicio")}
+        {checklistNode}
+        {conclusaoNode}
+        {planoNode}
+        {renderEditaveis(capitulos, valores, "fim")}
+      </>
+    );
+
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
@@ -285,31 +324,7 @@ export default function ApreciacaoTemplate({
         </div>
       )}
 
-      {renderEditaveis(capitulos, valores, "inicio")}
-
-      <ChecklistSection itens={itens} />
-
-      {(apreciacao.conclusao_tecnica || apreciacao.recomendacoes) && (
-        <div>
-          <p className="sec-titulo">Conclusão Técnica</p>
-          {apreciacao.conclusao_tecnica && (
-            <div className="campo">
-              <p className="rot">Parecer técnico</p>
-              <p className="val">{apreciacao.conclusao_tecnica}</p>
-            </div>
-          )}
-          {apreciacao.recomendacoes && (
-            <div className="campo">
-              <p className="rot">Recomendações finais</p>
-              <p className="val">{apreciacao.recomendacoes}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      <PlanoAcaoSection acoes={acoes} />
-
-      {renderEditaveis(capitulos, valores, "fim")}
+      {corpo}
 
       <FolhaAssinaturas
         signatarios={signatarios}

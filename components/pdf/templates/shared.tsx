@@ -96,6 +96,33 @@ export function renderEditaveis(
   return caps.map((c) => renderEditavelUm(c, valores));
 }
 
+/** True se há seções do sistema (tipo fixo) cadastradas — ativa o modo unificado. */
+export function temSecoesSistema(capitulos: TextoPadraoCapitulo[]): boolean {
+  return capitulos.some((c) => c.tipo === "fixo");
+}
+
+/**
+ * Renderiza o corpo do laudo como lista única por `ordem` (editáveis + seções
+ * do sistema intercalados). `renderSecao` mapeia cada slug_fixo ao seu nó.
+ * Use só quando temSecoesSistema()===true; senão mantenha o layout legado.
+ */
+export function renderUnificado(
+  capitulos: TextoPadraoCapitulo[],
+  valores: Record<string, string>,
+  renderSecao: (slug: string) => React.ReactNode,
+): React.ReactNode {
+  return [...capitulos]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+    .map((c) =>
+      c.tipo === "fixo" ? (
+        <React.Fragment key={c.id_capitulo}>{renderSecao(c.slug_fixo ?? "")}</React.Fragment>
+      ) : (
+        <React.Fragment key={c.id_capitulo}>{renderEditavelUm(c, valores)}</React.Fragment>
+      ),
+    );
+}
+
 /** Cabeçalho padrão dos laudos (faixa colorida + grid de dados). */
 export function CabecalhoLaudo({
   cor,
