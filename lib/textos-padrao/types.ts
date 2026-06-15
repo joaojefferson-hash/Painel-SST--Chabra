@@ -121,15 +121,12 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     modulo: "sst",
     titulo: "Texto Padrão — Painel SST",
     descricao:
-      "Capítulos reutilizáveis para os relatórios de Inspeção e PGR. Use as variáveis abaixo pra preencher empresa, CNPJ, datas etc. na hora da geração do PDF.",
-    destino: "Aparecem nos relatórios de inspeção, ficha NR-01 e PGR.",
+      "Monte o laudo como lista única: arraste/reordene os capítulos editáveis em relação ao bloco do relatório (inventário, riscos, plano — gerado automaticamente). Textos com ordem menor saem antes do relatório; maiores, depois.",
+    destino: "A ordem definida aqui vale para o relatório de inspeção, ficha NR-01 e PGR.",
     posicoesDisponiveis: ["inicio", "fim"],
+    ordenacaoUnificada: true,
     fixos: [
-      { titulo: "Itens Inspecionados",               slug_fixo: "sst_itens",             descricao: "Checklist de todos os itens avaliados na inspeção — gerado automaticamente.", ordem_base: 2000 },
-      { titulo: "Não Conformidades Identificadas",   slug_fixo: "sst_nao_conformidades", descricao: "Lista de não conformidades com nível de risco — gerada automaticamente.", ordem_base: 3000 },
-      { titulo: "Plano de Ação Corretiva",           slug_fixo: "sst_plano_acao",        descricao: "Plano de ação com prazos e responsáveis — gerado automaticamente.", ordem_base: 4000 },
-      { titulo: "Avaliação de Riscos",               slug_fixo: "sst_riscos",            descricao: "Tabela de avaliação de riscos identificados — gerada automaticamente.", ordem_base: 4500 },
-      { titulo: "Assinatura do Responsável Técnico", slug_fixo: "sst_assinatura",        descricao: "Rodapé de assinatura — gerado automaticamente.", ordem_base: 9000 },
+      { titulo: "Corpo do Relatório (inventário, riscos, plano)", slug_fixo: "sst_corpo", descricao: "Corpo gerado automaticamente: resumo, inventário de riscos, plano de ação, PAE etc. Os textos editáveis ficam antes ou depois deste bloco conforme a ordem.", ordem_base: 2000 },
     ],
   },
   conformidade: {

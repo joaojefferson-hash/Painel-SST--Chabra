@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import React, { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Printer, Shield, BadgeCheck, Download, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -10,6 +10,7 @@ import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import { useInspecao } from "@/lib/hooks/useInspecao";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
@@ -94,6 +95,7 @@ export default function PgrPage({ params }: Props) {
   );
 
   const { pdfAssinado, recarregar } = usePdfAssinado("inspecoes_pgr", id);
+  const { data: capitulosSst = [] } = useTextosPadrao("sst");
   const [baixando, setBaixando] = useState(false);
 
   async function handleBaixarPdf() {
@@ -115,6 +117,33 @@ export default function PgrPage({ params }: Props) {
   if (!data) return null;
 
   const { inspecao, responsaveis, paeContatos } = data;
+
+  const valoresSst: Record<string, string> = {
+    ...montarValoresEmpresa(empresa ?? null),
+    data_inspecao: formatarDataBR(inspecao.data_inspecao),
+    revisao: String(inspecao.revisao ?? ""),
+    responsavel: inspecao.responsavel ?? "",
+    carimbo: inspecao.responsavel ?? "",
+    importado: formatarDataBR(inspecao.created_at),
+  };
+
+  // Unificado: textos editáveis antes/depois do corpo do relatório (sst_corpo),
+  // conforme a ordem. Sem seções do sistema, mantém o legado (tudo antes).
+  const temFixosSst = capitulosSst.some((c) => c.tipo === "fixo");
+  const ordemCorpoSst = capitulosSst.find((c) => c.slug_fixo === "sst_corpo")?.ordem ?? 2000;
+  const editaveisSst = [...capitulosSst]
+    .filter((c) => c.tipo !== "fixo" && c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+  const antesSst = temFixosSst
+    ? editaveisSst.filter((c) => (c.ordem ?? 0) < ordemCorpoSst).map((c) => (
+        <TextosPadraoPrint key={c.id_capitulo} modulo="sst" capituloId={c.id_capitulo} valores={valoresSst} />
+      ))
+    : <TextosPadraoPrint modulo="sst" valores={valoresSst} posicao="antes" />;
+  const depoisSst = temFixosSst
+    ? editaveisSst.filter((c) => (c.ordem ?? 0) >= ordemCorpoSst).map((c) => (
+        <TextosPadraoPrint key={c.id_capitulo} modulo="sst" capituloId={c.id_capitulo} valores={valoresSst} />
+      ))
+    : null;
 
   return (
     <div className="space-y-4">
@@ -166,18 +195,7 @@ export default function PgrPage({ params }: Props) {
         }
       `}</style>
 
-      <TextosPadraoPrint
-        modulo="sst"
-        valores={{
-          ...montarValoresEmpresa(empresa ?? null),
-          data_inspecao: formatarDataBR(inspecao.data_inspecao),
-          revisao: String(inspecao.revisao ?? ""),
-          responsavel: inspecao.responsavel ?? "",
-          carimbo: inspecao.responsavel ?? "",
-          importado: formatarDataBR(inspecao.created_at),
-        }}
-        posicao="antes"
-      />
+      {antesSst}
 
       <article className="space-y-5 rounded-xl border border-gray-200 bg-white p-6 print:border-0 print:p-0 print:shadow-none">
         {/* HEADER PGR */}
@@ -582,6 +600,8 @@ export default function PgrPage({ params }: Props) {
             </p>
           </section>
         )}
+
+        {depoisSst}
 
         <AssinaturaRelatorio tabelaNome="inspecoes_pgr" docId={id} hideAcoes />
 

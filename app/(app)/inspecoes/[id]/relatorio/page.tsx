@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import React, { use, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
@@ -30,6 +30,7 @@ import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import NivelBadge from "@/components/riscos/NivelBadge";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import {
   montarValoresEmpresa,
   formatarDataBR,
@@ -217,10 +218,39 @@ export default function RelatorioChabraPage({ params }: Props) {
     finally { setBaixando(false); }
   }
 
+  const { data: capitulosSst = [] } = useTextosPadrao("sst");
+
   if (isLoading) return <LoadingSkeleton rows={10} />;
   if (!data || !ctx) return null;
 
   const { inspecao, responsaveis, paeContatos } = data;
+
+  const valoresSst: Record<string, string> = {
+    ...montarValoresEmpresa(empresa ?? null),
+    data_inspecao: formatarDataBR(inspecao.data_inspecao),
+    revisao: String(inspecao.revisao ?? ""),
+    responsavel: inspecao.responsavel ?? "",
+    carimbo: inspecao.responsavel ?? "",
+    importado: formatarDataBR(inspecao.created_at),
+  };
+
+  // Unificado: editáveis antes/depois do corpo do relatório (sst_corpo) por ordem.
+  // Sem seções do sistema, mantém o legado (tudo antes).
+  const temFixosSst = capitulosSst.some((c) => c.tipo === "fixo");
+  const ordemCorpoSst = capitulosSst.find((c) => c.slug_fixo === "sst_corpo")?.ordem ?? 2000;
+  const editaveisSst = [...capitulosSst]
+    .filter((c) => c.tipo !== "fixo" && c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+  const antesSst = temFixosSst
+    ? editaveisSst.filter((c) => (c.ordem ?? 0) < ordemCorpoSst).map((c) => (
+        <TextosPadraoPrint key={c.id_capitulo} modulo="sst" capituloId={c.id_capitulo} valores={valoresSst} />
+      ))
+    : <TextosPadraoPrint modulo="sst" valores={valoresSst} posicao="antes" />;
+  const depoisSst = temFixosSst
+    ? editaveisSst.filter((c) => (c.ordem ?? 0) >= ordemCorpoSst).map((c) => (
+        <TextosPadraoPrint key={c.id_capitulo} modulo="sst" capituloId={c.id_capitulo} valores={valoresSst} />
+      ))
+    : null;
   const dataInspFmt = fmtData(inspecao.data_inspecao);
 
   return (
@@ -362,20 +392,8 @@ export default function RelatorioChabraPage({ params }: Props) {
           </p>
         </section>
 
-        {/* Textos Padrão (capítulos cadastrados em /texto-padrao) —
-            aparecem após a capa, antes da página 2 de identificação. */}
-        <TextosPadraoPrint
-          modulo="sst"
-          valores={{
-            ...montarValoresEmpresa(empresa ?? null),
-            data_inspecao: formatarDataBR(inspecao.data_inspecao),
-            revisao: String(inspecao.revisao ?? ""),
-            responsavel: inspecao.responsavel ?? "",
-            carimbo: inspecao.responsavel ?? "",
-            importado: formatarDataBR(inspecao.created_at),
-          }}
-          posicao="antes"
-        />
+        {/* Textos Padrão — editáveis antes do corpo do relatório (ordem unificada) */}
+        {antesSst}
 
         {/* ============================================================
             PÁGINA 2: Identificação + Resumo Geral
@@ -728,6 +746,9 @@ export default function RelatorioChabraPage({ params }: Props) {
               ))}
             </div>
           )}
+
+          {/* Textos Padrão — editáveis depois do corpo (ordem unificada) */}
+          {depoisSst}
 
           <AssinaturaRelatorio
             nomeResponsavel={inspecao.responsavel ?? undefined}
