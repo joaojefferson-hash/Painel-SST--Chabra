@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import type {
   CategoriaCatalogo,
   CategoriaModelo,
@@ -113,11 +114,13 @@ export function useDeleteTipoRisco() {
         if (error) throw error;
         return "desativado";
       }
-      const { error } = await supabase
-        .from("tipos_risco")
-        .delete()
-        .eq("id_tipo", idTipo);
-      if (error) throw error;
+      await excluirComLixeiraPorId({
+        tabela: "tipos_risco",
+        chave: "id_tipo",
+        id: idTipo,
+        modulo: "config",
+        rotuloCol: "nome",
+      });
       return "removido";
     },
     onSuccess: (acao) => {
@@ -410,12 +413,13 @@ export function useDeleteMatriz() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (idMatriz: string) => {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase
-        .from("matrizes_risco")
-        .delete()
-        .eq("id_matriz", idMatriz);
-      if (error) throw error;
+      await excluirComLixeiraPorId({
+        tabela: "matrizes_risco",
+        chave: "id_matriz",
+        id: idMatriz,
+        modulo: "config",
+        rotuloCol: "nome",
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["matrizes"] });
@@ -494,12 +498,13 @@ export function useDeleteModeloRisco() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (idModelo: string) => {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase
-        .from("modelos_risco")
-        .delete()
-        .eq("id_modelo", idModelo);
-      if (error) throw error;
+      await excluirComLixeiraPorId({
+        tabela: "modelos_risco",
+        chave: "id_modelo",
+        id: idModelo,
+        modulo: "config",
+        rotuloCol: "nome",
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["modelos-tipo"] });

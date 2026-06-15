@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { registrarSoftNaLixeira } from "@/lib/hooks/useLixeira";
 import { gerarId } from "@/lib/utils";
 import type {
   DrpsMonitoramento,
@@ -143,6 +144,23 @@ export function useDrpsExcluirRelatorio() {
   return useMutation({
     mutationFn: async (args: { id_relatorio: string; id_empresa: string }) => {
       const supabase = createSupabaseBrowserClient();
+      // Registra na lixeira com o status ANTERIOR preservado (para restaurar).
+      const { data: row } = await supabase
+        .from("drps_relatorios")
+        .select("*")
+        .eq("id_relatorio", args.id_relatorio)
+        .maybeSingle();
+      if (row) {
+        const r = row as Record<string, unknown>;
+        await registrarSoftNaLixeira({
+          tabela: "drps_relatorios",
+          chave: "id_relatorio",
+          id: args.id_relatorio,
+          dados: r,
+          rotulo: (r.titulo as string) || `DRPS ${args.id_relatorio}`,
+          modulo: "drps",
+        });
+      }
       // Soft-delete: marca como DELETADO em vez de apagar (preserva numeração
       // de revisão e auditoria)
       const { error } = await supabase

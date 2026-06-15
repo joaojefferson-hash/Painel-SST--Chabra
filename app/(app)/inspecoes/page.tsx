@@ -20,6 +20,7 @@ import {
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import { useCanCreate, useCanDelete } from "@/lib/hooks/useUsuario";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { registrarSoftNaLixeira } from "@/lib/hooks/useLixeira";
 import { cn } from "@/lib/utils";
 import type { Inspecao } from "@/lib/supabase/types";
 
@@ -58,6 +59,15 @@ function InspecoesInner() {
   const delInsp = useMutation({
     mutationFn: async (insp: Inspecao) => {
       const supabase = createSupabaseBrowserClient();
+      // Registra na lixeira com o status ANTERIOR preservado (para restaurar).
+      await registrarSoftNaLixeira({
+        tabela: "inspecoes",
+        chave: "id_inspecao",
+        id: insp.id_inspecao,
+        dados: insp as unknown as Record<string, unknown>,
+        rotulo: `Inspeção ${insp.id_inspecao} (rev. ${insp.revisao})`,
+        modulo: "inspecoes",
+      });
       const { error } = await supabase
         .from("inspecoes")
         .update({ status: "DELETADA", updated_at: new Date().toISOString() } as never)

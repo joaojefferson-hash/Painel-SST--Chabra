@@ -9,6 +9,8 @@ export interface RegistroExcluido {
   id: string;
   tabela: string;
   registro_id: string;
+  chave: string | null;
+  tipo_exclusao: "hard" | "soft";
   rotulo: string | null;
   dados: Record<string, unknown>;
   modulo: string | null;
@@ -17,6 +19,40 @@ export interface RegistroExcluido {
   restaurado: boolean;
   restaurado_por: string | null;
   restaurado_em: string | null;
+}
+
+/**
+ * Registra na lixeira um SOFT delete (status marcado como excluído). NÃO exclui
+ * — o caller faz a atualização de status. `dados` deve conter o registro com o
+ * status ANTERIOR (antes da marcação), para a restauração devolvê-lo.
+ */
+export async function registrarSoftNaLixeira(args: {
+  tabela: string;
+  chave: string;
+  id: string;
+  dados: Record<string, unknown>;
+  rotulo?: string;
+  modulo?: string;
+}): Promise<void> {
+  const supabase = createSupabaseBrowserClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  await supabase.from("registros_excluidos").insert({
+    tabela: args.tabela,
+    registro_id: args.id,
+    chave: args.chave,
+    tipo_exclusao: "soft",
+    rotulo: args.rotulo ?? null,
+    dados: args.dados,
+    modulo: args.modulo ?? null,
+    excluido_por: user?.email ?? null,
+  } as never);
+  registrarAuditoria({
+    modulo: args.modulo ?? args.tabela,
+    id_referencia: args.id,
+    acao: "excluiu",
+    descricao: args.rotulo ?? args.tabela,
+    metadata: { tabela: args.tabela, soft: true },
+  });
 }
 
 export interface ExcluirComLixeiraArgs {
@@ -45,6 +81,8 @@ export async function excluirComLixeira(args: ExcluirComLixeiraArgs): Promise<vo
   const { error: snapErr } = await supabase.from("registros_excluidos").insert({
     tabela: args.tabela,
     registro_id: args.id,
+    chave: args.chave,
+    tipo_exclusao: "hard",
     rotulo: args.rotulo ?? null,
     dados: args.dados,
     modulo: args.modulo ?? null,
@@ -126,8 +164,19 @@ export function useRestaurarRegistro() {
   return useMutation({
     mutationFn: async (reg: RegistroExcluido) => {
       const supabase = createSupabaseBrowserClient();
-      const { error: insErr } = await supabase.from(reg.tabela).insert(reg.dados as never);
-      if (insErr) throw insErr;
+      if (reg.tipo_exclusao === "soft" && reg.chave) {
+        // Soft delete: a linha existe, só volta o status anterior.
+        const statusAnterior = (reg.dados as { status?: unknown }).status ?? null;
+        const { error: updRowErr } = await supabase
+          .from(reg.tabela)
+          .update({ status: statusAnterior, updated_at: new Date().toISOString() } as never)
+          .eq(reg.chave, reg.registro_id);
+        if (updRowErr) throw updRowErr;
+      } else {
+        // Hard delete: reinsere o registro.
+        const { error: insErr } = await supabase.from(reg.tabela).insert(reg.dados as never);
+        if (insErr) throw insErr;
+      }
 
       const { data: { user } } = await supabase.auth.getUser();
       const { error: updErr } = await supabase

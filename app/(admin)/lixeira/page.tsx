@@ -23,6 +23,12 @@ const TABELA_LABEL: Record<string, string> = {
   aep_relatorios: "AEP",
   aet_relatorios: "AET",
   drps_relatorios: "DRPS",
+  inspecoes: "Inspeção",
+  unidades: "Unidade",
+  tipos_risco: "Tipo de Risco",
+  matrizes_risco: "Matriz de Risco",
+  modelos_risco: "Modelo de Risco",
+  base_referencia_quimicos: "Base de Referência (Químicos)",
   usuarios: "Usuário",
 };
 
