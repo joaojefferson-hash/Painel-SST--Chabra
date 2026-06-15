@@ -150,9 +150,10 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     modulo: "nao_conformidade",
     titulo: "Texto Padrão — Não Conformidade",
     descricao:
-      "Capítulos reutilizáveis para os Relatórios de Não Conformidade (RNC). Inclua introdução, base metodológica e considerações sobre o plano de ação.",
-    destino: "Aparecem nos Relatórios de Não Conformidade.",
+      "Monte o laudo como lista única: arraste/reordene livremente os capítulos editáveis e as seções do sistema. A ordem definida aqui é a ordem do laudo.",
+    destino: "A ordem definida aqui é exatamente a ordem do Relatório de Não Conformidade.",
     posicoesDisponiveis: ["inicio", "fim"],
+    ordenacaoUnificada: true,
     fixos: [
       { titulo: "Descrição da Não Conformidade",     slug_fixo: "nc_descricao",  descricao: "Dados da NC: título, data, setor e evidências — gerados automaticamente.", ordem_base: 2000 },
       { titulo: "Plano de Ação Corretiva",           slug_fixo: "nc_plano",      descricao: "Ações corretivas com responsáveis e prazos — geradas automaticamente.", ordem_base: 3000 },
@@ -163,14 +164,12 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     modulo: "analise_quimicos",
     titulo: "Texto Padrão — Análise de Químicos",
     descricao:
-      "Capítulos reutilizáveis para as análises de produtos químicos. Pode incluir disclaimers, metodologia, normas aplicáveis.",
-    destino: "Aparecem no relatório de Análise de Químicos.",
+      "Monte o laudo como lista única: arraste/reordene livremente os capítulos editáveis em relação ao bloco da Análise Química (gerado automaticamente).",
+    destino: "A ordem definida aqui é exatamente a ordem do laudo de Análise de Químicos.",
     posicoesDisponiveis: ["inicio", "fim"],
+    ordenacaoUnificada: true,
     fixos: [
-      { titulo: "Inventário de Substâncias Químicas",  slug_fixo: "quimicos_inventario", descricao: "Inventário com CAS, quantidade e armazenamento — gerado automaticamente.", ordem_base: 2000 },
-      { titulo: "Fichas de Dados de Segurança (FDS)",  slug_fixo: "quimicos_fds",        descricao: "Resumo de riscos por produto — gerado automaticamente.", ordem_base: 3000 },
-      { titulo: "Classificação de Risco e EPC/EPI",    slug_fixo: "quimicos_risco",      descricao: "Nível de risco e medidas de controle — gerado automaticamente.", ordem_base: 4000 },
-      { titulo: "Assinatura do Responsável Técnico",   slug_fixo: "quimicos_assinatura", descricao: "Rodapé de assinatura — gerado automaticamente.", ordem_base: 9000 },
+      { titulo: "Análise Química (corpo do laudo)", slug_fixo: "quimicos_analise", descricao: "Corpo completo da análise: identificação, NR-15/16, aposentadoria, controles, parecer — gerado automaticamente.", ordem_base: 2000 },
     ],
   },
   apreciacao_maquinas: {

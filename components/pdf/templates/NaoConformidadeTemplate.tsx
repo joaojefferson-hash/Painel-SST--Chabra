@@ -2,7 +2,7 @@ import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
-import { TP_STYLE, renderEditaveis, CabecalhoLaudo } from "./shared";
+import { TP_STYLE, renderEditaveis, CabecalhoLaudo, temSecoesSistema, renderUnificado } from "./shared";
 
 export interface NaoConformidadeItemLocal {
   id_item: string;
@@ -167,6 +167,38 @@ export default function NaoConformidadeTemplate({
   const nrLinha = relatorio.nr_codigo
     ? `${relatorio.nr_codigo}${relatorio.nr_titulo ? ` — ${relatorio.nr_titulo}` : ""}`
     : "—";
+
+  // Seção do sistema "Não Conformidades" (resumo + itens + observações gerais).
+  const descricaoNode = (
+    <>
+      <ResumoCards itens={itens} />
+      <ItensSection itens={itens} />
+      {relatorio.observacoes_gerais && (
+        <div style={{ marginBottom: 16, border: "1px solid #e5e7eb", borderRadius: 8, padding: 10 }}>
+          <p style={{ margin: 0, fontSize: 9, fontWeight: 700, textTransform: "uppercase", color: "#6b7280" }}>Observações Gerais</p>
+          <p style={{ margin: "2px 0 0", fontSize: 11, color: "#111827", whiteSpace: "pre-wrap" }}>{relatorio.observacoes_gerais}</p>
+        </div>
+      )}
+    </>
+  );
+
+  function renderSecaoNC(slug: string): React.ReactNode {
+    switch (slug) {
+      case "nc_descricao": return descricaoNode;
+      default:             return null; // nc_plano (ações ficam por item) / nc_assinatura (folha no fim)
+    }
+  }
+
+  const corpo = temSecoesSistema(capitulos)
+    ? renderUnificado(capitulos, valores, renderSecaoNC)
+    : (
+      <>
+        {renderEditaveis(capitulos, valores, "inicio")}
+        {descricaoNode}
+        {renderEditaveis(capitulos, valores, "fim")}
+      </>
+    );
+
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
@@ -187,19 +219,7 @@ export default function NaoConformidadeTemplate({
         ]}
       />
 
-      {renderEditaveis(capitulos, valores, "inicio")}
-
-      <ResumoCards itens={itens} />
-      <ItensSection itens={itens} />
-
-      {relatorio.observacoes_gerais && (
-        <div style={{ marginBottom: 16, border: "1px solid #e5e7eb", borderRadius: 8, padding: 10 }}>
-          <p style={{ margin: 0, fontSize: 9, fontWeight: 700, textTransform: "uppercase", color: "#6b7280" }}>Observações Gerais</p>
-          <p style={{ margin: "2px 0 0", fontSize: 11, color: "#111827", whiteSpace: "pre-wrap" }}>{relatorio.observacoes_gerais}</p>
-        </div>
-      )}
-
-      {renderEditaveis(capitulos, valores, "fim")}
+      {corpo}
 
       <FolhaAssinaturas
         signatarios={signatarios}

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import React, { use, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle, BadgeCheck, Download, Loader2, AlertCircle } from "lucide-react";
 import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import { useRelatorioNaoConformidade } from "@/lib/hooks/useRelatoriosNaoConformidade";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
@@ -50,6 +51,8 @@ export default function LaudoNaoConformidadePage({
     } catch { toast.error("Erro ao baixar o PDF."); }
     finally { setBaixando(false); }
   }
+
+  const { data: capitulosNC = [] } = useTextosPadrao("nao_conformidade");
 
   if (isLoading) {
     return (
@@ -91,6 +94,62 @@ export default function LaudoNaoConformidadePage({
     carimbo: relatorio.responsavel ?? "",
     importado: formatarDataBR(relatorio.created_at),
   };
+
+  // Seção do sistema "Não Conformidades" (resumo + itens + observações).
+  const descricaoScreenNode = (
+    <>
+      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4 print:grid-cols-4">
+        <ResumoCard label="Total de NCs" valor={itens.length} cor="red" />
+        <ResumoCard label="Criticidade ALTA" valor={ncsAlta} cor="red" />
+        <ResumoCard label="Criticidade MÉDIA" valor={ncsMedia} cor="amber" />
+        <ResumoCard label="Criticidade BAIXA" valor={ncsBaixa} cor="emerald" />
+      </section>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700 print:text-base">
+          Não Conformidades ({itens.length})
+        </h2>
+        {itens.length === 0 ? (
+          <p className="text-sm text-gray-500">Nenhuma NC registrada neste relatório.</p>
+        ) : (
+          <div className="space-y-3">
+            {itens.map((item, idx) => (
+              <ItemNCReadOnly key={item.id_item} item={item} ordem={idx + 1} />
+            ))}
+          </div>
+        )}
+      </section>
+      {relatorio.observacoes_gerais && (
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm print:border-0 print:shadow-none print:p-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-600">Observações Gerais</p>
+          <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{relatorio.observacoes_gerais}</p>
+        </section>
+      )}
+    </>
+  );
+
+  function renderSecaoNCScreen(slug: string): React.ReactNode {
+    return slug === "nc_descricao" ? descricaoScreenNode : null;
+  }
+
+  const temFixosNC = capitulosNC.some((c) => c.tipo === "fixo");
+  const corpoScreen = temFixosNC ? (
+    [...capitulosNC]
+      .filter((c) => c.ativo !== false)
+      .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+      .map((c) =>
+        c.tipo === "fixo" ? (
+          <React.Fragment key={c.id_capitulo}>{renderSecaoNCScreen(c.slug_fixo ?? "")}</React.Fragment>
+        ) : (
+          <TextosPadraoPrint key={c.id_capitulo} modulo="nao_conformidade" capituloId={c.id_capitulo} valores={valoresTextosPadrao} />
+        ),
+      )
+  ) : (
+    <>
+      <TextosPadraoPrint modulo="nao_conformidade" valores={valoresTextosPadrao} posicao="inicio" />
+      {descricaoScreenNode}
+      <TextosPadraoPrint modulo="nao_conformidade" valores={valoresTextosPadrao} posicao="fim" />
+    </>
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 print:max-w-none print:space-y-2">
@@ -214,43 +273,8 @@ export default function LaudoNaoConformidadePage({
         </div>
       </section>
 
-      {/* Resumo de NCs */}
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4 print:grid-cols-4">
-        <ResumoCard label="Total de NCs" valor={itens.length} cor="red" />
-        <ResumoCard label="Criticidade ALTA" valor={ncsAlta} cor="red" />
-        <ResumoCard label="Criticidade MÉDIA" valor={ncsMedia} cor="amber" />
-        <ResumoCard label="Criticidade BAIXA" valor={ncsBaixa} cor="emerald" />
-      </section>
-
-      {/* Textos Padrão inicio */}
-      <TextosPadraoPrint modulo="nao_conformidade" valores={valoresTextosPadrao} posicao="inicio" />
-
-      {/* Lista de NCs — somente leitura */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700 print:text-base">
-          Não Conformidades ({itens.length})
-        </h2>
-        {itens.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhuma NC registrada neste relatório.</p>
-        ) : (
-          <div className="space-y-3">
-            {itens.map((item, idx) => (
-              <ItemNCReadOnly key={item.id_item} item={item} ordem={idx + 1} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Observações gerais */}
-      {relatorio.observacoes_gerais && (
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm print:border-0 print:shadow-none print:p-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-600">Observações Gerais</p>
-          <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{relatorio.observacoes_gerais}</p>
-        </section>
-      )}
-
-      {/* Textos Padrão fim */}
-      <TextosPadraoPrint modulo="nao_conformidade" valores={valoresTextosPadrao} posicao="fim" />
+      {/* Corpo do laudo — ordem unificada (sistema + editáveis) ou layout legado */}
+      {corpoScreen}
 
       {/* Assinatura */}
       <AssinaturaRelatorio

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import React, { use, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck, Download, Loader2, FlaskConical, FileText, Pencil } from "lucide-react";
 import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import { useAnaliseQuimico } from "@/lib/hooks/useAnalisesQuimicos";
 import ConclusaoRapidaCard from "@/components/quimicos/ConclusaoRapidaCard";
@@ -48,6 +49,8 @@ export default function LaudoAnaliseQuimicoPage({
     finally { setBaixando(false); }
   }
 
+  const { data: capitulosQ = [] } = useTextosPadrao("analise_quimicos");
+
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center text-gray-500">
@@ -78,6 +81,24 @@ export default function LaudoAnaliseQuimicoPage({
     carimbo: analise.usuario_nome ?? "",
     importado: formatarDataBR(analise.created_at),
   };
+
+  // Unificado: editáveis antes/depois do bloco "Análise Química" (quimicos_analise),
+  // conforme a ordem. Sem seções do sistema, mantém o layout legado (inicio/fim).
+  const temFixosQ = capitulosQ.some((c) => c.tipo === "fixo");
+  const ordemAnaliseQ = capitulosQ.find((c) => c.slug_fixo === "quimicos_analise")?.ordem ?? 2000;
+  const editaveisQ = [...capitulosQ]
+    .filter((c) => c.tipo !== "fixo" && c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+  const antesScreenQ = temFixosQ
+    ? editaveisQ.filter((c) => (c.ordem ?? 0) < ordemAnaliseQ).map((c) => (
+        <TextosPadraoPrint key={c.id_capitulo} modulo="analise_quimicos" capituloId={c.id_capitulo} valores={valoresTextosPadrao} />
+      ))
+    : <TextosPadraoPrint modulo="analise_quimicos" valores={valoresTextosPadrao} posicao="inicio" />;
+  const depoisScreenQ = temFixosQ
+    ? editaveisQ.filter((c) => (c.ordem ?? 0) >= ordemAnaliseQ).map((c) => (
+        <TextosPadraoPrint key={c.id_capitulo} modulo="analise_quimicos" capituloId={c.id_capitulo} valores={valoresTextosPadrao} />
+      ))
+    : <TextosPadraoPrint modulo="analise_quimicos" valores={valoresTextosPadrao} posicao="fim" />;
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
@@ -231,17 +252,17 @@ export default function LaudoAnaliseQuimicoPage({
         <ConclusaoRapidaCard conclusao={analise.conclusao_rapida} />
       </section>
 
-      {/* Textos Padrão antes */}
-      <TextosPadraoPrint modulo="analise_quimicos" valores={valoresTextosPadrao} posicao="inicio" />
+      {/* Editáveis antes do corpo (ordem unificada) */}
+      {antesScreenQ}
 
-      {/* Relatório técnico estruturado */}
+      {/* Relatório técnico estruturado (bloco "Análise Química") */}
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border-0 print:shadow-none print:p-2">
         <h2 className="mb-3 text-base font-bold text-verde-primary">Relatório Técnico Completo</h2>
         <RelatorioEstruturado analise={analise} empresa={empresa ?? null} />
       </section>
 
-      {/* Textos Padrão fim */}
-      <TextosPadraoPrint modulo="analise_quimicos" valores={valoresTextosPadrao} posicao="fim" />
+      {/* Editáveis depois do corpo (ordem unificada) */}
+      {depoisScreenQ}
 
       {/* Assinatura */}
       <AssinaturaRelatorio

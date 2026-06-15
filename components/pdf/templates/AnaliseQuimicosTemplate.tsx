@@ -3,7 +3,7 @@ import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import type { ConclusaoRapidaQuimico, CondicoesUsoQuimico } from "@/lib/supabase/types";
-import { TP_STYLE, renderEditaveis } from "./shared";
+import { TP_STYLE, renderEditaveis, renderEditavelUm, temSecoesSistema } from "./shared";
 
 export interface AnaliseQuimicosTemplateProps {
   analise: {
@@ -155,6 +155,22 @@ export default function AnaliseQuimicosTemplate({
     { item: "Metodologia de medição", valor: c.metodologia },
   ].filter((l) => l.valor && l.valor.trim().length > 0);
 
+  // Modo unificado: o corpo da análise é um bloco único ("quimicos_analise").
+  // Os editáveis ficam antes/depois dele conforme a ordem definida no editor.
+  // Sem seções do sistema cadastradas, mantém o layout posicional legado.
+  const temFixos = temSecoesSistema(capitulos);
+  const ordemAnalise =
+    capitulos.find((c) => c.slug_fixo === "quimicos_analise")?.ordem ?? 2000;
+  const editaveisOrdenados = [...capitulos]
+    .filter((c) => c.tipo !== "fixo" && c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+  const antesNode = temFixos
+    ? editaveisOrdenados.filter((c) => (c.ordem ?? 0) < ordemAnalise).map((c) => renderEditavelUm(c, valores))
+    : renderEditaveis(capitulos, valores, "inicio");
+  const depoisNode = temFixos
+    ? editaveisOrdenados.filter((c) => (c.ordem ?? 0) >= ordemAnalise).map((c) => renderEditavelUm(c, valores))
+    : renderEditaveis(capitulos, valores, "fim");
+
   return (
     <>
       {/* eslint-disable-next-line react/no-danger */}
@@ -174,7 +190,7 @@ export default function AnaliseQuimicosTemplate({
         </div>
       </div>
 
-      {renderEditaveis(capitulos, valores, "inicio")}
+      {antesNode}
 
       <Secao titulo="1. Identificação do Agente Químico">
         <DataGrid
@@ -327,7 +343,7 @@ export default function AnaliseQuimicosTemplate({
         </Secao>
       )}
 
-      {renderEditaveis(capitulos, valores, "fim")}
+      {depoisNode}
 
       <FolhaAssinaturas
         signatarios={signatarios}
