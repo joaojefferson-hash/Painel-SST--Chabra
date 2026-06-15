@@ -10,6 +10,7 @@ import {
   ClipboardEdit,
   FileEdit,
   Settings,
+  Trash2,
 } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import SidebarShell, { type NavItem, type NavSection } from "./SidebarShell";
@@ -33,6 +34,7 @@ const CONFIGURACAO_BASE: NavItem[] = [
 
 const CONFIGURACAO_ADMIN: NavItem[] = [
   { href: "/config", label: "Configurações", icon: Settings, variant: "config" },
+  { href: "/lixeira", label: "Lixeira", icon: Trash2, variant: "config" },
 ];
 
 export default function Sidebar() {

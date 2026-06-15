@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { gerarId } from "@/lib/utils";
 import { registrarAuditoria } from "@/lib/auditoria/registrar";
+import { excluirComLixeira } from "@/lib/hooks/useLixeira";
 import {
   MODULO_CONFIGS,
   type ModuloTextoPadrao,
@@ -199,13 +200,15 @@ export function useRestaurarVersao(modulo: ModuloTextoPadrao) {
 export function useExcluirCapituloTexto(modulo: ModuloTextoPadrao) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id_capitulo: string) => {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase
-        .from("textos_padrao")
-        .delete()
-        .eq("id_capitulo", id_capitulo);
-      if (error) throw error;
+    mutationFn: async (cap: TextoPadraoCapitulo) => {
+      await excluirComLixeira({
+        tabela: "textos_padrao",
+        chave: "id_capitulo",
+        id: cap.id_capitulo,
+        dados: cap as unknown as Record<string, unknown>,
+        rotulo: cap.titulo,
+        modulo: cap.modulo,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY(modulo) });

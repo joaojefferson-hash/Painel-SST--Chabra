@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { classificarAnexo, type Anexo, type ModuloAnexo } from "@/lib/anexos/types";
 import { registrarAuditoria } from "@/lib/auditoria/registrar";
+import { excluirComLixeira } from "@/lib/hooks/useLixeira";
 
 const KEY = (m: ModuloAnexo, id: string) => ["anexos", m, id] as const;
 
@@ -110,20 +111,19 @@ export function useExcluirAnexo(modulo: ModuloAnexo, idReferencia: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (anexo: Anexo) => {
-      const supabase = createSupabaseBrowserClient();
-      // Remove o arquivo do storage (best-effort) e depois a linha.
-      await supabase.storage.from("anexos").remove([anexo.storage_path]);
-      const { error } = await supabase.from("anexos").delete().eq("id_anexo", anexo.id_anexo);
-      if (error) throw error;
-    },
-    onSuccess: (_data, anexo) => {
-      qc.invalidateQueries({ queryKey: KEY(modulo, idReferencia) });
-      registrarAuditoria({
-        modulo,
-        id_referencia: idReferencia,
-        acao: "removeu_anexo",
-        descricao: anexo.nome,
+      // Vai para a lixeira (snapshot + auditoria). O ARQUIVO no storage é
+      // mantido para que a restauração reabra com a mesma URL.
+      await excluirComLixeira({
+        tabela: "anexos",
+        chave: "id_anexo",
+        id: anexo.id_anexo,
+        dados: anexo as unknown as Record<string, unknown>,
+        rotulo: anexo.nome,
+        modulo: anexo.modulo,
       });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY(modulo, idReferencia) });
       toast.success("Anexo removido");
     },
     onError: (e: Error) => toast.error(e.message),

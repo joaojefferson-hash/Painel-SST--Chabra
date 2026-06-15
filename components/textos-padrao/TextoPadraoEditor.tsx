@@ -428,7 +428,7 @@ export default function TextoPadraoEditor({ modulo }: Props) {
         loading={excluir.isPending}
         onConfirm={() => {
           if (!confirmExcluir) return;
-          excluir.mutate(confirmExcluir.id_capitulo, {
+          excluir.mutate(confirmExcluir, {
             onSuccess: () => setConfirmExcluir(null),
           });
         }}

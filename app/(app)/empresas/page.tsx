@@ -6,12 +6,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
 import { useUnidades } from "@/lib/hooks/useUnidades";
+import { excluirComLixeira } from "@/lib/hooks/useLixeira";
 import EmpresaCard from "@/components/empresas/EmpresaCard";
 import EmpresaForm from "@/components/empresas/EmpresaForm";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useCanCreate, useCanDelete, useCanEdit } from "@/lib/hooks/useUsuario";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Empresa } from "@/lib/supabase/types";
 
 export default function EmpresasPage() {
@@ -29,14 +29,17 @@ export default function EmpresasPage() {
 
   const delEmpresa = useMutation({
     mutationFn: async (e: Empresa) => {
-      const supabase = createSupabaseBrowserClient();
-      // Hard delete — FKs com ON DELETE CASCADE limpam todas as
-      // inspeções, setores, riscos, etc da empresa.
-      const { error } = await supabase
-        .from("empresas")
-        .delete()
-        .eq("id_empresa", e.id_empresa);
-      if (error) throw error;
+      // Exclusão com lixeira: salva snapshot recuperável + audita, depois exclui.
+      // (FKs ON DELETE CASCADE ainda limpam os filhos — restauração traz a
+      // empresa de volta; filhos em cascata não são restaurados.)
+      await excluirComLixeira({
+        tabela: "empresas",
+        chave: "id_empresa",
+        id: e.id_empresa,
+        dados: e as unknown as Record<string, unknown>,
+        rotulo: e.nome_empresa,
+        modulo: "empresas",
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["empresas"] });
