@@ -126,7 +126,7 @@ export default function LaudoAnaliseQuimicoPage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/analise-quimicos/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf reAssinatura={true} defaultSignatoryName={analise.usuario_nome ?? undefined} apiPdfUrl={`/api/pdf/analise-quimicos/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />
           </>
         ) : (
           <BotaoAssinarPdf apiPdfUrl={`/api/pdf/analise-quimicos/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="analises_quimicos" docId={id} onAssinado={recarregar} />

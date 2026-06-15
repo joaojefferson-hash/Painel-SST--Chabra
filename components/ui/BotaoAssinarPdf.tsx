@@ -8,6 +8,9 @@ import AssinarPdfModal from "@/components/ui/AssinarPdfModal";
 interface Props {
   /** Email do profissional responsável pelo documento (pré-seleção no modal). */
   defaultSignatoryEmail?: string;
+  /** Nome do profissional responsável cadastrado no documento (pré-seleção por
+   *  nome quando não há email — útil para laudos que guardam só o nome). */
+  defaultSignatoryName?: string;
   /** Tabela do documento. Passado ao modal para salvar o PDF assinado no servidor. */
   tabelaNome?: string;
   /** ID do documento. Passado ao modal para salvar o PDF assinado no servidor. */
@@ -32,6 +35,7 @@ interface Props {
 
 export default function BotaoAssinarPdf({
   defaultSignatoryEmail,
+  defaultSignatoryName,
   tabelaNome,
   docId,
   onAssinado,
@@ -109,6 +113,7 @@ export default function BotaoAssinarPdf({
           setPdfBytes(undefined);
         }}
         defaultSignatoryEmail={defaultSignatoryEmail}
+        defaultSignatoryName={defaultSignatoryName}
         tabelaNome={tabelaNome}
         docId={docId}
         onAssinado={onAssinado}

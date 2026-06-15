@@ -163,6 +163,7 @@ export default function AssinaturaRelatorio({
           </button>
           <BotaoAssinarPdf
             defaultSignatoryEmail={sigData?.email ?? undefined}
+            defaultSignatoryName={nomeResponsavel ?? undefined}
             tabelaNome={tabelaNome}
             docId={docId}
             onAssinado={recarregar}

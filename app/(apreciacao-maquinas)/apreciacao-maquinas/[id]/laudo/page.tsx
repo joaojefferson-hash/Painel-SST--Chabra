@@ -242,10 +242,10 @@ export default function LaudoApreciacaoMaquinasPage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/apreciacao/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf reAssinatura={true} defaultSignatoryName={apreciacao.responsavel ?? undefined} apiPdfUrl={`/api/pdf/apreciacao/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
           </>
         ) : (
-          <BotaoAssinarPdf apiPdfUrl={`/api/pdf/apreciacao/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
+          <BotaoAssinarPdf defaultSignatoryName={apreciacao.responsavel ?? undefined} apiPdfUrl={`/api/pdf/apreciacao/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="apreciacoes_maquinas" docId={id} onAssinado={recarregar} />
         )}
         <BotaoGerarPdf
           apiPdfUrl={`/api/pdf/apreciacao/${id}`}

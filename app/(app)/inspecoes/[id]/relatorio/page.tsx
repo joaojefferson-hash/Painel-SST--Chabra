@@ -284,7 +284,7 @@ export default function RelatorioChabraPage({ params }: Props) {
               </button>
             </>
           ) : (
-            <BotaoAssinarPdf tabelaNome="inspecoes_relatorio" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf defaultSignatoryName={inspecao.responsavel ?? undefined} tabelaNome="inspecoes_relatorio" docId={id} onAssinado={recarregar} />
           )}
           <BotaoGerarPdf
             tabelaNome="inspecoes_relatorio"

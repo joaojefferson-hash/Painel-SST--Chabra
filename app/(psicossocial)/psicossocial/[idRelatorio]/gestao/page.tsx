@@ -22,6 +22,7 @@ import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import {
   useDrpsMonitoramento,
   useDrpsPlanoMedidas,
+  useDrpsRelatorio,
   useDrpsRevisao,
 } from "@/lib/hooks/useDrps";
 import {
@@ -38,6 +39,7 @@ export default function GestaoPage({
 }) {
   const { idRelatorio } = use(params);
   const ano = new Date().getFullYear();
+  const { data: relatorioDrps } = useDrpsRelatorio(idRelatorio);
   const { data: planoDB } = useDrpsPlanoMedidas(idRelatorio, ano);
   const { data: monitoramentos = [] } = useDrpsMonitoramento(idRelatorio);
   const { data: revisao } = useDrpsRevisao(idRelatorio);
@@ -94,7 +96,7 @@ export default function GestaoPage({
               </button>
             </>
           ) : (
-            <BotaoAssinarPdf tabelaNome="drps_relatorios_gestao" docId={idRelatorio} onAssinado={recarregar} />
+            <BotaoAssinarPdf defaultSignatoryName={relatorioDrps?.responsavel_tecnico ?? undefined} tabelaNome="drps_relatorios_gestao" docId={idRelatorio} onAssinado={recarregar} />
           )}
           <BotaoGerarPdf
             tabelaNome="drps_relatorios_gestao"

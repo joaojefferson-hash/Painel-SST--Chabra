@@ -321,10 +321,11 @@ export default function PsicossocialLaudoPage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/drps/${idRelatorio}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="drps_relatorios_analise" docId={idRelatorio} onAssinado={recarregar} />
+            <BotaoAssinarPdf reAssinatura={true} defaultSignatoryName={relatorio?.responsavel_tecnico ?? undefined} apiPdfUrl={`/api/pdf/drps/${idRelatorio}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="drps_relatorios_analise" docId={idRelatorio} onAssinado={recarregar} />
           </>
         ) : (
           <BotaoAssinarPdf
+            defaultSignatoryName={relatorio?.responsavel_tecnico ?? undefined}
             apiPdfUrl={`/api/pdf/drps/${idRelatorio}`}
             baseCongeladaUrl={baseCongeladaUrl}
             tabelaNome="drps_relatorios_analise"

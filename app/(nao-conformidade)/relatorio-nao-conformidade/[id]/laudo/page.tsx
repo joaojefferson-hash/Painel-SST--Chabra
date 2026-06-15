@@ -177,10 +177,10 @@ export default function LaudoNaoConformidadePage({
               {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               Baixar PDF Assinado
             </button>
-            <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/nao-conformidade/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf reAssinatura={true} defaultSignatoryName={relatorio.responsavel ?? undefined} apiPdfUrl={`/api/pdf/nao-conformidade/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
           </>
         ) : (
-          <BotaoAssinarPdf apiPdfUrl={`/api/pdf/nao-conformidade/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
+          <BotaoAssinarPdf defaultSignatoryName={relatorio.responsavel ?? undefined} apiPdfUrl={`/api/pdf/nao-conformidade/${id}`} baseCongeladaUrl={baseCongeladaUrl} tabelaNome="relatorios_nao_conformidade" docId={id} onAssinado={recarregar} />
         )}
         <BotaoGerarPdf
           apiPdfUrl={`/api/pdf/nao-conformidade/${id}`}

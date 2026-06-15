@@ -204,7 +204,7 @@ export default function FichaInspecaoPage({ params }: Props) {
               </button>
             </>
           ) : (
-            <BotaoAssinarPdf tabelaNome="inspecoes_ficha" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf defaultSignatoryName={inspecao.responsavel ?? undefined} tabelaNome="inspecoes_ficha" docId={id} onAssinado={recarregar} />
           )}
           <BotaoGerarPdf
             tabelaNome="inspecoes_ficha"

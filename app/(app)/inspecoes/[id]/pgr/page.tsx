@@ -176,7 +176,7 @@ export default function PgrPage({ params }: Props) {
               </button>
             </>
           ) : (
-            <BotaoAssinarPdf tabelaNome="inspecoes_pgr" docId={id} onAssinado={recarregar} />
+            <BotaoAssinarPdf defaultSignatoryName={inspecao.responsavel ?? undefined} tabelaNome="inspecoes_pgr" docId={id} onAssinado={recarregar} />
           )}
           <BotaoGerarPdf
             tabelaNome="inspecoes_pgr"

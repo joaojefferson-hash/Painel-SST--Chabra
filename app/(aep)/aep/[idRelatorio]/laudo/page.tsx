@@ -336,6 +336,7 @@ export default function AepLaudoPage({
               </button>
               <BotaoAssinarPdf
                 reAssinatura={true}
+                defaultSignatoryName={rel?.responsavel_elaboracao ?? undefined}
                 tabelaNome="aep_relatorios"
                 docId={idRelatorio}
                 onAssinado={recarregar}
@@ -345,6 +346,7 @@ export default function AepLaudoPage({
             </>
           ) : (
             <BotaoAssinarPdf
+              defaultSignatoryName={rel?.responsavel_elaboracao ?? undefined}
               tabelaNome="aep_relatorios"
               docId={idRelatorio}
               onAssinado={recarregar}
