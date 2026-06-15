@@ -44,6 +44,12 @@ export interface Signatario {
    * chamadores existentes.
    */
   assinadoDigitalmente?: boolean;
+  /**
+   * URL da imagem de assinatura cadastrada do profissional. Quando presente,
+   * renderiza a IMAGEM da assinatura (assinatura eletrônica por imagem) em vez
+   * do selo A1 ou da linha manual. Tem prioridade sobre os demais modos.
+   */
+  assinaturaImagemUrl?: string;
 }
 
 export interface FolhaAssinaturasProps {
@@ -225,6 +231,100 @@ function CarimboSignatario({
   );
 }
 
+function CampoAssinaturaImagem({
+  signatario,
+  dataHora,
+}: {
+  signatario: Signatario;
+  dataHora: string;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div
+        style={{
+          border: `1.5px solid ${VERDE}`,
+          borderRadius: 6,
+          overflow: "hidden",
+          fontSize: 11,
+          fontFamily: "Arial, Helvetica, sans-serif",
+        }}
+      >
+        {/* Faixa superior */}
+        <div
+          style={{
+            backgroundColor: VERDE,
+            color: "white",
+            padding: "4px 8px",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: "0.03em",
+          }}
+        >
+          <IconeVerificacao />
+          ASSINADO ELETRONICAMENTE
+        </div>
+
+        {/* Corpo: imagem da assinatura + dados */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
+            padding: "8px 10px",
+            backgroundColor: "white",
+          }}
+        >
+          <div
+            style={{
+              width: 96,
+              minHeight: 56,
+              flexShrink: 0,
+              backgroundColor: VERDE_CLARO,
+              borderRadius: 4,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 4,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={signatario.assinaturaImagemUrl}
+              alt="Assinatura"
+              style={{ maxHeight: 52, maxWidth: 84, objectFit: "contain" }}
+            />
+          </div>
+
+          <div style={{ flex: 1, lineHeight: 1.5 }}>
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                color: CINZA_TEXTO,
+              }}
+            >
+              {signatario.nomeCompleto}
+            </div>
+            {(signatario.cargo || signatario.registroProfissional) && (
+              <div style={{ color: CINZA_TEXTO, fontSize: 10 }}>
+                {[signatario.cargo, signatario.registroProfissional]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </div>
+            )}
+            <div style={{ color: CINZA_TEXTO, fontSize: 10 }}>{dataHora}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CampoManualSignatario({
   signatario,
 }: {
@@ -379,7 +479,13 @@ export default function FolhaAssinaturas({
         }}
       >
         {signatarios.map((s, i) =>
-          s.assinadoDigitalmente === false ? (
+          s.assinaturaImagemUrl ? (
+            <CampoAssinaturaImagem
+              key={i}
+              signatario={s}
+              dataHora={dataHoraAssinatura}
+            />
+          ) : s.assinadoDigitalmente === false ? (
             <CampoManualSignatario key={i} signatario={s} />
           ) : (
             <CarimboSignatario

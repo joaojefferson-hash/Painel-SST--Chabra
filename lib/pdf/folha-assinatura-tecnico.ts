@@ -57,24 +57,30 @@ export async function montarSignatarioTecnico(
 
   const { data: rawAssinado } = await supabase
     .from("pdfs_assinados")
-    .select("assinado_em, assinado_por")
+    .select("assinado_em, assinado_por, tipo_assinatura")
     .eq("tabela", opts.tabela)
     .eq("doc_id", opts.docId)
     .maybeSingle();
   const assinado = rawAssinado as
-    | { assinado_em: string; assinado_por: string }
+    | { assinado_em: string; assinado_por: string; tipo_assinatura: string | null }
     | null;
 
   if (assinado) {
-    // Documento assinado digitalmente → selo com o assinante real.
+    // Documento assinado → busca o assinante real.
     const { data: rawSigner } = await supabase
       .from("usuarios")
-      .select("nome, cargo, cpf")
+      .select("nome, cargo, cpf, assinatura_url")
       .eq("email", assinado.assinado_por)
       .single();
     const signer = rawSigner as
-      | { nome: string | null; cargo: string | null; cpf: string | null }
+      | {
+          nome: string | null;
+          cargo: string | null;
+          cpf: string | null;
+          assinatura_url: string | null;
+        }
       | null;
+    const porImagem = assinado.tipo_assinatura === "imagem";
     return {
       signatario: {
         nomeCompleto: signer?.nome ?? assinado.assinado_por,
@@ -83,6 +89,9 @@ export async function montarSignatarioTecnico(
         cpf: signer?.cpf ?? null,
         funcaoNoDocumento: funcao,
         assinadoDigitalmente: true,
+        // Assinatura por imagem → carimba a imagem; senão, selo A1.
+        assinaturaImagemUrl:
+          porImagem && signer?.assinatura_url ? signer.assinatura_url : undefined,
       },
       dataHoraAssinatura: fmtDataHora(assinado.assinado_em),
     };

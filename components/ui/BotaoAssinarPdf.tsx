@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, Loader2 } from "lucide-react";
+import { BadgeCheck, Loader2, PenLine } from "lucide-react";
 import toast from "react-hot-toast";
 import AssinarPdfModal from "@/components/ui/AssinarPdfModal";
+import AssinarImagemModal from "@/components/ui/AssinarImagemModal";
 
 interface Props {
   /** Email do profissional responsável pelo documento (pré-seleção no modal). */
@@ -44,8 +45,49 @@ export default function BotaoAssinarPdf({
   baseCongeladaUrl,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [openImg, setOpenImg] = useState(false);
   const [capturando, setCapturando] = useState(false);
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | undefined>();
+
+  /**
+   * Assinatura por imagem: registra no servidor (tipo='imagem'). Para laudos
+   * com rota Puppeteer (apiPdfUrl) o servidor já regenera+salva o PDF com a
+   * imagem. Para laudos por captura de tela, o servidor pede needsClientSave —
+   * então fechamos o modal, deixamos a tela re-renderizar com a imagem e
+   * capturamos o DOM para salvar.
+   */
+  async function handleAssinarImagem(signatoryEmail: string) {
+    const res = await fetch("/api/sign-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signatoryEmail, tabelaNome, docId, apiPdfUrl }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as { error?: string }).error ?? "Erro ao assinar");
+
+    if ((data as { needsClientSave?: boolean }).needsClientSave) {
+      // Fecha o modal antes de capturar (evita o overlay interferir no canvas).
+      setOpenImg(false);
+      window.dispatchEvent(
+        new CustomEvent("pdf:assinado", { detail: { tabelaNome, docId } }),
+      );
+      onAssinado?.();
+      await new Promise((r) => setTimeout(r, 1400));
+      const { gerarHtmlParaPdf } = await import("@/lib/gerarHtmlParaPdf");
+      const bytes = await gerarHtmlParaPdf({ forSigning: true });
+      const form = new FormData();
+      form.append("pdf", new Blob([bytes], { type: "application/pdf" }), "assinado.pdf");
+      if (tabelaNome) form.append("tabelaNome", tabelaNome);
+      if (docId) form.append("docId", docId);
+      const res2 = await fetch("/api/sign-image", { method: "POST", body: form });
+      if (!res2.ok) {
+        const d2 = await res2.json().catch(() => ({}));
+        throw new Error((d2 as { error?: string }).error ?? "Erro ao salvar o PDF assinado");
+      }
+    }
+    onAssinado?.();
+    toast.success("Documento assinado com a imagem de assinatura!");
+  }
 
   async function handleClick() {
     setCapturando(true);
@@ -105,6 +147,27 @@ export default function BotaoAssinarPdf({
         )}
         {capturando ? "Gerando PDF..." : reAssinatura ? "Re-assinar" : "Assinar PDF A1"}
       </button>
+
+      {!reAssinatura && (
+        <button
+          type="button"
+          onClick={() => setOpenImg(true)}
+          disabled={capturando}
+          className="inline-flex items-center gap-1.5 rounded-md border border-verde-primary/40 bg-white px-3 py-1.5 text-sm font-semibold text-verde-primary hover:bg-verde-primary/5 disabled:opacity-60 print:hidden"
+          title="Assinar carimbando a imagem de assinatura cadastrada no perfil"
+        >
+          <PenLine className="size-4" />
+          Assinar com imagem
+        </button>
+      )}
+
+      <AssinarImagemModal
+        open={openImg}
+        onClose={() => setOpenImg(false)}
+        defaultSignatoryEmail={defaultSignatoryEmail}
+        defaultSignatoryName={defaultSignatoryName}
+        onConfirm={handleAssinarImagem}
+      />
 
       <AssinarPdfModal
         open={open}
