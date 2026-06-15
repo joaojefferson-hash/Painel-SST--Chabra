@@ -221,6 +221,17 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // E3: trilha de auditoria (fire-and-forget — nunca bloqueia a assinatura)
+      try {
+        await supabase.from("document_audit_logs").insert({
+          modulo: tabelaNome,
+          id_referencia: docId,
+          acao: "assinou_pdf",
+          descricao: "PDF assinado com certificado A1 ICP-Brasil",
+          usuario_email: emailSignatario,
+        } as never);
+      } catch { /* ignora falha de auditoria */ }
+
       return NextResponse.json({ success: true });
     }
 

@@ -4,6 +4,7 @@ import { useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { registrarAuditoria } from "@/lib/auditoria/registrar";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -247,6 +248,12 @@ export function useCongelarPdf() {
     onSuccess: (d) => {
       qc.invalidateQueries({ queryKey: KEY_CONGELADO(d.modulo, d.idRelatorio) });
       qc.invalidateQueries({ queryKey: KEY() });
+      registrarAuditoria({
+        modulo: d.modulo,
+        id_referencia: d.idRelatorio,
+        acao: "congelou_pdf",
+        descricao: `Versão ${d.versao} aprovada e congelada (hash ${d.hash.slice(0, 12)}…)`,
+      });
       toast.success(`Versão ${d.versao} aprovada e congelada`);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -296,8 +303,15 @@ export function useRegistrarPdf() {
       if (error) throw error;
       return data as { id: string };
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: KEY() });
+      registrarAuditoria({
+        modulo: vars.modulo,
+        id_referencia: vars.idRelatorio ?? null,
+        acao: "gerou_pdf",
+        descricao: vars.tipoDocumento ?? null,
+        empresa_id: vars.empresaId ?? null,
+      });
     },
     // Erros são silenciosos — o download do usuário não deve ser bloqueado
     onError: (e: Error) => {

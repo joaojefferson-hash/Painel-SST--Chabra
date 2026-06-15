@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { classificarAnexo, type Anexo, type ModuloAnexo } from "@/lib/anexos/types";
+import { registrarAuditoria } from "@/lib/auditoria/registrar";
 
 const KEY = (m: ModuloAnexo, id: string) => ["anexos", m, id] as const;
 
@@ -63,8 +64,14 @@ export function useEnviarAnexo(modulo: ModuloAnexo, idReferencia: string) {
       } as never);
       if (insErr) throw insErr;
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: KEY(modulo, idReferencia) });
+      registrarAuditoria({
+        modulo,
+        id_referencia: idReferencia,
+        acao: "anexou",
+        descricao: vars.file.name,
+      });
       toast.success("Anexo enviado");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -109,8 +116,14 @@ export function useExcluirAnexo(modulo: ModuloAnexo, idReferencia: string) {
       const { error } = await supabase.from("anexos").delete().eq("id_anexo", anexo.id_anexo);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, anexo) => {
       qc.invalidateQueries({ queryKey: KEY(modulo, idReferencia) });
+      registrarAuditoria({
+        modulo,
+        id_referencia: idReferencia,
+        acao: "removeu_anexo",
+        descricao: anexo.nome,
+      });
       toast.success("Anexo removido");
     },
     onError: (e: Error) => toast.error(e.message),

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { gerarId } from "@/lib/utils";
+import { registrarAuditoria } from "@/lib/auditoria/registrar";
 import {
   MODULO_CONFIGS,
   type ModuloTextoPadrao,
@@ -181,6 +182,12 @@ export function useRestaurarVersao(modulo: ModuloTextoPadrao) {
     onSuccess: (_data, versao) => {
       qc.invalidateQueries({ queryKey: KEY(modulo) });
       qc.invalidateQueries({ queryKey: KEY_HIST(versao.id_capitulo) });
+      registrarAuditoria({
+        modulo,
+        id_referencia: versao.id_capitulo,
+        acao: "restaurou_texto",
+        descricao: `Restaurou a versão ${versao.versao} de "${versao.titulo}"`,
+      });
       toast.success(`Versão ${versao.versao} restaurada`);
     },
     onError: (e: Error) => toast.error(e.message),
