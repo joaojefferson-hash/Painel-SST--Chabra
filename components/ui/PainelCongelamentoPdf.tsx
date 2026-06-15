@@ -88,6 +88,7 @@ export default function PainelCongelamentoPdf({
           )}
           <p className="text-[11px] italic text-gray-500">
             A assinatura A1 é aplicada sobre este arquivo imutável.
+            {congelado!.versao > 1 && " Versões anteriores foram marcadas como substituídas."}
           </p>
         </div>
       ) : (

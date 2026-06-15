@@ -222,6 +222,16 @@ export function useCongelarPdf() {
       if (upErr) throw upErr;
 
       const { data: { user } } = await supabase.auth.getUser();
+
+      // Marca as versões congeladas anteriores deste documento como substituídas,
+      // garantindo que só a nova permaneça vigente (status='congelado').
+      await supabase
+        .from("pdfs_gerados")
+        .update({ status: "substituido" } as never)
+        .eq("modulo", opts.modulo)
+        .eq("id_relatorio", opts.idRelatorio ?? "")
+        .eq("status", "congelado");
+
       const { error } = await supabase
         .from("pdfs_gerados")
         .insert({
