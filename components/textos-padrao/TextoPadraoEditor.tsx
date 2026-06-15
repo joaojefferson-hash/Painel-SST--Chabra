@@ -123,9 +123,18 @@ export default function TextoPadraoEditor({ modulo }: Props) {
     const idx = grupo.findIndex((c) => c.id_capitulo === cap.id_capitulo);
     const novoIdx = direcao === "up" ? idx - 1 : idx + 1;
     if (novoIdx < 0 || novoIdx >= grupo.length) return;
-    const outro = grupo[novoIdx];
-    await salvar.mutateAsync({ id_capitulo: cap.id_capitulo, ordem: outro.ordem });
-    await salvar.mutateAsync({ id_capitulo: outro.id_capitulo, ordem: cap.ordem });
+
+    // Reordena a lista e RE-SEQUENCIA as ordens (passo 10). Robusto a ordens
+    // duplicadas/colididas (que antes faziam a troca simples não surtir efeito).
+    const novaLista = [...grupo];
+    const [item] = novaLista.splice(idx, 1);
+    novaLista.splice(novoIdx, 0, item);
+    await Promise.all(
+      novaLista
+        .map((c, i) => ({ c, novaOrdem: i * 10 }))
+        .filter(({ c, novaOrdem }) => (c.ordem ?? 0) !== novaOrdem)
+        .map(({ c, novaOrdem }) => salvar.mutateAsync({ id_capitulo: c.id_capitulo, ordem: novaOrdem })),
+    );
   }
 
   // Editáveis agrupados por posição no laudo (reflete a ordem real do PDF):
