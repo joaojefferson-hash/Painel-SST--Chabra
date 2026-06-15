@@ -26,6 +26,7 @@ import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import { useInspecao } from "@/lib/hooks/useInspecao";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
+import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import NivelBadge from "@/components/riscos/NivelBadge";
@@ -300,6 +301,14 @@ export default function RelatorioChabraPage({ params }: Props) {
             }}
           />
         </div>
+      </div>
+
+      {/* Dados da empresa (não imprime) */}
+      <div className="no-print">
+        <EmpresaInfoPanel
+          empresa={empresa ?? null}
+          className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+        />
       </div>
 
       {/* CSS de impressão */}

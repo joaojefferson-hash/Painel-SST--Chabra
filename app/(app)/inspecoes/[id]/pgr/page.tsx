@@ -14,6 +14,7 @@ import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import { useInspecao } from "@/lib/hooks/useInspecao";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
+import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import NivelBadge from "@/components/riscos/NivelBadge";
@@ -183,6 +184,14 @@ export default function PgrPage({ params }: Props) {
             className="inline-flex items-center gap-2 rounded-md bg-verde-primary px-4 py-2 text-sm font-semibold text-white hover:bg-verde-accent"
           />
         </div>
+      </div>
+
+      {/* Dados da empresa (não imprime) */}
+      <div className="no-print">
+        <EmpresaInfoPanel
+          empresa={empresa ?? null}
+          className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+        />
       </div>
 
       {/* CSS de impressão paisagem A4 */}
