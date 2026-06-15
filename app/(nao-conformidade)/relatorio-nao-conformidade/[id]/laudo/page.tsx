@@ -8,6 +8,7 @@ import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import AnexosManager from "@/components/anexos/AnexosManager";
 import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
+import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import toast from "react-hot-toast";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
@@ -216,6 +217,10 @@ export default function LaudoNaoConformidadePage({
 
       <div className="px-4 pt-3">
         <AnexosManager modulo="nao_conformidade" idReferencia={id} />
+      </div>
+
+      <div className="px-4 pt-3 print:hidden">
+        <EmpresaInfoPanel empresa={empresa ?? null} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm" />
       </div>
 
       {/* Logo Chabra */}
