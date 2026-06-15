@@ -5,6 +5,7 @@ import { Plus, Search, Building2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
+import { useUnidades } from "@/lib/hooks/useUnidades";
 import EmpresaCard from "@/components/empresas/EmpresaCard";
 import EmpresaForm from "@/components/empresas/EmpresaForm";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -15,11 +16,13 @@ import type { Empresa } from "@/lib/supabase/types";
 
 export default function EmpresasPage() {
   const { data: empresas = [], isLoading, error } = useEmpresas();
+  const { data: unidades = [] } = useUnidades();
   const canEdit = useCanEdit();
   const canCreate = useCanCreate();
   const canDelete = useCanDelete();
   const qc = useQueryClient();
   const [busca, setBusca] = useState("");
+  const [filtroUnidade, setFiltroUnidade] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Empresa | null>(null);
   const [confirmDel, setConfirmDel] = useState<Empresa | null>(null);
@@ -45,15 +48,18 @@ export default function EmpresasPage() {
   });
 
   const filtradas = useMemo(() => {
-    if (!busca.trim()) return empresas;
-    const q = busca.toLowerCase();
-    return empresas.filter(
-      (e) =>
+    const q = busca.trim().toLowerCase();
+    return empresas.filter((e) => {
+      if (filtroUnidade === "__sem__" && e.id_unidade) return false;
+      if (filtroUnidade && filtroUnidade !== "__sem__" && e.id_unidade !== filtroUnidade) return false;
+      if (!q) return true;
+      return (
         e.nome_empresa.toLowerCase().includes(q) ||
         (e.cnpj ?? "").toLowerCase().includes(q) ||
         (e.razao_social ?? "").toLowerCase().includes(q)
-    );
-  }, [empresas, busca]);
+      );
+    });
+  }, [empresas, busca, filtroUnidade]);
 
   return (
     <div className="space-y-4">
@@ -68,6 +74,20 @@ export default function EmpresasPage() {
             className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm shadow-sm transition focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/20"
           />
         </div>
+        {unidades.length > 0 && (
+          <select
+            value={filtroUnidade}
+            onChange={(e) => setFiltroUnidade(e.target.value)}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm shadow-sm transition focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/20"
+            title="Filtrar por unidade"
+          >
+            <option value="">Todas as unidades</option>
+            {unidades.map((u) => (
+              <option key={u.id_unidade} value={u.id_unidade}>{u.nome}</option>
+            ))}
+            <option value="__sem__">Sem unidade</option>
+          </select>
+        )}
         {canCreate && (
           <button
             type="button"
