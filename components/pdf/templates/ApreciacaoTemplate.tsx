@@ -1,7 +1,10 @@
 import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
+import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/SecoesComuns";
+import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
+import { substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 import { TP_STYLE, renderEditaveis, temSecoesSistema, renderUnificado } from "./shared";
 import {
   CATEGORIAS_NR12_LABELS,
@@ -54,7 +57,7 @@ export interface ApreciacaoTemplateProps {
     recomendacoes: string | null;
   };
   maquinaNome: string;
-  empresa?: { nome_empresa: string; cnpj: string | null } | null;
+  empresa?: Partial<Empresa> | null;
   itens: ApreciacaoItemLocal[];
   acoes: ApreciacaoAcaoLocal[];
   capitulos: TextoPadraoCapitulo[];
@@ -252,6 +255,16 @@ export default function ApreciacaoTemplate({
     ? new Date(apreciacao.data_apreciacao + "T00:00").toLocaleDateString("pt-BR")
     : "—";
 
+  // Títulos para o sumário (exclui o próprio sumário), na ordem dos blocos.
+  const sumarioTitulos = [...capitulos]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
+    )
+    .filter((t) => t && t.trim());
+
   // Seções do sistema como nós nomeados (reutilizados nos dois modos).
   const checklistNode = <ChecklistSection itens={itens} />;
   const conclusaoNode = (apreciacao.conclusao_tecnica || apreciacao.recomendacoes) ? (
@@ -271,10 +284,12 @@ export default function ApreciacaoTemplate({
   // a folha de assinatura, sempre ao final).
   function renderSecaoApreciacao(slug: string): React.ReactNode {
     switch (slug) {
-      case "apreciacao_checklist": return checklistNode;
-      case "apreciacao_risco":     return conclusaoNode;
-      case "apreciacao_plano":     return planoNode;
-      default:                     return null;
+      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} />;
+      case "sumario":               return <SecaoSumario titulos={sumarioTitulos} />;
+      case "apreciacao_checklist":  return checklistNode;
+      case "apreciacao_risco":      return conclusaoNode;
+      case "apreciacao_plano":      return planoNode;
+      default:                      return null;
     }
   }
 
@@ -295,7 +310,8 @@ export default function ApreciacaoTemplate({
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: STYLE_BLOCK }} />
 
-      {/* Cabeçalho */}
+      {/* Cabeçalho enxuto — identificação completa da empresa fica na seção
+          "identificacao_empresa"; dados da máquina, em "apreciacao_identificacao". */}
       <div style={{ marginBottom: 16, borderBottom: `3px solid ${LARANJA}`, paddingBottom: 14 }}>
         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: LARANJA }}>
           Apreciação de Risco — NR-12
@@ -303,20 +319,14 @@ export default function ApreciacaoTemplate({
         <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 700, color: "#111827" }}>
           {apreciacao.titulo || `Apreciação ${maquinaNome}`}
         </h1>
+        <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", fontSize: 11, color: "#374151" }}>
+          <span><strong>Empresa:</strong> {empresa?.nome_empresa ?? "—"}</span>
+          <span><strong>Máquina:</strong> {maquinaNome}</span>
+          <span><strong>Setor / Local:</strong> {apreciacao.setor ?? "—"}</span>
+          <span><strong>Data:</strong> {dataAp}</span>
+        </div>
       </div>
 
-      {/* Dados gerais */}
-      <table className="dados">
-        <tbody>
-          <tr><td className="rot">Empresa</td><td>{empresa?.nome_empresa ?? "—"}</td><td className="rot">CNPJ</td><td>{empresa?.cnpj ?? "—"}</td></tr>
-          <tr><td className="rot">Máquina</td><td>{maquinaNome}</td><td className="rot">Setor</td><td>{apreciacao.setor ?? "—"}</td></tr>
-          <tr><td className="rot">Responsável técnico</td><td>{apreciacao.responsavel ?? "—"}</td><td className="rot">Responsável da empresa</td><td>{apreciacao.responsavel_empresa ?? "—"}</td></tr>
-          <tr><td className="rot">Cidade</td><td>{apreciacao.cidade ?? "—"}</td><td className="rot">Data da apreciação</td><td>{dataAp}</td></tr>
-          {apreciacao.risco_residual && (
-            <tr><td className="rot">Risco residual</td><td colSpan={3}>{apreciacao.risco_residual}</td></tr>
-          )}
-        </tbody>
-      </table>
       {apreciacao.observacoes_gerais && (
         <div className="campo" style={{ marginBottom: 8 }}>
           <p className="rot">Observações gerais</p>

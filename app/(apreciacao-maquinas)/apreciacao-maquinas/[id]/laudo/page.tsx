@@ -15,7 +15,7 @@ import { useMaquina } from "@/lib/hooks/useInventarioMaquinas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
-import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
+import { montarValoresEmpresa, formatarDataBR, substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 import { useApreciacaoMaquina } from "@/lib/hooks/useApreciacoesMaquinas";
 import ItemApreciacaoCard from "@/components/apreciacao-maquinas/ItemApreciacaoCard";
 import PlanoAcaoTable from "@/components/apreciacao-maquinas/PlanoAcaoTable";
@@ -178,12 +178,49 @@ export default function LaudoApreciacaoMaquinasPage({
     </section>
   );
 
+  // Títulos para o sumário (exclui o próprio sumário), na ordem dos blocos.
+  const sumarioTitulos = [...capitulosAp]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresTextosPadrao),
+    )
+    .filter((t) => t && t.trim());
+
+  const identificacaoEmpresaScreenNode = (
+    <div className="mb-6 break-inside-avoid">
+      <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+        Identificação da Empresa
+      </h2>
+      <EmpresaInfoPanel empresa={empresa ?? null} />
+    </div>
+  );
+
+  const sumarioScreenNode = (
+    <div className="mb-6 break-inside-avoid">
+      <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+        Sumário
+      </h2>
+      <ol className="space-y-1">
+        {sumarioTitulos.map((t, i) => (
+          <li key={i} className="flex items-baseline gap-2 border-b border-dotted border-gray-300 py-0.5 text-xs text-gray-700">
+            <span className="min-w-5 font-bold text-emerald-800">{i + 1}.</span>
+            <span>{t}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+
   function renderSecaoApScreen(slug: string): React.ReactNode {
     switch (slug) {
-      case "apreciacao_checklist": return checklistScreenNode;
-      case "apreciacao_risco":     return conclusaoScreenNode;
-      case "apreciacao_plano":     return planoScreenNode;
-      default:                     return null;
+      case "identificacao_empresa": return identificacaoEmpresaScreenNode;
+      case "sumario":               return sumarioScreenNode;
+      case "apreciacao_checklist":  return checklistScreenNode;
+      case "apreciacao_risco":      return conclusaoScreenNode;
+      case "apreciacao_plano":      return planoScreenNode;
+      default:                      return null;
     }
   }
 

@@ -165,7 +165,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           recomendacoes: (ap.recomendacoes as string) ?? null,
         },
         maquinaNome,
-        empresa: empresa ? { nome_empresa: empresa.nome_empresa, cnpj: empresa.cnpj } : null,
+        empresa,
         itens,
         acoes,
         capitulos,

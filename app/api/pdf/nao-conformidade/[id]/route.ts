@@ -124,7 +124,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           data_inspecao: (rel.data_inspecao as string) ?? null,
           observacoes_gerais: (rel.observacoes_gerais as string) ?? null,
         },
-        empresa: empresa ? { nome_empresa: empresa.nome_empresa, cnpj: empresa.cnpj } : null,
+        empresa,
         itens,
         capitulos,
         valores,

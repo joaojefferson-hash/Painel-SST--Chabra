@@ -100,7 +100,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           conclusao_rapida: (ana.conclusao_rapida as ConclusaoRapidaQuimico) ?? null,
           usuario_nome: (ana.usuario_nome as string) ?? null,
         },
-        empresa: empresa ? { nome_empresa: empresa.nome_empresa, cnpj: empresa.cnpj } : null,
+        empresa,
         capitulos,
         valores,
         signatarios,

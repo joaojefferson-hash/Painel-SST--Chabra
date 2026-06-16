@@ -1,7 +1,10 @@
 import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
+import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/SecoesComuns";
+import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
+import { substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 import { TP_STYLE, renderEditaveis, CabecalhoLaudo, temSecoesSistema, renderUnificado } from "./shared";
 
 export interface NaoConformidadeItemLocal {
@@ -29,7 +32,7 @@ export interface NaoConformidadeTemplateProps {
     data_inspecao: string | null;
     observacoes_gerais: string | null;
   };
-  empresa?: { nome_empresa: string; cnpj: string | null } | null;
+  empresa?: Partial<Empresa> | null;
   itens: NaoConformidadeItemLocal[];
   capitulos: TextoPadraoCapitulo[];
   valores: Record<string, string>;
@@ -164,9 +167,18 @@ export default function NaoConformidadeTemplate({
   dataHoraAssinatura,
   identificadorDocumento,
 }: NaoConformidadeTemplateProps) {
-  const nrLinha = relatorio.nr_codigo
-    ? `${relatorio.nr_codigo}${relatorio.nr_titulo ? ` — ${relatorio.nr_titulo}` : ""}`
-    : "—";
+  // Blocos ordenados (mesma regra usada por renderUnificado) p/ montar o sumário.
+  const blocos = [...capitulos]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+  // Títulos para o sumário (exclui o próprio sumário).
+  const sumarioTitulos = blocos
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
+    )
+    .filter((t) => t && t.trim());
 
   // Seção do sistema "Não Conformidades" (resumo + itens + observações gerais).
   const descricaoNode = (
@@ -184,8 +196,10 @@ export default function NaoConformidadeTemplate({
 
   function renderSecaoNC(slug: string): React.ReactNode {
     switch (slug) {
-      case "nc_descricao": return descricaoNode;
-      default:             return null; // nc_plano (ações ficam por item) / nc_assinatura (folha no fim)
+      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} />;
+      case "sumario":               return <SecaoSumario titulos={sumarioTitulos} />;
+      case "nc_descricao":          return descricaoNode;
+      default:                      return null; // nc_plano (ações ficam por item) / nc_assinatura (folha no fim)
     }
   }
 
@@ -210,12 +224,9 @@ export default function NaoConformidadeTemplate({
         titulo={relatorio.titulo}
         linhas={[
           ["Empresa", empresa?.nome_empresa ?? "—"],
-          ["CNPJ", empresa?.cnpj ?? "—"],
-          ["NR vinculada", nrLinha],
           ["Setor / Local", relatorio.setor ?? "—"],
-          ["Responsável técnico", relatorio.responsavel ?? "—"],
-          ["Responsável da empresa", relatorio.responsavel_empresa ?? "—"],
           ["Cidade", relatorio.cidade ?? "—"],
+          ["Data", valores.data_inspecao ?? "—"],
         ]}
       />
 

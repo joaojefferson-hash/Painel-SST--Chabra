@@ -14,7 +14,7 @@ import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
-import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
+import { montarValoresEmpresa, formatarDataBR, substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 import { useAnaliseQuimico } from "@/lib/hooks/useAnalisesQuimicos";
 import ConclusaoRapidaCard from "@/components/quimicos/ConclusaoRapidaCard";
 import RelatorioEstruturado from "@/components/quimicos/RelatorioEstruturado";
@@ -83,23 +83,76 @@ export default function LaudoAnaliseQuimicoPage({
     importado: formatarDataBR(analise.created_at),
   };
 
-  // Unificado: editáveis antes/depois do bloco "Análise Química" (quimicos_analise),
-  // conforme a ordem. Sem seções do sistema, mantém o layout legado (inicio/fim).
-  const temFixosQ = capitulosQ.some((c) => c.tipo === "fixo");
-  const ordemAnaliseQ = capitulosQ.find((c) => c.slug_fixo === "quimicos_analise")?.ordem ?? 2000;
-  const editaveisQ = [...capitulosQ]
-    .filter((c) => c.tipo !== "fixo" && c.ativo !== false)
+  // Corpo da análise (seção do sistema "quimicos_analise"): relatório técnico
+  // estruturado gerado automaticamente.
+  const analiseBodyScreenNode = (
+    <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border-0 print:shadow-none print:p-2">
+      <h2 className="mb-3 text-base font-bold text-verde-primary">Relatório Técnico Completo</h2>
+      <RelatorioEstruturado analise={analise} empresa={empresa ?? null} />
+    </section>
+  );
+
+  // Blocos ordenados (mesma regra do corpoScreen) p/ montar o sumário.
+  const blocosQ = [...capitulosQ]
+    .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
-  const antesScreenQ = temFixosQ
-    ? editaveisQ.filter((c) => (c.ordem ?? 0) < ordemAnaliseQ).map((c) => (
+  const sumarioTitulos = blocosQ
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresTextosPadrao),
+    )
+    .filter((t) => t && t.trim());
+
+  function renderSecaoQScreen(slug: string): React.ReactNode {
+    switch (slug) {
+      case "identificacao_empresa":
+        return (
+          <div className="mb-6 break-inside-avoid">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              Identificação da Empresa
+            </h2>
+            <EmpresaInfoPanel empresa={empresa ?? null} />
+          </div>
+        );
+      case "sumario":
+        return (
+          <div className="mb-6 break-inside-avoid">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              Sumário
+            </h2>
+            <ol className="space-y-1">
+              {sumarioTitulos.map((t, i) => (
+                <li key={i} className="flex items-baseline gap-2 border-b border-dotted border-gray-300 py-0.5 text-xs text-gray-700">
+                  <span className="min-w-5 font-bold text-emerald-800">{i + 1}.</span>
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        );
+      case "quimicos_analise":
+        return analiseBodyScreenNode;
+      default:
+        return null;
+    }
+  }
+
+  const temFixosQ = capitulosQ.some((c) => c.tipo === "fixo");
+  const corpoScreen = temFixosQ ? (
+    blocosQ.map((c) =>
+      c.tipo === "fixo" ? (
+        <React.Fragment key={c.id_capitulo}>{renderSecaoQScreen(c.slug_fixo ?? "")}</React.Fragment>
+      ) : (
         <TextosPadraoPrint key={c.id_capitulo} modulo="analise_quimicos" capituloId={c.id_capitulo} valores={valoresTextosPadrao} />
-      ))
-    : <TextosPadraoPrint modulo="analise_quimicos" valores={valoresTextosPadrao} posicao="inicio" />;
-  const depoisScreenQ = temFixosQ
-    ? editaveisQ.filter((c) => (c.ordem ?? 0) >= ordemAnaliseQ).map((c) => (
-        <TextosPadraoPrint key={c.id_capitulo} modulo="analise_quimicos" capituloId={c.id_capitulo} valores={valoresTextosPadrao} />
-      ))
-    : <TextosPadraoPrint modulo="analise_quimicos" valores={valoresTextosPadrao} posicao="fim" />;
+      ),
+    )
+  ) : (
+    <>
+      <TextosPadraoPrint modulo="analise_quimicos" valores={valoresTextosPadrao} posicao="inicio" />
+      {analiseBodyScreenNode}
+      <TextosPadraoPrint modulo="analise_quimicos" valores={valoresTextosPadrao} posicao="fim" />
+    </>
+  );
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
@@ -257,17 +310,8 @@ export default function LaudoAnaliseQuimicoPage({
         <ConclusaoRapidaCard conclusao={analise.conclusao_rapida} />
       </section>
 
-      {/* Editáveis antes do corpo (ordem unificada) */}
-      {antesScreenQ}
-
-      {/* Relatório técnico estruturado (bloco "Análise Química") */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border-0 print:shadow-none print:p-2">
-        <h2 className="mb-3 text-base font-bold text-verde-primary">Relatório Técnico Completo</h2>
-        <RelatorioEstruturado analise={analise} empresa={empresa ?? null} />
-      </section>
-
-      {/* Editáveis depois do corpo (ordem unificada) */}
-      {depoisScreenQ}
+      {/* Corpo do laudo — ordem unificada (sistema + editáveis) ou layout legado */}
+      {corpoScreen}
 
       {/* Assinatura */}
       <AssinaturaRelatorio

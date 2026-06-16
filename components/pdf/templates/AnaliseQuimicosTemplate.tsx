@@ -1,9 +1,12 @@
 import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
+import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/SecoesComuns";
+import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import type { ConclusaoRapidaQuimico, CondicoesUsoQuimico } from "@/lib/supabase/types";
-import { TP_STYLE, renderEditaveis, renderEditavelUm, temSecoesSistema } from "./shared";
+import { substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
+import { TP_STYLE, renderEditaveis, renderUnificado, temSecoesSistema } from "./shared";
 
 export interface AnaliseQuimicosTemplateProps {
   analise: {
@@ -19,7 +22,7 @@ export interface AnaliseQuimicosTemplateProps {
     conclusao_rapida: ConclusaoRapidaQuimico | null;
     usuario_nome: string | null;
   };
-  empresa?: { nome_empresa: string; cnpj: string | null } | null;
+  empresa?: Partial<Empresa> | null;
   capitulos: TextoPadraoCapitulo[];
   valores: Record<string, string>;
   signatarios: Signatario[];
@@ -155,43 +158,23 @@ export default function AnaliseQuimicosTemplate({
     { item: "Metodologia de medição", valor: c.metodologia },
   ].filter((l) => l.valor && l.valor.trim().length > 0);
 
-  // Modo unificado: o corpo da análise é um bloco único ("quimicos_analise").
-  // Os editáveis ficam antes/depois dele conforme a ordem definida no editor.
-  // Sem seções do sistema cadastradas, mantém o layout posicional legado.
-  const temFixos = temSecoesSistema(capitulos);
-  const ordemAnalise =
-    capitulos.find((c) => c.slug_fixo === "quimicos_analise")?.ordem ?? 2000;
-  const editaveisOrdenados = [...capitulos]
-    .filter((c) => c.tipo !== "fixo" && c.ativo !== false)
+  // Blocos ordenados (mesma regra de renderUnificado) p/ montar o sumário.
+  const blocos = [...capitulos]
+    .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
-  const antesNode = temFixos
-    ? editaveisOrdenados.filter((c) => (c.ordem ?? 0) < ordemAnalise).map((c) => renderEditavelUm(c, valores))
-    : renderEditaveis(capitulos, valores, "inicio");
-  const depoisNode = temFixos
-    ? editaveisOrdenados.filter((c) => (c.ordem ?? 0) >= ordemAnalise).map((c) => renderEditavelUm(c, valores))
-    : renderEditaveis(capitulos, valores, "fim");
 
-  return (
+  // Títulos para o sumário (exclui o próprio sumário).
+  const sumarioTitulos = blocos
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
+    )
+    .filter((t) => t && t.trim());
+
+  // Corpo da análise (seção do sistema "quimicos_analise"): o laudo técnico
+  // completo gerado automaticamente.
+  const analiseBodyNode = (
     <>
-      {/* eslint-disable-next-line react/no-danger */}
-      <style dangerouslySetInnerHTML={{ __html: STYLE_BLOCK }} />
-
-      {/* Cabeçalho */}
-      <div style={{ marginBottom: 20, borderBottom: `3px solid ${VERDE}`, paddingBottom: 14 }}>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#0284c7" }}>
-          Análise de Agente Químico
-        </p>
-        <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 700, color: "#111827" }}>{analise.titulo}</h1>
-        <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", fontSize: 11, color: "#374151" }}>
-          <span><strong>Empresa:</strong> {empresa?.nome_empresa ?? "—"}</span>
-          <span><strong>CNPJ:</strong> {empresa?.cnpj ?? "—"}</span>
-          <span><strong>Origem:</strong> {analise.modo === "PDF" ? `FISPQ: ${analise.fonte_arquivo ?? ""}` : "Entrada manual"}</span>
-          <span><strong>Responsável:</strong> {analise.usuario_nome ?? "—"}</span>
-        </div>
-      </div>
-
-      {antesNode}
-
       <Secao titulo="1. Identificação do Agente Químico">
         <DataGrid
           items={[
@@ -342,8 +325,47 @@ export default function AnaliseQuimicosTemplate({
           </table>
         </Secao>
       )}
+    </>
+  );
 
-      {depoisNode}
+  function renderSecaoQ(slug: string): React.ReactNode {
+    switch (slug) {
+      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} />;
+      case "sumario":               return <SecaoSumario titulos={sumarioTitulos} />;
+      case "quimicos_analise":      return analiseBodyNode;
+      default:                      return null;
+    }
+  }
+
+  const corpo = temSecoesSistema(capitulos)
+    ? renderUnificado(capitulos, valores, renderSecaoQ)
+    : (
+      <>
+        {renderEditaveis(capitulos, valores, "inicio")}
+        {analiseBodyNode}
+        {renderEditaveis(capitulos, valores, "fim")}
+      </>
+    );
+
+  return (
+    <>
+      {/* eslint-disable-next-line react/no-danger */}
+      <style dangerouslySetInnerHTML={{ __html: STYLE_BLOCK }} />
+
+      {/* Cabeçalho — enxuto; os dados da empresa vão no capítulo
+          "Identificação da Empresa". */}
+      <div style={{ marginBottom: 20, borderBottom: `3px solid ${VERDE}`, paddingBottom: 14 }}>
+        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#0284c7" }}>
+          Análise de Agente Químico
+        </p>
+        <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 700, color: "#111827" }}>{analise.titulo}</h1>
+        <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", fontSize: 11, color: "#374151" }}>
+          <span><strong>Empresa:</strong> {empresa?.nome_empresa ?? "—"}</span>
+          <span><strong>Origem:</strong> {analise.modo === "PDF" ? `FISPQ: ${analise.fonte_arquivo ?? ""}` : "Entrada manual"}</span>
+        </div>
+      </div>
+
+      {corpo}
 
       <FolhaAssinaturas
         signatarios={signatarios}

@@ -14,7 +14,7 @@ import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
-import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
+import { montarValoresEmpresa, formatarDataBR, substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 import { useRelatorioNaoConformidade } from "@/lib/hooks/useRelatoriosNaoConformidade";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -128,8 +128,49 @@ export default function LaudoNaoConformidadePage({
     </>
   );
 
+  // Blocos ordenados (mesma regra do corpoScreen) p/ montar o sumário.
+  const blocosNC = [...capitulosNC]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+  const sumarioTitulos = blocosNC
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresTextosPadrao),
+    )
+    .filter((t) => t && t.trim());
+
   function renderSecaoNCScreen(slug: string): React.ReactNode {
-    return slug === "nc_descricao" ? descricaoScreenNode : null;
+    switch (slug) {
+      case "identificacao_empresa":
+        return (
+          <div className="mb-6 break-inside-avoid">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              Identificação da Empresa
+            </h2>
+            <EmpresaInfoPanel empresa={empresa ?? null} />
+          </div>
+        );
+      case "sumario":
+        return (
+          <div className="mb-6 break-inside-avoid">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              Sumário
+            </h2>
+            <ol className="space-y-1">
+              {sumarioTitulos.map((t, i) => (
+                <li key={i} className="flex items-baseline gap-2 border-b border-dotted border-gray-300 py-0.5 text-xs text-gray-700">
+                  <span className="min-w-5 font-bold text-emerald-800">{i + 1}.</span>
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        );
+      case "nc_descricao":
+        return descricaoScreenNode;
+      default:
+        return null;
+    }
   }
 
   const temFixosNC = capitulosNC.some((c) => c.tipo === "fixo");
