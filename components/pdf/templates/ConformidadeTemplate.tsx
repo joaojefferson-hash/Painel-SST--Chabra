@@ -2,6 +2,7 @@ import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/SecoesComuns";
+import { classeQuebraFixo } from "@/components/pdf/templates/shared";
 import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import {
@@ -43,6 +44,8 @@ export interface ConformidadeTemplateProps {
 
 const STYLE_BLOCK = `
 * { box-sizing: border-box; }
+.textos-padrao-capitulo--nova-pagina { page-break-before: always; }
+.textos-padrao-capitulo--continua { page-break-before: auto; }
 .tp-cap { margin-bottom: 16pt; }
 .tp-cap h2 { font-size: 13pt; font-weight: 700; color: #0f766e; border-bottom: 2px solid #0f766e; padding-bottom: 3px; margin: 0 0 8pt; }
 .tp-cap .corpo { font-size: 11pt; color: #1f2937; line-height: 1.5; text-align: justify; }
@@ -178,7 +181,7 @@ export default function ConformidadeTemplate({
   function renderBloco(c: TextoPadraoCapitulo) {
     if (c.tipo === "fixo") {
       const s = secoes[c.slug_fixo ?? ""];
-      return s ? <div key={c.id_capitulo}>{s}</div> : null;
+      return s ? <div key={c.id_capitulo} className={classeQuebraFixo(c)}>{s}</div> : null;
     }
     return (
       <div key={c.id_capitulo} className="tp-cap">

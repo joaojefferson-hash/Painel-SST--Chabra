@@ -253,9 +253,15 @@ export default function RelatorioChabraPage({ params }: Props) {
     .filter((t) => t && t.trim());
   function renderBlocoSst(c: (typeof blocosSst)[number]): React.ReactNode {
     if (c.tipo === "fixo") {
+      const classeQuebra =
+        c.quebra_pagina === "continua"
+          ? "textos-padrao-capitulo--continua"
+          : c.quebra_pagina === "nova"
+            ? "textos-padrao-capitulo--nova-pagina"
+            : "";
       if (c.slug_fixo === "identificacao_empresa") {
         return (
-          <div key={c.id_capitulo} className="mb-6 break-inside-avoid">
+          <div key={c.id_capitulo} className={`mb-6 break-inside-avoid ${classeQuebra}`}>
             <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
               Identificação da Empresa
             </h2>
@@ -265,7 +271,7 @@ export default function RelatorioChabraPage({ params }: Props) {
       }
       if (c.slug_fixo === "sumario") {
         return (
-          <div key={c.id_capitulo} className="mb-6 break-inside-avoid">
+          <div key={c.id_capitulo} className={`mb-6 break-inside-avoid ${classeQuebra}`}>
             <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
               Sumário
             </h2>

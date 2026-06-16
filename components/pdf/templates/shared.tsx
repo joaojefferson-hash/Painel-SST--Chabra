@@ -31,7 +31,20 @@ export const TP_STYLE = `
 .tp-capa { position: relative; width: 100%; margin-bottom: 16pt; page-break-after: always; }
 .tp-capa img.bg { width: 100%; height: auto; display: block; border-radius: 4px; }
 .tp-capa .caixa { position: absolute; white-space: pre-wrap; line-height: 1.3; }
+.textos-padrao-capitulo--nova-pagina { page-break-before: always; }
+.textos-padrao-capitulo--continua { page-break-before: auto; }
 `;
+
+/**
+ * Classe de quebra de página para uma SEÇÃO DO SISTEMA (fixo), conforme o
+ * `quebra_pagina` marcado no editor. Retorna undefined quando NÃO marcado —
+ * preservando o fluxo atual (não muda laudos já existentes).
+ */
+export function classeQuebraFixo(c: TextoPadraoCapitulo): string | undefined {
+  if (c.quebra_pagina === "continua") return "textos-padrao-capitulo--continua";
+  if (c.quebra_pagina === "nova") return "textos-padrao-capitulo--nova-pagina";
+  return undefined;
+}
 
 /** Filtra/ordena os capítulos editáveis de uma posição (mesma regra do print). */
 export function editaveisPorPosicao(
@@ -116,7 +129,9 @@ export function renderUnificado(
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
     .map((c) =>
       c.tipo === "fixo" ? (
-        <React.Fragment key={c.id_capitulo}>{renderSecao(c.slug_fixo ?? "")}</React.Fragment>
+        <div key={c.id_capitulo} className={classeQuebraFixo(c)}>
+          {renderSecao(c.slug_fixo ?? "")}
+        </div>
       ) : (
         <React.Fragment key={c.id_capitulo}>{renderEditavelUm(c, valores)}</React.Fragment>
       ),

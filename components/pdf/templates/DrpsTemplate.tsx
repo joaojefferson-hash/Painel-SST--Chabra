@@ -5,7 +5,7 @@ import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/Secoes
 import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import { substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
-import { renderEditaveis, renderEditavelUm } from "./shared";
+import { renderEditaveis, renderEditavelUm, classeQuebraFixo } from "./shared";
 import {
   aplicarMatriz,
   calcularResumoCompleto,
@@ -67,6 +67,8 @@ const STYLE_BLOCK = `
 .drps-conc th { background: #d4edda; color: #1e4d28; font-weight: 700; }
 .drps-conc ul { margin: 0; padding-left: 1.1em; }
 .drps-conc li { margin: 1px 0; }
+.textos-padrao-capitulo--nova-pagina { page-break-before: always; }
+.textos-padrao-capitulo--continua { page-break-before: auto; }
 .tp-cap { margin-bottom: 16pt; }
 .tp-cap h2 { font-size: 13pt; font-weight: 700; color: #1e4d28; border-bottom: 2px solid #006B54; padding-bottom: 3px; margin: 0 0 8pt; }
 .tp-cap .corpo { font-size: 11pt; color: #1f2937; line-height: 1.5; text-align: justify; }
@@ -429,7 +431,7 @@ export default function DrpsTemplate({
       {temFixos ? (
         ordenados.map((c) =>
           c.tipo === "fixo" ? (
-            <React.Fragment key={c.id_capitulo}>{renderSecao(c.slug_fixo ?? "")}</React.Fragment>
+            <div key={c.id_capitulo} className={classeQuebraFixo(c)}>{renderSecao(c.slug_fixo ?? "")}</div>
           ) : (
             <React.Fragment key={c.id_capitulo}>{renderEditavelUm(c, valores)}</React.Fragment>
           ),

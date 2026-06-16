@@ -459,9 +459,10 @@ function FixoCard({
   descricao: string;
   onMover: (dir: "up" | "down") => void;
   onToggleMostrar: () => void;
-  onSalvar: (patch: { orientacao?: OrientacaoPagina }) => void;
+  onSalvar: (patch: { orientacao?: OrientacaoPagina; quebra_pagina?: QuebraPagina }) => void;
 }) {
   const orientacao = capitulo.orientacao ?? "retrato";
+  const quebra = capitulo.quebra_pagina ?? "nova";
 
   return (
     <div className={cn(
@@ -485,6 +486,32 @@ function FixoCard({
         </span>
 
         <p className="flex-1 text-sm font-semibold text-gray-800">{capitulo.titulo}</p>
+
+        {/* Início: Nova página / Continuação */}
+        <div className="inline-flex overflow-hidden rounded-md border border-blue-200 bg-white shrink-0">
+          <button type="button"
+            onClick={() => quebra !== "nova" && onSalvar({ quebra_pagina: "nova" })}
+            disabled={salvando}
+            title="Inicia em uma nova página"
+            className={cn(
+              "inline-flex items-center gap-1 px-2 py-1.5 text-[10px] font-semibold transition-colors disabled:opacity-50",
+              quebra === "nova" ? "bg-blue-600 text-white" : "bg-white text-gray-500 hover:bg-blue-50"
+            )}
+          >
+            <FilePlus2 className="size-3" /> Nova página
+          </button>
+          <button type="button"
+            onClick={() => quebra !== "continua" && onSalvar({ quebra_pagina: "continua" })}
+            disabled={salvando || indice === 0}
+            title={indice === 0 ? "O primeiro capítulo começa em nova página" : "Continua na página do capítulo anterior"}
+            className={cn(
+              "inline-flex items-center gap-1 px-2 py-1.5 text-[10px] font-semibold transition-colors disabled:opacity-50",
+              quebra === "continua" ? "bg-blue-600 text-white" : "bg-white text-gray-500 hover:bg-blue-50"
+            )}
+          >
+            <AlignLeft className="size-3" /> Continuação
+          </button>
+        </div>
 
         {/* Orientação */}
         <div className="inline-flex overflow-hidden rounded-md border border-blue-200 bg-white shrink-0">

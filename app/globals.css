@@ -213,6 +213,9 @@ select:focus {
   }
   .print-break { page-break-after: always; }
   .print-avoid-break { page-break-inside: avoid; }
+  /* Quebra de página de capítulos/seções (editáveis e do sistema) */
+  .textos-padrao-capitulo--nova-pagina { page-break-before: always; }
+  .textos-padrao-capitulo--continua { page-break-before: auto; }
 
   /* Bloco de assinaturas: nova página dedicada quando não há espaço suficiente */
   .assinatura-bloco-final {

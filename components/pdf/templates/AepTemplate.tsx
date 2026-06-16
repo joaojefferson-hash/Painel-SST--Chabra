@@ -11,6 +11,7 @@ import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/SecoesComuns";
+import { classeQuebraFixo } from "@/components/pdf/templates/shared";
 import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import {
@@ -805,32 +806,29 @@ export default function AepTemplate({
 
   function renderBloco(c: TextoPadraoCapitulo) {
     if (c.tipo === "fixo") {
+      let conteudoFixo: React.ReactNode = null;
       switch (c.slug_fixo) {
         case "identificacao_empresa":
-          return (
-            <div key={c.id_capitulo}>
-              <SecaoIdentificacaoEmpresa empresa={empresa} />
-            </div>
-          );
+          conteudoFixo = <SecaoIdentificacaoEmpresa empresa={empresa} />;
+          break;
         case "sumario":
-          return (
-            <div key={c.id_capitulo}>
-              <SecaoSumario titulos={sumarioTitulos} />
-            </div>
-          );
+          conteudoFixo = <SecaoSumario titulos={sumarioTitulos} />;
+          break;
         case "aep_escalonamento":
-          return secaoIndicadores ? (
-            <div key={c.id_capitulo}>{secaoIndicadores}</div>
-          ) : null;
+          conteudoFixo = secaoIndicadores;
+          break;
         case "aep_triagem":
-          return <div key={c.id_capitulo}>{secaoTriagem}</div>;
+          conteudoFixo = secaoTriagem;
+          break;
         case "aep_consideracoes":
-          return secaoConsideracoes ? (
-            <div key={c.id_capitulo}>{secaoConsideracoes}</div>
-          ) : null;
+          conteudoFixo = secaoConsideracoes;
+          break;
         default:
-          return null;
+          conteudoFixo = null;
       }
+      return conteudoFixo ? (
+        <div key={c.id_capitulo} className={classeQuebraFixo(c)}>{conteudoFixo}</div>
+      ) : null;
     }
     return renderEditavel(c);
   }
