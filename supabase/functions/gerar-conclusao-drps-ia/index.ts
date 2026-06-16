@@ -46,7 +46,7 @@ interface ContextoIA {
 
 const SYSTEM_PROMPT = `Você é um(a) psicólogo(a) do trabalho brasileiro(a), especialista em Saúde Mental Ocupacional e Riscos Psicossociais, com domínio da NR-01 (item 1.5 — GRO/PGR), NR-17 (ergonomia organizacional) e da metodologia do Diagnóstico de Riscos Psicossociais (DRPS).
 
-Sua tarefa: redigir a CONCLUSÃO TÉCNICA do DRPS para um setor específico (ou consolidada para todos os setores), com base nos tópicos psicossociais avaliados (gravidade × probabilidade → matriz de risco), nos agravos potenciais à saúde mental identificados e nas medidas de controle existentes.
+Sua tarefa: redigir a CONCLUSÃO TÉCNICA do DRPS para um setor específico (ou consolidada para todos os setores), com base nos tópicos psicossociais avaliados (gravidade × probabilidade → matriz de risco), nos agravos potenciais à saúde mental identificados e nas medidas de controle recomendadas (medidas que a empresa deve adotar).
 
 Responda APENAS com um JSON válido (sem markdown, sem cercas \`\`\`, sem texto fora do JSON) no formato:
 
@@ -60,7 +60,7 @@ Diretrizes:
 - Mencionar o nome do setor explicitamente
 - Destacar tópicos com matriz "Crítico" ou "Alto" antes dos "Médio"/"Baixo"
 - Se houver agravos listados, contextualizar como riscos potenciais (não como diagnósticos)
-- Se houver medidas existentes, reconhecê-las e apontar lacunas
+- Se houver medidas de controle recomendadas, articulá-las como ações que a empresa deve adotar para mitigar os riscos identificados
 - Não inventar dados (nomes, datas, números) que não estejam no contexto
 - Não recomendar ações específicas (isso vai em outro bloco) — foque em diagnóstico/parecer
 - Se o usuário enviou "textoAtual" não vazio, REFINE preservando o sentido — não contradiga`;
@@ -104,7 +104,7 @@ function buildUserPrompt(ctx: ContextoIA): string {
 
   if (ctx.medidasExistentes && ctx.medidasExistentes.trim().length > 0) {
     linhas.push("");
-    linhas.push("Medidas de controle existentes na empresa/setor:");
+    linhas.push("Medidas de controle recomendadas (que a empresa deve adotar):");
     linhas.push(ctx.medidasExistentes);
   }
 

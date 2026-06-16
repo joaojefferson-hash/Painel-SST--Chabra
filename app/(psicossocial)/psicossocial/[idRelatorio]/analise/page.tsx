@@ -1157,38 +1157,10 @@ function BlocoSetor({
           </tr>
           <tr>
             <td className="drps-label align-top">
-              Possíveis Agravos à Saúde Mental
+              Medidas de controle recomendadas (medidas que a empresa deve adotar)
               <div className="mt-1 text-[9px] font-normal italic text-gray-600">
-                Ex: tudo aquilo que pode acontecer com colaboradores se os
-                riscos psicossociais não forem identificados e controlados.
-              </div>
-            </td>
-            <td colSpan={3} className="align-top">
-              <div className="print:hidden">
-                <MultiSelectInline
-                  opcoes={AGRAVOS_OPCOES}
-                  selecionados={editor.agravosSel}
-                  extras={editor.agravosExtras}
-                  novoValor={editor.novoAgravo}
-                  onToggle={editor.toggleAgravo}
-                  onAdd={editor.adicionarAgravo}
-                  onRemoveExtra={editor.removerAgravoExtra}
-                  onNovoValor={editor.setNovoAgravo}
-                  placeholder="Adicionar outro agravo..."
-                  disabled={!canEdit}
-                />
-              </div>
-              <div className="hidden whitespace-pre-wrap print:block">
-                {drpsRel?.agravos_por_setor?.[relatorio.setor] ?? ""}
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td className="drps-label align-top">
-              Medidas de Controle Existentes
-              <div className="mt-1 text-[9px] font-normal italic text-gray-600">
-                Ex: ações que a empresa já realiza para controle dos riscos
-                psicossociais.
+                Ex: medidas que a empresa deve adotar para controlar os riscos
+                psicossociais identificados.
               </div>
             </td>
             <td colSpan={3} className="align-top">
@@ -1297,6 +1269,41 @@ function BlocoSetor({
         {relatorio.totalRespondentes} respondente(s) · {relatorio.topicos.length}{" "}
         tópico(s)
       </div>
+
+      <table className="drps-tabela mt-2">
+        <tbody>
+          <tr>
+            <td className="drps-header-section" colSpan={4}>
+              Possíveis Agravos à Saúde Mental
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={4} className="align-top">
+              <div className="mb-1 text-[9px] font-normal italic text-gray-600">
+                Ex: tudo aquilo que pode acontecer com colaboradores se os
+                riscos psicossociais não forem identificados e controlados.
+              </div>
+              <div className="print:hidden">
+                <MultiSelectInline
+                  opcoes={AGRAVOS_OPCOES}
+                  selecionados={editor.agravosSel}
+                  extras={editor.agravosExtras}
+                  novoValor={editor.novoAgravo}
+                  onToggle={editor.toggleAgravo}
+                  onAdd={editor.adicionarAgravo}
+                  onRemoveExtra={editor.removerAgravoExtra}
+                  onNovoValor={editor.setNovoAgravo}
+                  placeholder="Adicionar outro agravo..."
+                  disabled={!canEdit}
+                />
+              </div>
+              <div className="hidden whitespace-pre-wrap print:block">
+                {drpsRel?.agravos_por_setor?.[relatorio.setor] ?? ""}
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <table className="drps-tabela mt-2">
         <tbody>

@@ -172,11 +172,7 @@ function BlocoSetor({
           <tr><td className="drps-label">Funções</td><td colSpan={3}>{funcoes || "—"}</td></tr>
           <tr><td className="drps-label">Quantidade de Trabalhadores na Função</td><td colSpan={3}>{totalRespondentes}</td></tr>
           <tr>
-            <td className="drps-label">Possíveis Agravos à Saúde Mental</td>
-            <td colSpan={3} style={{ whiteSpace: "pre-wrap" }}>{rel.agravos_por_setor?.[setor] ?? ""}</td>
-          </tr>
-          <tr>
-            <td className="drps-label">Medidas de Controle Existentes</td>
+            <td className="drps-label">Medidas de controle recomendadas (medidas que a empresa deve adotar)</td>
             <td colSpan={3} style={{ whiteSpace: "pre-wrap" }}>{rel.medidas_por_setor?.[setor] ?? ""}</td>
           </tr>
           <tr><td className="drps-header-section" colSpan={4}>Classificação de Risco Psicossocial</td></tr>
@@ -212,6 +208,17 @@ function BlocoSetor({
       <div style={{ marginTop: 6, fontSize: "9px", color: "#6b7280" }}>
         {totalRespondentes} respondente(s) · {topicos.length} tópico(s)
       </div>
+
+      <table className="drps-tabela" style={{ marginTop: 8 }}>
+        <tbody>
+          <tr><td className="drps-header-section" colSpan={2}>Possíveis Agravos à Saúde Mental</td></tr>
+          <tr>
+            <td colSpan={2} style={{ whiteSpace: "pre-wrap" }}>
+              {rel.agravos_por_setor?.[setor] ?? ""}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <table className="drps-tabela" style={{ marginTop: 8 }}>
         <tbody>
