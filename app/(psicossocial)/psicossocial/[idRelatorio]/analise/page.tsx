@@ -1293,7 +1293,7 @@ function BlocoSetor({
                 psicossociais identificados.
               </div>
               <div className="print:hidden">
-                <MultiSelectInline
+                <ComboTagInline
                   opcoes={medidasOpcoes}
                   selecionados={editor.medidasSel}
                   extras={editor.medidasExtras}
@@ -1302,7 +1302,7 @@ function BlocoSetor({
                   onAdd={editor.adicionarMedida}
                   onRemoveExtra={editor.removerMedidaExtra}
                   onNovoValor={editor.setNovaMedida}
-                  placeholder="Adicionar outra medida..."
+                  placeholder="Buscar medida na lista ou digitar e adicionar..."
                   disabled={!canEdit}
                 />
               </div>
@@ -1373,157 +1373,11 @@ function BlocoSetor({
   );
 }
 
-function MultiSelectInline({
-  opcoes,
-  selecionados,
-  extras,
-  novoValor,
-  onToggle,
-  onAdd,
-  onRemoveExtra,
-  onNovoValor,
-  placeholder,
-  disabled = false,
-}: {
-  opcoes: string[];
-  selecionados: string[];
-  extras: string[];
-  novoValor: string;
-  onToggle: (item: string) => void;
-  onAdd: () => void;
-  onRemoveExtra: (i: number) => void;
-  onNovoValor: (v: string) => void;
-  placeholder: string;
-  disabled?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
-
-  const total = selecionados.length + extras.length;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        disabled={disabled}
-        className="flex w-full items-center justify-between rounded-md border border-gray-300 bg-white px-2 py-1.5 text-left text-[11px] hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-60"
-      >
-        <span className={total === 0 ? "text-gray-400" : "text-gray-700"}>
-          {total === 0
-            ? "Selecionar..."
-            : `${total} selecionado${total === 1 ? "" : "s"}`}
-        </span>
-        <ChevronDown
-          className={`size-3.5 text-gray-400 transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
-          <ul className="max-h-56 overflow-auto py-1">
-            {opcoes.map((opt) => {
-              const marcado = selecionados.includes(opt);
-              return (
-                <li key={opt}>
-                  <button
-                    type="button"
-                    onClick={() => onToggle(opt)}
-                    className={`flex w-full items-center gap-2 px-3 py-1 text-left text-[11px] hover:bg-verde-light ${
-                      marcado ? "bg-verde-light/60" : ""
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={marcado}
-                      readOnly
-                      className="rounded border-gray-300 text-verde-primary focus:ring-verde-primary/30"
-                    />
-                    <span className="text-gray-800">{opt}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
-      {(selecionados.length > 0 || extras.length > 0) && (
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          {selecionados.map((s) => (
-            <span
-              key={s}
-              className="inline-flex items-center gap-1 rounded-full bg-verde-light px-2 py-0.5 text-[10px] text-verde-primary"
-            >
-              {s}
-              <button
-                type="button"
-                onClick={() => onToggle(s)}
-                className="text-verde-primary/60 hover:text-red-600"
-              >
-                <X className="size-3" />
-              </button>
-            </span>
-          ))}
-          {extras.map((e, i) => (
-            <span
-              key={`extra-${i}`}
-              className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-800"
-            >
-              {e}
-              <button
-                type="button"
-                onClick={() => onRemoveExtra(i)}
-                className="text-amber-700/60 hover:text-red-600"
-              >
-                <X className="size-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-1.5 flex gap-1.5">
-        <input
-          type="text"
-          value={novoValor}
-          onChange={(e) => onNovoValor(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onAdd()}
-          disabled={disabled}
-          placeholder={placeholder}
-          className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-[11px] focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30 disabled:cursor-not-allowed disabled:bg-gray-50"
-        />
-        <button
-          type="button"
-          onClick={onAdd}
-          disabled={disabled || !novoValor.trim()}
-          className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Plus className="size-3" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 /**
  * Campo ÚNICO (combobox + tags): digita para filtrar/escolher da lista OU
  * adiciona manual quando o texto não existe — tudo no mesmo campo, com chips.
- * Usa o mesmo estado/dados do MultiSelectInline (selecionados + extras), então
- * não muda salvamento nem PDF.
+ * Usa o mesmo estado/dados (selecionados + extras), então não muda salvamento
+ * nem PDF.
  */
 function ComboTagInline({
   opcoes,
