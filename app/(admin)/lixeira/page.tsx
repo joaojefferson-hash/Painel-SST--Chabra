@@ -64,11 +64,11 @@ export default function LixeiraPage() {
           A lixeira está vazia.
         </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="reveal-up space-y-2">
           {registros.map((r) => (
             <li
               key={r.id}
-              className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
+              className="card-hover flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
             >
               <span className="inline-flex shrink-0 items-center rounded bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
                 {rotuloTabela(r.tabela)}

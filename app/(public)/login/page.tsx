@@ -178,7 +178,7 @@ function LoginInner() {
 
       <div className="relative w-full max-w-md">
         {/* Card principal */}
-        <div className="rounded-3xl bg-white px-8 py-10 shadow-[0_25px_60px_rgba(0,0,0,0.25)] ring-1 ring-black/5">
+        <div className="reveal-up rounded-3xl bg-white px-8 py-10 shadow-[0_25px_60px_rgba(0,0,0,0.25)] ring-1 ring-black/5">
 
           {/* Logo + título */}
           <div className="flex flex-col items-center text-center">
@@ -252,7 +252,7 @@ function LoginInner() {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white shadow-md transition active:scale-[0.98] disabled:opacity-60"
+              className="sheen flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white shadow-md transition active:scale-[0.98] disabled:opacity-60"
               style={{ background: "linear-gradient(135deg, #006B54 0%, #00835A 100%)" }}
             >
               {loading && <Loader2 className="size-4 animate-spin" />}

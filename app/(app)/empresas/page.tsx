@@ -145,7 +145,7 @@ export default function EmpresasPage() {
       )}
 
       {!isLoading && !error && filtradas.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="reveal-up grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtradas.map((empresa) => (
             <EmpresaCard
               key={empresa.id_empresa}

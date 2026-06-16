@@ -159,7 +159,7 @@ export default function NovaApreciacaoPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+        className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm reveal-up"
       >
         {/* 1 — Empresa */}
         <Campo label="Empresa *" htmlFor="empresa">

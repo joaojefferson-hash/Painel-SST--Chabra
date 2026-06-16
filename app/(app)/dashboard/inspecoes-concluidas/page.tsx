@@ -96,7 +96,7 @@ export default function InspecoesConcluidasDashboard() {
       </div>
 
       {/* Por mês */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+      <div className="reveal-up card-hover rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <TrendingUp className="size-4 text-verde-primary" />
@@ -137,7 +137,7 @@ export default function InspecoesConcluidasDashboard() {
       </div>
 
       {/* Por técnico */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+      <div className="reveal-up card-hover rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Users className="size-4 text-verde-primary" />

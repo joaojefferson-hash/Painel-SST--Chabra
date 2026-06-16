@@ -136,7 +136,7 @@ export default function UsuariosPage() {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+      <div className="reveal-up overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         {isLoading ? (
           <div className="p-4">
             <LoadingSkeleton rows={5} />

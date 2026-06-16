@@ -70,7 +70,7 @@ export default function NovoAetPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm reveal-up">
         {/* Empresa */}
         <div>
           <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500">

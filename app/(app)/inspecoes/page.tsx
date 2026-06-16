@@ -209,7 +209,7 @@ function InspecoesInner() {
       )}
 
       <div className={cn(
-        "overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm",
+        "reveal-up overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm",
         isFetching && "opacity-70 transition-opacity"
       )}>
         {!enabled ? (

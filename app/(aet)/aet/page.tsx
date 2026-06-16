@@ -104,7 +104,7 @@ export default function AetListPage() {
       </div>
 
       {/* Tabela documental */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm reveal-up card-hover">
         {isLoading ? (
           <div className="p-4">
             <LoadingSkeleton rows={5} />

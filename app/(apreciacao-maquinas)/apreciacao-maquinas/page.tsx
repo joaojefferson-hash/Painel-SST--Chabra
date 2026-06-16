@@ -158,7 +158,7 @@ export default function ApreciacaoMaquinasPage() {
             )}
           </div>
         ) : (
-          <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white shadow-sm reveal-up card-hover">
             {filtradas.map((a) => (
               <Link
                 key={a.id_apreciacao}
@@ -218,7 +218,7 @@ function Card({
     amber: "border-amber-200 bg-amber-50 text-amber-700",
   };
   return (
-    <div className="flex items-center gap-3 rounded-lg border bg-white p-4 shadow-sm">
+    <div className="flex items-center gap-3 rounded-lg border bg-white p-4 shadow-sm card-hover">
       <div
         className={`flex size-10 items-center justify-center rounded-md ${cores[cor]}`}
       >

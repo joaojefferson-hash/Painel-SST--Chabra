@@ -49,7 +49,7 @@ function RelatoriosInner() {
 
   return (
     <div className="space-y-6">
-      <header className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+      <header className="reveal-up rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <div className="flex items-start gap-3">
           <div className="flex size-11 items-center justify-center rounded-xl bg-verde-light text-verde-primary">
             <BarChart3 className="size-6" />
@@ -112,7 +112,7 @@ function RelatoriosInner() {
             </h2>
             <Link
               href={`/empresas/${empresaId}/relatorio`}
-              className="group flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:border-verde-primary/50 hover:-translate-y-0.5 hover:shadow-md"
+              className="group tilt-3d sheen flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:border-verde-primary/50 hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="flex size-12 items-center justify-center rounded-xl bg-blue-50 text-blue-700 transition-colors group-hover:bg-blue-100">
                 <Layers className="size-6" />

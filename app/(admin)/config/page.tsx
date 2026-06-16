@@ -87,7 +87,7 @@ export default function ConfigPage() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="reveal-up rounded-xl border border-gray-200 bg-white shadow-sm">
         <nav className="flex flex-wrap gap-1 border-b border-gray-200 p-2">
           {TABS.map((t) => {
             const Icon = t.icon;

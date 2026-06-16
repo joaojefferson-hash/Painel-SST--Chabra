@@ -92,7 +92,7 @@ export default function NovoNaoConformidadePage() {
         </p>
       </div>
 
-      <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm reveal-up">
         <div>
           <label className={lblCls}>Título do relatório *</label>
           <input
