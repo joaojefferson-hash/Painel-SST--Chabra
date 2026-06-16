@@ -204,12 +204,12 @@ export default function AssinaturaRelatorio({
                 </p>
               </div>
             ) : assinaturaPorImagem ? (
-              <div className="flex h-24 w-72 items-end justify-center pb-1">
+              <div className="flex h-32 w-72 items-end justify-center pb-1">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={assinaturaUrl!}
                   alt="Assinatura"
-                  className="max-h-20 max-w-[240px] object-contain"
+                  className="max-h-28 max-w-[280px] object-contain"
                 />
               </div>
             ) : assinaturaUrl || certificado ? (

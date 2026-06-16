@@ -1,0 +1,347 @@
+
+> painel-sst@0.3.206 electron:release
+> next build && npm run electron:compile && electron-builder --win --publish always
+
+   ▲ Next.js 15.5.15
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 33.3s
+   Linting and checking validity of types ...
+
+./app/(admin)/portal-sst/page.tsx
+72:9  Warning: 'user' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+270:10  Warning: 'mostrarForm' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+270:23  Warning: 'setMostrarForm' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/(admin)/usuarios/page.tsx
+404:3  Warning: Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps').
+
+./app/(aep)/aep/[idRelatorio]/setores/page.tsx
+212:7  Warning: Expected an assignment or function call and instead saw an expression.  @typescript-eslint/no-unused-expressions
+
+./app/(aet)/aet/13fatores-config/page.tsx
+107:7  Warning: Expected an assignment or function call and instead saw an expression.  @typescript-eslint/no-unused-expressions
+
+./app/(aet)/aet/[idRelatorio]/analise/page.tsx
+65:7  Warning: Expected an assignment or function call and instead saw an expression.  @typescript-eslint/no-unused-expressions
+
+./app/(aet)/aet/[idRelatorio]/dados/page.tsx
+199:6  Warning: React Hook useEffect has a missing dependency: 'rel'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/(aet)/aet/[idRelatorio]/laudo/page.tsx
+12:3  Warning: 'Printer' is defined but never used.  @typescript-eslint/no-unused-vars
+33:3  Warning: 'useAetTextoPadrao' is defined but never used.  @typescript-eslint/no-unused-vars
+52:8  Warning: 'RichTextEditor' is defined but never used.  @typescript-eslint/no-unused-vars
+62:3  Warning: 'AetTextoPadraoCapitulo' is defined but never used.  @typescript-eslint/no-unused-vars
+1227:3  Warning: 'semaforo' is defined but never used.  @typescript-eslint/no-unused-vars
+1718:13  Warning: '_semaforo' is defined but never used.  @typescript-eslint/no-unused-vars
+1720:18  Warning: '_zonaFromMedia' is defined but never used.  @typescript-eslint/no-unused-vars
+1883:3  Warning: 'registroProfissional' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(aet)/aet/[idRelatorio]/psicossocial/page.tsx
+345:7  Warning: Expected an assignment or function call and instead saw an expression.  @typescript-eslint/no-unused-expressions
+
+./app/(aet)/aet/[idRelatorio]/setores/page.tsx
+306:7  Warning: Expected an assignment or function call and instead saw an expression.  @typescript-eslint/no-unused-expressions
+
+./app/(aet)/layout.tsx
+13:3  Warning: 'Settings2' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(analise-quimicos)/analise-quimicos/base/page.tsx
+124:9  Warning: The 'itens' logical expression could make the dependencies of useMemo Hook (at line 144) change on every render. To fix this, wrap the initialization of 'itens' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./app/(app)/empresas/[id]/relatorio/page.tsx
+5:21  Warning: 'Printer' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(app)/inspecoes/[id]/ficha/page.tsx
+5:21  Warning: 'Printer' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(app)/inspecoes/[id]/pgr/page.tsx
+5:21  Warning: 'Printer' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(app)/inspecoes/[id]/relatorio/page.tsx
+9:3  Warning: 'Printer' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(apreciacao-maquinas)/apreciacao-maquinas/[id]/laudo/page.tsx
+42:9  Warning: The 'itens' logical expression could make the dependencies of useMemo Hook (at line 86) change on every render. To fix this, wrap the initialization of 'itens' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+42:9  Warning: The 'itens' logical expression could make the dependencies of useMemo Hook (at line 106) change on every render. To fix this, wrap the initialization of 'itens' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./app/(apreciacao-maquinas)/apreciacao-maquinas/[id]/page.tsx
+99:9  Warning: The 'itens' logical expression could make the dependencies of useMemo Hook (at line 180) change on every render. To fix this, wrap the initialization of 'itens' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+99:9  Warning: The 'itens' logical expression could make the dependencies of useMemo Hook (at line 189) change on every render. To fix this, wrap the initialization of 'itens' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+99:9  Warning: The 'itens' logical expression could make the dependencies of useMemo Hook (at line 297) change on every render. To fix this, wrap the initialization of 'itens' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+196:9  Warning: 'dirty' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/(conformidade)/relatorio-conformidade/[id]/laudo/page.tsx
+3:15  Warning: 'useMemo' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(conformidade)/relatorio-conformidade/[id]/page.tsx
+1139:10  Warning: 'BlocoAssinaturas' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(hub)/inicio/page.tsx
+225:10  Warning: 'diferencaTexto' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(nao-conformidade)/relatorio-nao-conformidade/[id]/page.tsx
+20:10  Warning: 'createSupabaseBrowserClient' is defined but never used.  @typescript-eslint/no-unused-vars
+1157:10  Warning: 'BlocoAssinaturas' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(psicossocial)/psicossocial/[idRelatorio]/gestao/page.tsx
+9:3  Warning: 'Printer' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(public)/login/page.tsx
+280:10  Warning: 'percent' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/(questionarios-psicossociais)/layout.tsx
+108:6  Warning: React Hook useMemo has a missing dependency: 'isAdmin'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/api/cert/validar/route.ts
+95:5  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+
+./app/api/pdf/token/route.ts
+6:28  Warning: '_req' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/empresas/EmpresaCard.tsx
+4:10  Warning: 'Building2' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/inspecoes/editor/tabs/MaquinasTab.tsx
+277:55  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+277:58  Warning: 'i' is defined but never used.  @typescript-eslint/no-unused-vars
+708:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+1060:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/inspecoes/editor/tabs/RiscosTab.tsx
+15:22  Warning: 'NivelRisco' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/inspecoes/editor/tabs/TreinamentosTab.tsx
+425:23  Warning: Expected an assignment or function call and instead saw an expression.  @typescript-eslint/no-unused-expressions
+
+./components/layout/ModuleTopbar.tsx
+59:40  Warning: 'title' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/layout/SidebarShell.tsx
+263:50  Warning: Expected an assignment or function call and instead saw an expression.  @typescript-eslint/no-unused-expressions
+
+./components/pdf/templates/AepTemplate.tsx
+813:8  Warning: Unused eslint-disable directive (no problems were reported from 'react/no-danger').
+
+./components/pdf/templates/AnaliseQuimicosTemplate.tsx
+176:8  Warning: Unused eslint-disable directive (no problems were reported from 'react/no-danger').
+
+./components/pdf/templates/ApreciacaoTemplate.tsx
+295:8  Warning: Unused eslint-disable directive (no problems were reported from 'react/no-danger').
+
+./components/pdf/templates/ConformidadeTemplate.tsx
+181:8  Warning: Unused eslint-disable directive (no problems were reported from 'react/no-danger').
+
+./components/pdf/templates/DrpsTemplate.tsx
+401:8  Warning: Unused eslint-disable directive (no problems were reported from 'react/no-danger').
+
+./components/pdf/templates/NaoConformidadeTemplate.tsx
+204:8  Warning: Unused eslint-disable directive (no problems were reported from 'react/no-danger').
+
+./components/ui/AssinaturaRelatorio.tsx
+94:27  Warning: '_n' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./lib/gerarHtmlParaPdf.ts
+244:3  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+
+./lib/hooks/useAet.ts
+843:41  Warning: '_id' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/hooks/useDrps.ts
+122:37  Warning: '_' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+ ⚠ Using edge runtime on a page currently disables static generation for that page
+   Generating static pages (0/90) ...
+   Generating static pages (22/90) 
+   Generating static pages (44/90) 
+   Generating static pages (67/90) 
+ ✓ Generating static pages (90/90)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                            Size  First Load JS
+┌ ○ /                                                 183 B         102 kB
+├ ○ /_not-found                                        1 kB         103 kB
+├ ○ /acoes                                          7.39 kB         213 kB
+├ ○ /aep                                            10.4 kB         208 kB
+├ ƒ /aep/[idRelatorio]                                183 B         102 kB
+├ ƒ /aep/[idRelatorio]/dados                        8.57 kB         206 kB
+├ ƒ /aep/[idRelatorio]/laudo                         9.8 kB         234 kB
+├ ƒ /aep/[idRelatorio]/setores                      11.8 kB         213 kB
+├ ○ /aep/ajuda                                        34 kB         136 kB
+├ ○ /aep/dashboard                                  8.67 kB         206 kB
+├ ○ /aep/novo                                       9.05 kB         207 kB
+├ ○ /aep/texto-padrao                               1.63 kB         365 kB
+├ ○ /aet                                            8.81 kB         220 kB
+├ ƒ /aet/[idRelatorio]                                183 B         102 kB
+├ ƒ /aet/[idRelatorio]/analise                      6.13 kB         357 kB
+├ ƒ /aet/[idRelatorio]/dados                        8.24 kB         359 kB
+├ ƒ /aet/[idRelatorio]/laudo                        18.1 kB         246 kB
+├ ƒ /aet/[idRelatorio]/psicossocial                 9.51 kB         217 kB
+├ ƒ /aet/[idRelatorio]/setores                      14.6 kB         366 kB
+├ ○ /aet/13fatores-config                           7.57 kB         215 kB
+├ ○ /aet/ajuda                                      22.9 kB         125 kB
+├ ○ /aet/dashboard                                  8.19 kB         219 kB
+├ ○ /aet/novo                                       7.63 kB         215 kB
+├ ○ /aet/owas-config                                7.94 kB         215 kB
+├ ○ /aet/perfis-owas                                7.07 kB         214 kB
+├ ○ /aet/texto-padrao                               1.63 kB         365 kB
+├ ○ /analise-quimicos                               5.25 kB         214 kB
+├ ƒ /analise-quimicos/[id]                          3.25 kB         244 kB
+├ ƒ /analise-quimicos/[id]/laudo                    4.13 kB         250 kB
+├ ○ /analise-quimicos/ajuda                         11.6 kB         114 kB
+├ ○ /analise-quimicos/base                          6.29 kB         220 kB
+├ ○ /analise-quimicos/historico                     5.13 kB         214 kB
+├ ○ /analise-quimicos/nova                          15.6 kB         237 kB
+├ ○ /analise-quimicos/texto-padrao                  1.64 kB         365 kB
+├ ƒ /api/cert/validar                                 183 B         102 kB
+├ ƒ /api/gerar-analise-setor-aet-ia                   183 B         102 kB
+├ ƒ /api/gerar-intro-capitulo-aet-ia                  183 B         102 kB
+├ ƒ /api/maquina/analisar-foto                        183 B         102 kB
+├ ƒ /api/pdf/aep/[id]                                 183 B         102 kB
+├ ƒ /api/pdf/analise-quimicos/[id]                    183 B         102 kB
+├ ƒ /api/pdf/apreciacao/[id]                          183 B         102 kB
+├ ƒ /api/pdf/conformidade/[id]                        183 B         102 kB
+├ ƒ /api/pdf/drps/[id]                                183 B         102 kB
+├ ƒ /api/pdf/nao-conformidade/[id]                    183 B         102 kB
+├ ƒ /api/pdf/token                                    183 B         102 kB
+├ ƒ /api/sign-image                                   183 B         102 kB
+├ ƒ /api/sign-pdf                                     183 B         102 kB
+├ ○ /apreciacao-maquinas                             6.4 kB         215 kB
+├ ƒ /apreciacao-maquinas/[id]                       12.2 kB         258 kB
+├ ƒ /apreciacao-maquinas/[id]/laudo                 4.64 kB         256 kB
+├ ○ /apreciacao-maquinas/ajuda                      12.3 kB         115 kB
+├ ○ /apreciacao-maquinas/nova                       7.54 kB         219 kB
+├ ○ /apreciacao-maquinas/relacao-maquinas           17.6 kB         218 kB
+├ ○ /apreciacao-maquinas/texto-padrao               1.65 kB         365 kB
+├ ○ /config                                         22.9 kB         388 kB
+├ ○ /dashboard                                      7.58 kB         317 kB
+├ ○ /dashboard/inspecoes-concluidas                  3.9 kB         308 kB
+├ ○ /empresas                                       6.95 kB         215 kB
+├ ƒ /empresas/[id]                                  5.06 kB         220 kB
+├ ƒ /empresas/[id]/relatorio                        9.58 kB         220 kB
+├ ƒ /icon                                             183 B         102 kB
+├ ○ /inicio                                         11.2 kB         213 kB
+├ ○ /inspecoes                                      6.69 kB         214 kB
+├ ƒ /inspecoes/[id]                                 55.5 kB         268 kB
+├ ƒ /inspecoes/[id]/ficha                           11.3 kB         218 kB
+├ ƒ /inspecoes/[id]/pgr                             9.65 kB         232 kB
+├ ƒ /inspecoes/[id]/relatorio                       14.4 kB         239 kB
+├ ○ /inspecoes/ficha                                6.89 kB         204 kB
+├ ○ /inspecoes/nova                                 8.96 kB         207 kB
+├ ○ /inventario-maquinas                             2.7 kB         212 kB
+├ ƒ /inventario-maquinas/[id]                       1.84 kB         219 kB
+├ ○ /inventario-maquinas/ajuda                        11 kB         113 kB
+├ ○ /inventario-maquinas/nova                         924 B         218 kB
+├ ○ /lixeira                                        6.25 kB         204 kB
+├ ○ /login                                          6.75 kB         187 kB
+├ ○ /pdfs-gerados                                    6.8 kB         204 kB
+├ ƒ /portal-cliente/documentos                      2.51 kB         211 kB
+├ ƒ /portal-cliente/inicio                          2.07 kB         211 kB
+├ ƒ /portal-cliente/nao-conformidades               2.94 kB         212 kB
+├ ƒ /portal-cliente/pendencias                      4.18 kB         213 kB
+├ ƒ /portal-cliente/perfil                          1.43 kB         210 kB
+├ ƒ /portal-cliente/plano-acao                      1.53 kB         210 kB
+├ ƒ /portal-cliente/solicitacoes                    4.67 kB         213 kB
+├ ○ /portal-sst                                     8.52 kB         206 kB
+├ ○ /produtividade                                  9.47 kB         440 kB
+├ ○ /produtividade/documentos                       6.54 kB         326 kB
+├ ○ /produtividade/projecoes                        10.8 kB         304 kB
+├ ○ /produtividade/projecoes-salvas                 6.36 kB         187 kB
+├ ○ /produtividade/registros                        5.23 kB         186 kB
+├ ○ /produtividade/unidades                         5.97 kB         186 kB
+├ ○ /psicossocial                                   7.49 kB         218 kB
+├ ƒ /psicossocial/[idRelatorio]/analise             13.7 kB         381 kB
+├ ƒ /psicossocial/[idRelatorio]/conclusao-geral     6.15 kB         356 kB
+├ ƒ /psicossocial/[idRelatorio]/dados               10.8 kB         216 kB
+├ ƒ /psicossocial/[idRelatorio]/dashboard           10.1 kB         330 kB
+├ ƒ /psicossocial/[idRelatorio]/escala              5.36 kB         211 kB
+├ ƒ /psicossocial/[idRelatorio]/gestao                12 kB         228 kB
+├ ƒ /psicossocial/[idRelatorio]/laudo               12.6 kB         249 kB
+├ ƒ /psicossocial/[idRelatorio]/medidas             9.29 kB         209 kB
+├ ƒ /psicossocial/[idRelatorio]/metadados           6.32 kB         206 kB
+├ ƒ /psicossocial/[idRelatorio]/monitoramento        6.3 kB         212 kB
+├ ƒ /psicossocial/[idRelatorio]/resumo              5.85 kB         211 kB
+├ ƒ /psicossocial/[idRelatorio]/revisao             10.1 kB         209 kB
+├ ○ /psicossocial/ajuda                               183 B         102 kB
+├ ○ /psicossocial/criterios                           183 B         102 kB
+├ ○ /psicossocial/dashboard-geral                   4.92 kB         208 kB
+├ ○ /psicossocial/metodologia                       6.55 kB         109 kB
+├ ○ /psicossocial/novo                              8.01 kB         207 kB
+├ ○ /psicossocial/texto-padrao                      1.67 kB         365 kB
+├ ○ /questionarios-psicossociais                     4.1 kB         208 kB
+├ ƒ /questionarios-psicossociais/[id]               5.33 kB         209 kB
+├ ƒ /questionarios-psicossociais/[id]/planos        5.23 kB         209 kB
+├ ƒ /questionarios-psicossociais/[id]/respondentes  7.55 kB         354 kB
+├ ƒ /questionarios-psicossociais/[id]/resultados    5.18 kB         209 kB
+├ ○ /questionarios-psicossociais/ajuda              12.1 kB         114 kB
+├ ○ /questionarios-psicossociais/como-funciona      8.47 kB         128 kB
+├ ○ /questionarios-psicossociais/nova               2.99 kB         190 kB
+├ ○ /questionarios-psicossociais/tipos               104 kB         447 kB
+├ ○ /relatorio-conformidade                         7.12 kB         213 kB
+├ ƒ /relatorio-conformidade/[id]                    12.8 kB         244 kB
+├ ƒ /relatorio-conformidade/[id]/laudo              7.46 kB         245 kB
+├ ○ /relatorio-conformidade/ajuda                   8.09 kB         110 kB
+├ ○ /relatorio-conformidade/historico               6.97 kB         213 kB
+├ ○ /relatorio-conformidade/novo                    9.33 kB         215 kB
+├ ○ /relatorio-conformidade/texto-padrao            1.64 kB         365 kB
+├ ○ /relatorio-nao-conformidade                     7.31 kB         213 kB
+├ ƒ /relatorio-nao-conformidade/[id]                12.2 kB         244 kB
+├ ƒ /relatorio-nao-conformidade/[id]/laudo          7.46 kB         245 kB
+├ ○ /relatorio-nao-conformidade/ajuda               9.27 kB         111 kB
+├ ○ /relatorio-nao-conformidade/historico            6.9 kB         213 kB
+├ ○ /relatorio-nao-conformidade/novo                9.28 kB         215 kB
+├ ○ /relatorio-nao-conformidade/texto-padrao        1.64 kB         365 kB
+├ ○ /relatorios                                     8.56 kB         210 kB
+├ ○ /sinalizacao-psicossocial                       9.05 kB         207 kB
+├ ○ /texto-padrao                                   1.63 kB         365 kB
+└ ○ /usuarios                                       11.1 kB         215 kB
++ First Load JS shared by all                        102 kB
+  ├ chunks/1255-55f5611cfd370a3f.js                 45.7 kB
+  ├ chunks/4bd1b696-100b9d70ed4e49c1.js             54.2 kB
+  └ other shared chunks (total)                     2.28 kB
+
+
+ƒ Middleware                                        89.8 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> painel-sst@0.3.206 electron:compile
+> tsc -p electron/tsconfig.json
+
+  • electron-builder  version=25.1.8 os=10.0.26200
+  • loaded configuration  file=C:\Users\PC\painel-sst\electron-builder.yml
+  • description is missed in the package.json  appPackageFile=C:\Users\PC\painel-sst\package.json
+  • author is missed in the package.json  appPackageFile=C:\Users\PC\painel-sst\package.json
+  • @electron/rebuild already used by electron-builder, please consider to remove excess dependency from devDependencies
+
+To ensure your native dependencies are always matched electron version, simply add script `"postinstall": "electron-builder install-app-deps" to your `package.json`
+  • executing @electron/rebuild  electronVersion=33.4.11 arch=x64 buildFromSource=false appDir=./
+  • installing native dependencies  arch=x64
+  • preparing       moduleName=better-sqlite3 arch=x64
+  • finished        moduleName=better-sqlite3 arch=x64
+  • completed installing native dependencies
+  • packaging       platform=win32 arch=x64 electron=33.4.11 appOutDir=dist\win-unpacked
+  • updating asar integrity executable resource  executablePath=dist\win-unpacked\Painel SST.exe
+  • signing with signtool.exe  path=dist\win-unpacked\Painel SST.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • building        target=nsis file=dist\Painel SST Setup 0.3.206.exe archs=x64 oneClick=false perMachine=false
+  • signing with signtool.exe  path=dist\win-unpacked\resources\elevate.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\__uninstaller-nsis-painel-sst.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\Painel SST Setup 0.3.206.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • building block map  blockMapFile=dist\Painel SST Setup 0.3.206.exe.blockmap
+  • publishing      publisher=Github (owner: joaojefferson-hash, project: Painel-SST--Chabra, version: 0.3.206)
+  • uploading       file=Painel-SST-Setup-0.3.206.exe.blockmap provider=github
+  • uploading       file=Painel-SST-Setup-0.3.206.exe provider=github
+  • overwrite published file  file=Painel-SST-Setup-0.3.206.exe.blockmap reason=already exists on GitHub
+  • overwrite published file  file=Painel-SST-Setup-0.3.206.exe reason=already exists on GitHub
+  • overwrite published file  file=latest.yml reason=already exists on GitHub

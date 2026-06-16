@@ -249,7 +249,7 @@ function CampoAssinaturaImagem({
       {/* Imagem da assinatura sobre a linha */}
       <div
         style={{
-          minHeight: 72,
+          minHeight: 110,
           width: "100%",
           display: "flex",
           alignItems: "flex-end",
@@ -261,7 +261,7 @@ function CampoAssinaturaImagem({
         <img
           src={signatario.assinaturaImagemUrl}
           alt="Assinatura"
-          style={{ maxHeight: 70, maxWidth: 240, objectFit: "contain" }}
+          style={{ maxHeight: 108, maxWidth: 300, objectFit: "contain" }}
         />
       </div>
 
