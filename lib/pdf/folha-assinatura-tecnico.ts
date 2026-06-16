@@ -69,7 +69,7 @@ export async function montarSignatarioTecnico(
     // Documento assinado → busca o assinante real.
     const { data: rawSigner } = await supabase
       .from("usuarios")
-      .select("nome, cargo, cpf, assinatura_url")
+      .select("nome, cargo, cpf, assinatura_url, registro_mte, crp")
       .eq("email", assinado.assinado_por)
       .single();
     const signer = rawSigner as
@@ -78,14 +78,23 @@ export async function montarSignatarioTecnico(
           cargo: string | null;
           cpf: string | null;
           assinatura_url: string | null;
+          registro_mte: string | null;
+          crp: string | null;
         }
       | null;
     const porImagem = assinado.tipo_assinatura === "imagem";
+    // Registro profissional do assinante (Reg. MTE para técnicos, CRP para
+    // psicólogos). Usado principalmente na assinatura por imagem.
+    const registroSigner = signer?.registro_mte
+      ? `Reg. MTE ${signer.registro_mte}`
+      : signer?.crp
+        ? `CRP ${signer.crp}`
+        : null;
     return {
       signatario: {
         nomeCompleto: signer?.nome ?? assinado.assinado_por,
         cargo: opts.cargo ?? signer?.cargo ?? null,
-        registroProfissional: opts.registroProfissional ?? null,
+        registroProfissional: opts.registroProfissional ?? registroSigner,
         cpf: signer?.cpf ?? null,
         funcaoNoDocumento: funcao,
         assinadoDigitalmente: true,

@@ -62,6 +62,8 @@ export default function AssinaturaRelatorio({
     mostrar_assinatura_imagem?: boolean;
     cargo?: string | null;
     email?: string | null;
+    registro_mte?: string | null;
+    crp?: string | null;
   } | null>(null);
 
   const { pdfAssinado, recarregar } = usePdfAssinado(tabelaNome, docId);
@@ -73,7 +75,7 @@ export default function AssinaturaRelatorio({
       if (!user?.email) return;
       supabase
         .from("usuarios")
-        .select("assinatura_url, tipo_certificado, mostrar_assinatura_imagem, cargo, email")
+        .select("assinatura_url, tipo_certificado, mostrar_assinatura_imagem, cargo, email, registro_mte, crp")
         .eq("email", user.email)
         .single()
         .then(({ data }) => setSigData(data ?? null));
@@ -81,12 +83,12 @@ export default function AssinaturaRelatorio({
       const firstWord = (nomeResponsavel ?? "").trim().split(/\s+/)[0];
       supabase
         .from("usuarios")
-        .select("assinatura_url, tipo_certificado, mostrar_assinatura_imagem, cargo, nome, email")
+        .select("assinatura_url, tipo_certificado, mostrar_assinatura_imagem, cargo, nome, email, registro_mte, crp")
         .ilike("nome", `%${firstWord}%`)
         .limit(20)
         .then(({ data }) => {
           if (!data?.length) { setSigData(null); return; }
-          type Row = { nome: string; email: string; assinatura_url: string | null; tipo_certificado: "A1" | "A3" | null; mostrar_assinatura_imagem: boolean; cargo: string | null };
+          type Row = { nome: string; email: string; assinatura_url: string | null; tipo_certificado: "A1" | "A3" | null; mostrar_assinatura_imagem: boolean; cargo: string | null; registro_mte: string | null; crp: string | null };
           const match = (data as Row[]).find((u) => nameMatches(u.nome, nomeResponsavel!));
           if (match) {
             const { nome: _n, ...rest } = match;
@@ -122,6 +124,17 @@ export default function AssinaturaRelatorio({
   const assinaturaUrl = mostrarImagem ? (sigData?.assinatura_url ?? null) : null;
   const certificado = sigData?.tipo_certificado ?? null;
   const assinaturaEmpresaUrl = configs?.assinatura_empresa_url ?? null;
+
+  // Registro profissional (Reg. MTE para técnicos, CRP para psicólogos).
+  const registro = sigData?.registro_mte
+    ? `Reg. MTE ${sigData.registro_mte}`
+    : sigData?.crp
+      ? `CRP ${sigData.crp}`
+      : null;
+  // Assinatura por IMAGEM (carimbo da imagem cadastrada) → mostra só a imagem,
+  // sem o quadro "Assinado digitalmente".
+  const assinaturaPorImagem =
+    !!pdfAssinado && pdfAssinado.tipo_assinatura === "imagem" && !!assinaturaUrl;
 
   const hoje = new Date();
   const dataFormatada =
@@ -190,6 +203,15 @@ export default function AssinaturaRelatorio({
                   Assinatura do responsável técnico
                 </p>
               </div>
+            ) : assinaturaPorImagem ? (
+              <div className="flex h-24 w-72 items-end justify-center pb-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={assinaturaUrl!}
+                  alt="Assinatura"
+                  className="max-h-20 max-w-[240px] object-contain"
+                />
+              </div>
             ) : assinaturaUrl || certificado ? (
               <div className="w-72 overflow-hidden rounded border border-blue-300 bg-white shadow-sm">
                 <div className="flex items-center gap-1.5 bg-blue-600 px-3 py-1.5">
@@ -231,6 +253,7 @@ export default function AssinaturaRelatorio({
             )}
             <p className="mt-1 text-xs font-semibold text-gray-700">{nome}</p>
             {cargo && <p className="text-[11px] text-gray-400">{cargo}</p>}
+            {registro && <p className="text-[11px] text-gray-400">{registro}</p>}
           </div>
 
           {/* ── Assinatura da empresa ── */}

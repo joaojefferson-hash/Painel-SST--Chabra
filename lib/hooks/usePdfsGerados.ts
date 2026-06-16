@@ -105,6 +105,7 @@ export interface PdfAssinado {
   pdf_path: string;
   assinado_em: string;
   assinado_por: string;
+  tipo_assinatura?: string | null;
 }
 
 /** Carrega e mantém atualizado o registro do PDF assinado para um documento. */
@@ -119,7 +120,7 @@ export function usePdfAssinado(tabelaNome?: string, docId?: string) {
     queryFn: async () => {
       const { data } = await createSupabaseBrowserClient()
         .from("pdfs_assinados")
-        .select("pdf_path, assinado_em, assinado_por")
+        .select("pdf_path, assinado_em, assinado_por, tipo_assinatura")
         .eq("tabela", tabelaNome!)
         .eq("doc_id", docId!)
         .single();

@@ -233,93 +233,66 @@ function CarimboSignatario({
 
 function CampoAssinaturaImagem({
   signatario,
-  dataHora,
 }: {
   signatario: Signatario;
-  dataHora: string;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 4,
+        fontFamily: "Arial, Helvetica, sans-serif",
+      }}
+    >
+      {/* Imagem da assinatura sobre a linha */}
       <div
         style={{
-          border: `1.5px solid ${VERDE}`,
-          borderRadius: 6,
-          overflow: "hidden",
-          fontSize: 11,
-          fontFamily: "Arial, Helvetica, sans-serif",
+          minHeight: 72,
+          width: "100%",
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "center",
+          paddingBottom: 2,
         }}
       >
-        {/* Faixa superior */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={signatario.assinaturaImagemUrl}
+          alt="Assinatura"
+          style={{ maxHeight: 70, maxWidth: 240, objectFit: "contain" }}
+        />
+      </div>
+
+      {/* Linha + identificação */}
+      <div
+        style={{
+          width: "100%",
+          borderTop: "1px solid #9CA3AF",
+          paddingTop: 6,
+          textAlign: "center",
+          lineHeight: 1.4,
+        }}
+      >
         <div
           style={{
-            backgroundColor: VERDE,
-            color: "white",
-            padding: "4px 8px",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: "0.03em",
+            fontWeight: 700,
+            fontSize: 11,
+            color: CINZA_TEXTO,
+            textTransform: "uppercase",
           }}
         >
-          <IconeVerificacao />
-          ASSINADO ELETRONICAMENTE
+          {signatario.nomeCompleto}
         </div>
-
-        {/* Corpo: imagem da assinatura + dados */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 10,
-            padding: "8px 10px",
-            backgroundColor: "white",
-          }}
-        >
-          <div
-            style={{
-              width: 96,
-              minHeight: 56,
-              flexShrink: 0,
-              backgroundColor: VERDE_CLARO,
-              borderRadius: 4,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 4,
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={signatario.assinaturaImagemUrl}
-              alt="Assinatura"
-              style={{ maxHeight: 52, maxWidth: 84, objectFit: "contain" }}
-            />
+        {signatario.cargo && (
+          <div style={{ fontSize: 10, color: CINZA_LEVE }}>{signatario.cargo}</div>
+        )}
+        {signatario.registroProfissional && (
+          <div style={{ fontSize: 10, color: CINZA_LEVE }}>
+            {signatario.registroProfissional}
           </div>
-
-          <div style={{ flex: 1, lineHeight: 1.5 }}>
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: 11,
-                textTransform: "uppercase",
-                letterSpacing: "0.04em",
-                color: CINZA_TEXTO,
-              }}
-            >
-              {signatario.nomeCompleto}
-            </div>
-            {(signatario.cargo || signatario.registroProfissional) && (
-              <div style={{ color: CINZA_TEXTO, fontSize: 10 }}>
-                {[signatario.cargo, signatario.registroProfissional]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </div>
-            )}
-            <div style={{ color: CINZA_TEXTO, fontSize: 10 }}>{dataHora}</div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -480,11 +453,7 @@ export default function FolhaAssinaturas({
       >
         {signatarios.map((s, i) =>
           s.assinaturaImagemUrl ? (
-            <CampoAssinaturaImagem
-              key={i}
-              signatario={s}
-              dataHora={dataHoraAssinatura}
-            />
+            <CampoAssinaturaImagem key={i} signatario={s} />
           ) : s.assinadoDigitalmente === false ? (
             <CampoManualSignatario key={i} signatario={s} />
           ) : (
