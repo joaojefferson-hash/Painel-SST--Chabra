@@ -267,7 +267,9 @@ export default function AnalisePage({
     return editores[s] ?? editorVazio;
   }
   function patchEditor(s: string, patch: Partial<SetorEditor>) {
-    setEditores((prev) => ({ ...prev, [s]: { ...getEditor(s), ...patch } }));
+    // Lê de `prev` (não da closure) para que múltiplos patches no mesmo clique
+    // (ex: selecionar item + limpar o campo) componham sem se sobrescrever.
+    setEditores((prev) => ({ ...prev, [s]: { ...(prev[s] ?? editorVazio), ...patch } }));
     setDirty(true);
   }
   function toggleAgravo(s: string, item: string) {
