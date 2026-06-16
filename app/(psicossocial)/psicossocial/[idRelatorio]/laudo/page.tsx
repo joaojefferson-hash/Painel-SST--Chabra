@@ -185,7 +185,7 @@ export default function PsicossocialLaudoPage({
 
   // Títulos para o sumário em lista (exclui o próprio sumário), na ordem do laudo.
   const sumarioTitulos = ordenados
-    .filter((c) => c.slug_fixo !== "sumario")
+    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresVars),
     )

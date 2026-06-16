@@ -393,7 +393,7 @@ export default function DrpsTemplate({
 
   // Títulos para o sumário (exclui o próprio sumário).
   const sumarioTitulos = blocosOrdenados
-    .filter((c) => c.slug_fixo !== "sumario")
+    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
     )

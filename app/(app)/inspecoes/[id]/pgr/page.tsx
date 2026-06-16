@@ -138,7 +138,7 @@ export default function PgrPage({ params }: Props) {
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
   // Títulos do sumário (na ordem; exclui o próprio sumário).
   const sumarioTitulosSst = blocosSst
-    .filter((c) => c.slug_fixo !== "sumario")
+    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresSst),
     )

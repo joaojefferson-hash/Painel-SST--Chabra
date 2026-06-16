@@ -259,7 +259,7 @@ export default function ApreciacaoTemplate({
   const sumarioTitulos = [...capitulos]
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
-    .filter((c) => c.slug_fixo !== "sumario")
+    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
     )
