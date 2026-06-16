@@ -1156,34 +1156,6 @@ function BlocoSetor({
             <td colSpan={3}>{relatorio.totalRespondentes}</td>
           </tr>
           <tr>
-            <td className="drps-label align-top">
-              Medidas de controle recomendadas (medidas que a empresa deve adotar)
-              <div className="mt-1 text-[9px] font-normal italic text-gray-600">
-                Ex: medidas que a empresa deve adotar para controlar os riscos
-                psicossociais identificados.
-              </div>
-            </td>
-            <td colSpan={3} className="align-top">
-              <div className="print:hidden">
-                <MultiSelectInline
-                  opcoes={MEDIDAS_EXISTENTES_OPCOES}
-                  selecionados={editor.medidasSel}
-                  extras={editor.medidasExtras}
-                  novoValor={editor.novaMedida}
-                  onToggle={editor.toggleMedida}
-                  onAdd={editor.adicionarMedida}
-                  onRemoveExtra={editor.removerMedidaExtra}
-                  onNovoValor={editor.setNovaMedida}
-                  placeholder="Adicionar outra medida..."
-                  disabled={!canEdit}
-                />
-              </div>
-              <div className="hidden whitespace-pre-wrap print:block">
-                {drpsRel?.medidas_por_setor?.[relatorio.setor] ?? ""}
-              </div>
-            </td>
-          </tr>
-          <tr>
             <td className="drps-header-section" colSpan={4}>
               Classificação de Risco Psicossocial
             </td>
@@ -1299,6 +1271,36 @@ function BlocoSetor({
               </div>
               <div className="hidden whitespace-pre-wrap print:block">
                 {drpsRel?.agravos_por_setor?.[relatorio.setor] ?? ""}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td className="drps-header-section" colSpan={4}>
+              Medidas de controle recomendadas (medidas que a empresa deve adotar)
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={4} className="align-top">
+              <div className="mb-1 text-[9px] font-normal italic text-gray-600">
+                Ex: medidas que a empresa deve adotar para controlar os riscos
+                psicossociais identificados.
+              </div>
+              <div className="print:hidden">
+                <MultiSelectInline
+                  opcoes={MEDIDAS_EXISTENTES_OPCOES}
+                  selecionados={editor.medidasSel}
+                  extras={editor.medidasExtras}
+                  novoValor={editor.novaMedida}
+                  onToggle={editor.toggleMedida}
+                  onAdd={editor.adicionarMedida}
+                  onRemoveExtra={editor.removerMedidaExtra}
+                  onNovoValor={editor.setNovaMedida}
+                  placeholder="Adicionar outra medida..."
+                  disabled={!canEdit}
+                />
+              </div>
+              <div className="hidden whitespace-pre-wrap print:block">
+                {drpsRel?.medidas_por_setor?.[relatorio.setor] ?? ""}
               </div>
             </td>
           </tr>

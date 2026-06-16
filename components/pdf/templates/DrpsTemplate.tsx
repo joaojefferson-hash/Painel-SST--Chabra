@@ -167,10 +167,6 @@ function BlocoSetor({
           <tr><td className="drps-label">Setor</td><td colSpan={3}>{setor}</td></tr>
           <tr><td className="drps-label">Funções</td><td colSpan={3}>{funcoes || "—"}</td></tr>
           <tr><td className="drps-label">Quantidade de Trabalhadores na Função</td><td colSpan={3}>{totalRespondentes}</td></tr>
-          <tr>
-            <td className="drps-label">Medidas de controle recomendadas (medidas que a empresa deve adotar)</td>
-            <td colSpan={3} style={{ whiteSpace: "pre-wrap" }}>{rel.medidas_por_setor?.[setor] ?? ""}</td>
-          </tr>
           <tr><td className="drps-header-section" colSpan={4}>Classificação de Risco Psicossocial</td></tr>
         </tbody>
       </table>
@@ -211,6 +207,12 @@ function BlocoSetor({
           <tr>
             <td colSpan={2} style={{ whiteSpace: "pre-wrap" }}>
               {rel.agravos_por_setor?.[setor] ?? ""}
+            </td>
+          </tr>
+          <tr><td className="drps-header-section" colSpan={2}>Medidas de controle recomendadas (medidas que a empresa deve adotar)</td></tr>
+          <tr>
+            <td colSpan={2} style={{ whiteSpace: "pre-wrap" }}>
+              {rel.medidas_por_setor?.[setor] ?? ""}
             </td>
           </tr>
         </tbody>
