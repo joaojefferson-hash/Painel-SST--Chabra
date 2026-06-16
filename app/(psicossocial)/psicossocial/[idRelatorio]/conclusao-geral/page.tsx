@@ -167,7 +167,10 @@ export default function ConclusaoGeralPage({
               matriz: t.matriz,
             })),
             agravos: relatorio.agravos_por_setor ?? null,
-            medidasExistentes: relatorio.medidas_existentes ?? null,
+            // Lê as medidas RECOMENDADAS por setor (consolidadas), igual ao agravos
+            // e à conclusão por setor — não o campo global legado medidas_existentes.
+            medidasExistentes:
+              relatorio.medidas_por_setor ?? relatorio.medidas_existentes ?? null,
             textoAtual: conclusao.trim() || null,
           },
         }
