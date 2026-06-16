@@ -47,3 +47,4 @@ electron/assets/*.ico
 
 .vercel
 electron-release.log
+release-*.log
