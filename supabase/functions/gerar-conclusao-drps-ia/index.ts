@@ -65,6 +65,43 @@ Diretrizes:
 - Não recomendar ações específicas (isso vai em outro bloco) — foque em diagnóstico/parecer
 - Se o usuário enviou "textoAtual" não vazio, REFINE preservando o sentido — não contradiga`;
 
+/** Coage agravos/medidas para texto: aceita string, array ou mapa por setor
+ *  (Record<setor, texto>) — a Conclusão Geral envia o mapa agravos_por_setor. */
+function asText(v: unknown): string {
+  if (!v) return "";
+  if (typeof v === "string") return v;
+  if (Array.isArray(v)) return v.filter(Boolean).map(String).join("\n");
+  if (typeof v === "object") {
+    return Object.values(v as Record<string, unknown>)
+      .filter(Boolean)
+      .map(String)
+      .join("\n");
+  }
+  return String(v);
+}
+
+// Conclusão POR SETOR: tabela por Fator de Risco (Agravos + Medidas).
+const SYSTEM_PROMPT_SETOR = `Você é um(a) psicólogo(a) do trabalho brasileiro(a), especialista em Saúde Mental Ocupacional e Riscos Psicossociais, com domínio da NR-01 (item 1.5 — GRO/PGR) e da NR-17 (ergonomia organizacional).
+
+Com base na Classificação de Risco Psicossocial do setor — considerando os Fatores de Risco identificados, suas Fontes Geradoras, Gravidade, Probabilidade e respectiva Matriz de Risco — gere, PARA CADA Fator de Risco listado, os Possíveis Agravos à Saúde Mental e as Medidas de Controle Recomendadas.
+
+Responda APENAS com JSON válido (sem markdown, sem cercas \`\`\`, sem texto fora do JSON):
+{
+  "conclusao": "<table>...</table>"
+}
+
+O campo "conclusao" deve conter UMA tabela HTML (e nada além dela), com exatamente estas colunas e nesta ordem:
+<table><thead><tr><th>Fator de Risco</th><th>Matriz de Risco</th><th>Possíveis Agravos à Saúde Mental</th><th>Medidas de Controle Recomendadas</th></tr></thead><tbody> ...uma <tr> por Fator de Risco... </tbody></table>
+
+Regras de conteúdo:
+- Uma linha (<tr>) por Fator de Risco fornecido no contexto. NÃO invente fatores fora da lista.
+- Coluna "Matriz de Risco": repita exatamente a classificação informada (Crítico/Alto/Médio/Baixo).
+- "Possíveis Agravos à Saúde Mental": descreva os danos à saúde física e mental que o fator pode causar (ex.: ansiedade, estresse ocupacional, síndrome de burnout, depressão, distúrbios do sono, transtornos psicossomáticos, queda de desempenho cognitivo), PROPORCIONAIS ao nível da matriz.
+- "Medidas de Controle Recomendadas": medidas que a empresa deve adotar para eliminar, reduzir ou controlar o risco, atacando DIRETAMENTE as Fontes Geradoras descritas, seguindo a hierarquia de controle (eliminação > controles organizacionais > medidas administrativas > individuais).
+- Coerência com o nível: fatores Crítico/Alto exigem medidas mais robustas e imediatas; priorize Crítico > Alto > Médio > Baixo.
+- Português do Brasil, linguagem técnica de SST, alinhada à NR-01 e NR-17.
+- Dentro das células pode usar listas <ul><li> para múltiplos itens. Não use <script>, <style> nem atributos de evento. Não escreva nada fora da <table>.`;
+
 function buildUserPrompt(ctx: ContextoIA): string {
   const linhas: string[] = ["Contexto do Diagnóstico de Riscos Psicossociais:", ""];
 
@@ -96,16 +133,18 @@ function buildUserPrompt(ctx: ContextoIA): string {
     if (t.fonteGeradora) linhas.push(`    Fonte geradora: ${t.fonteGeradora}`);
   }
 
-  if (ctx.agravos && ctx.agravos.trim().length > 0) {
+  const agravosTxt = asText(ctx.agravos);
+  if (agravosTxt.trim().length > 0) {
     linhas.push("");
-    linhas.push("Possíveis agravos à saúde mental (apontados para o setor):");
-    linhas.push(ctx.agravos);
+    linhas.push("Possíveis agravos à saúde mental (já apontados pelo psicólogo, use como apoio):");
+    linhas.push(agravosTxt);
   }
 
-  if (ctx.medidasExistentes && ctx.medidasExistentes.trim().length > 0) {
+  const medidasTxt = asText(ctx.medidasExistentes);
+  if (medidasTxt.trim().length > 0) {
     linhas.push("");
-    linhas.push("Medidas de controle recomendadas (que a empresa deve adotar):");
-    linhas.push(ctx.medidasExistentes);
+    linhas.push("Medidas de controle já indicadas (use como apoio):");
+    linhas.push(medidasTxt);
   }
 
   if (ctx.textoAtual && ctx.textoAtual.trim().length > 0) {
@@ -115,7 +154,11 @@ function buildUserPrompt(ctx: ContextoIA): string {
   }
 
   linhas.push("");
-  linhas.push("Gere a conclusão técnica em JSON conforme o formato definido.");
+  linhas.push(
+    ctx.ehConsolidado
+      ? "Gere a conclusão técnica consolidada em JSON conforme o formato definido."
+      : "Gere a tabela (Fator de Risco | Matriz de Risco | Possíveis Agravos | Medidas de Controle Recomendadas) em JSON conforme o formato definido."
+  );
   return linhas.join("\n");
 }
 
@@ -144,6 +187,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Conclusão por setor → tabela (Fator × Agravos × Medidas).
+    // Conclusão geral (consolidada) → texto corrido em parágrafos.
+    const systemPrompt = body.ehConsolidado ? SYSTEM_PROMPT : SYSTEM_PROMPT_SETOR;
+    const maxTokens = body.ehConsolidado ? 900 : 2400;
+
     const groqRes = await fetch(GROQ_URL, {
       method: "POST",
       headers: {
@@ -153,12 +201,12 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         model: MODEL,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: buildUserPrompt(body) },
         ],
         response_format: { type: "json_object" },
-        temperature: 0.5,
-        max_tokens: 900,
+        temperature: 0.4,
+        max_tokens: maxTokens,
       }),
     });
 

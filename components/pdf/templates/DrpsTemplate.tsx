@@ -62,6 +62,11 @@ const STYLE_BLOCK = `
 .drps-setor-bloco:first-of-type { page-break-before: auto; }
 .drps-badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 10px; font-weight: 700; color: #fff; }
 .drps-conc { font-size: 11px; line-height: 1.5; color: #1f2937; }
+.drps-conc table { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 10px; table-layout: fixed; }
+.drps-conc th, .drps-conc td { border: 1px solid #999; padding: 4px 6px; vertical-align: top; text-align: left; word-wrap: break-word; }
+.drps-conc th { background: #d4edda; color: #1e4d28; font-weight: 700; }
+.drps-conc ul { margin: 0; padding-left: 1.1em; }
+.drps-conc li { margin: 1px 0; }
 .tp-cap { margin-bottom: 16pt; }
 .tp-cap h2 { font-size: 13pt; font-weight: 700; color: #1e4d28; border-bottom: 2px solid #006B54; padding-bottom: 3px; margin: 0 0 8pt; }
 .tp-cap .corpo { font-size: 11pt; color: #1f2937; line-height: 1.5; text-align: justify; }
