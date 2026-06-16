@@ -1319,7 +1319,7 @@ function BlocoSetor({
                   disabled={
                     !canEdit || gerandoIA || relatorio.topicos.length === 0
                   }
-                  title="Gerar conclusão técnica com IA a partir dos tópicos avaliados, agravos e medidas existentes"
+                  title="Gerar conclusão técnica com IA a partir dos tópicos avaliados, agravos e medidas recomendadas"
                   className="inline-flex items-center gap-1 rounded-md bg-verde-primary px-2 py-1 text-[10px] font-semibold normal-case tracking-normal text-white shadow-sm hover:bg-verde-accent disabled:cursor-not-allowed disabled:opacity-50 print:hidden"
                 >
                   {gerandoIA ? (

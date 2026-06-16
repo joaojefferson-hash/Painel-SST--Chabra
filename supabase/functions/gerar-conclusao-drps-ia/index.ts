@@ -51,7 +51,7 @@ Sua tarefa: redigir a CONCLUSÃO TÉCNICA do DRPS para um setor específico (ou 
 Responda APENAS com um JSON válido (sem markdown, sem cercas \`\`\`, sem texto fora do JSON) no formato:
 
 {
-  "conclusao": "Texto corrido em português brasileiro, 2 a 4 parágrafos, tom técnico-profissional, redação na 3ª pessoa, citando os tópicos de maior matriz de risco, articulando agravos potenciais com medidas existentes e indicando a necessidade (ou suficiência) de medidas de controle adicionais. Não usar listas com bullets — somente parágrafos. Quando pertinente, citar NR-01 e NR-17."
+  "conclusao": "Texto corrido em português brasileiro, 2 a 4 parágrafos, tom técnico-profissional, redação na 3ª pessoa, citando os tópicos de maior matriz de risco, articulando agravos potenciais com as medidas de controle recomendadas e indicando a necessidade (ou suficiência) de medidas adicionais. Não usar listas com bullets — somente parágrafos. Quando pertinente, citar NR-01 e NR-17."
 }
 
 Diretrizes:

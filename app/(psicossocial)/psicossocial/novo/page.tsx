@@ -142,7 +142,7 @@ function Inner() {
 
           <p className="text-xs text-gray-500">
             Você pode preencher mais metadados (funções, qtd. trabalhadores,
-            agravos, medidas existentes) depois, na aba <strong>Metadados</strong>{" "}
+            agravos, medidas recomendadas) depois, na aba <strong>Metadados</strong>{" "}
             do relatório.
           </p>
 

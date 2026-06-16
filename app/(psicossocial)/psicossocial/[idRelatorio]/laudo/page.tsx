@@ -554,9 +554,9 @@ function BlocoSetorLaudo({
           </tr>
           <tr>
             <td className="drps-label align-top">
-              Medidas de Controle Existentes
+              Medidas de controle recomendadas (medidas que a empresa deve adotar)
               <div className="mt-1 text-[9px] font-normal italic text-gray-600">
-                Ex: ações que a empresa já realiza para controle dos riscos psicossociais.
+                Ex: medidas que a empresa deve adotar para controlar os riscos psicossociais identificados.
               </div>
             </td>
             <td colSpan={3} className="align-top whitespace-pre-wrap text-[11px]">
