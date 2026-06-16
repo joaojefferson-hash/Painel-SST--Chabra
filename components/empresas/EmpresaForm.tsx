@@ -114,10 +114,14 @@ export default function EmpresaForm({
     }
     setBuscandoCnpj(true);
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digitos}`);
+      const res = await fetch(`/api/cnpj/${digitos}`);
+      const d = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (res.status === 404) throw new Error("CNPJ não encontrado na Receita.");
-      if (!res.ok) throw new Error(`Falha na consulta (HTTP ${res.status}).`);
-      const d = (await res.json()) as Record<string, unknown>;
+      if (!res.ok)
+        throw new Error(
+          (typeof d.error === "string" && d.error) ||
+            `Falha na consulta (HTTP ${res.status}).`,
+        );
 
       const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
       const razao = str(d.razao_social);
