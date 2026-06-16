@@ -132,16 +132,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           conclusoes_por_setor: rel.conclusoes_por_setor,
           conclusao_geral: rel.conclusao_geral,
         },
-        empresa: empresa
-          ? {
-              nome_empresa: empresa.nome_empresa,
-              cnpj: empresa.cnpj,
-              cpf: empresa.cpf,
-              cei: empresa.cei,
-              caepf: empresa.caepf,
-              cno: empresa.cno,
-            }
-          : null,
+        empresa,
         respondentes,
         probabilidades,
         planoMedidas,

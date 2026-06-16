@@ -10,6 +10,8 @@
 import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
+import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/SecoesComuns";
+import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import {
   substituirVariaveis,
@@ -102,6 +104,8 @@ export interface AepRelatorioLocal {
 
 export interface AepTemplateProps {
   relatorio: AepRelatorioLocal;
+  /** Empresa completa para a seção de sistema "Identificação da Empresa". */
+  empresa?: Partial<Empresa> | null;
   /** Capítulos do módulo "aep" da tabela textos_padrao. */
   capitulos: TextoPadraoCapitulo[];
   /** Valores das variáveis {{...}} gerados por montarValoresAep(). */
@@ -656,6 +660,7 @@ function SetorBlock({
 
 export default function AepTemplate({
   relatorio: rel,
+  empresa,
   capitulos,
   valoresVars,
   signatarios,
@@ -663,7 +668,9 @@ export default function AepTemplate({
   dataHoraAssinatura,
   identificadorDocumento,
 }: AepTemplateProps) {
-  const empresa = rel.empresas;
+  // Empresa do join (nome/cnpj) para a capa enxuta; a seção de sistema
+  // "Identificação da Empresa" usa a empresa COMPLETA recebida via prop.
+  const empresaCapa = rel.empresas;
   const setoresComAet = rel.setores.filter((s) => s.necessita_aet);
   const totalRiscos = rel.setores.reduce((a, s) => a + s.riscos.length, 0);
 
@@ -674,6 +681,14 @@ export default function AepTemplate({
   const blocosOrdenados = [...capitulos]
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+  // Títulos para o sumário (exclui o próprio sumário).
+  const sumarioTitulos = blocosOrdenados
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresVars),
+    )
+    .filter((t) => t && t.trim());
 
   function renderEditavel(c: TextoPadraoCapitulo) {
     const ehCapa = !!c.bg_imagem_url;
@@ -791,6 +806,18 @@ export default function AepTemplate({
   function renderBloco(c: TextoPadraoCapitulo) {
     if (c.tipo === "fixo") {
       switch (c.slug_fixo) {
+        case "identificacao_empresa":
+          return (
+            <div key={c.id_capitulo}>
+              <SecaoIdentificacaoEmpresa empresa={empresa} />
+            </div>
+          );
+        case "sumario":
+          return (
+            <div key={c.id_capitulo}>
+              <SecaoSumario titulos={sumarioTitulos} />
+            </div>
+          );
         case "aep_escalonamento":
           return secaoIndicadores ? (
             <div key={c.id_capitulo}>{secaoIndicadores}</div>
@@ -842,13 +869,8 @@ export default function AepTemplate({
             color: "#111827",
           }}
         >
-          {empresa?.nome_empresa}
+          {empresaCapa?.nome_empresa}
         </h1>
-        {empresa?.cnpj && (
-          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7280" }}>
-            CNPJ: {empresa.cnpj}
-          </p>
-        )}
         <div
           style={{
             marginTop: 16,

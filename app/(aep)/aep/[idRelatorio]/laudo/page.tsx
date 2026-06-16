@@ -300,6 +300,20 @@ export default function AepLaudoPage({
     [rel]
   );
 
+  // Blocos ordenados (mesma regra do corpo) p/ montar o sumário.
+  const sumarioTitulos = useMemo(
+    () =>
+      [...capsAep]
+        .filter((c) => c.ativo !== false)
+        .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+        .filter((c) => c.slug_fixo !== "sumario")
+        .map((c) =>
+          c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresVars),
+        )
+        .filter((t) => t && t.trim()),
+    [capsAep, valoresVars],
+  );
+
   if (!rel) return null;
 
   return (
@@ -425,6 +439,33 @@ export default function AepLaudoPage({
           .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
           .map((c) => {
             if (c.tipo === "fixo") {
+              if (c.slug_fixo === "identificacao_empresa") {
+                return (
+                  <div key={c.id_capitulo} className="mb-6 break-inside-avoid">
+                    <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+                      Identificação da Empresa
+                    </h2>
+                    <EmpresaInfoPanel empresa={empresaFull ?? null} />
+                  </div>
+                );
+              }
+              if (c.slug_fixo === "sumario") {
+                return (
+                  <div key={c.id_capitulo} className="mb-6 break-inside-avoid">
+                    <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+                      Sumário
+                    </h2>
+                    <ol className="space-y-1">
+                      {sumarioTitulos.map((t, i) => (
+                        <li key={i} className="flex items-baseline gap-2 border-b border-dotted border-gray-300 py-0.5 text-xs text-gray-700">
+                          <span className="min-w-5 font-bold text-emerald-800">{i + 1}.</span>
+                          <span>{t}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                );
+              }
               if (c.slug_fixo === "aep_escalonamento") {
                 return (
                   <Section key={c.id_capitulo} titulo="Indicadores de Necessidade de AET Completa">

@@ -35,6 +35,7 @@ import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import {
   montarValoresEmpresa,
   formatarDataBR,
+  substituirVariaveisTexto,
 } from "@/lib/textos-padrao/variaveis";
 import {
   fmtData,
@@ -235,22 +236,61 @@ export default function RelatorioChabraPage({ params }: Props) {
     importado: formatarDataBR(inspecao.created_at),
   };
 
-  // Unificado: editáveis antes/depois do corpo do relatório (sst_corpo) por ordem.
-  // Sem seções do sistema, mantém o legado (tudo antes).
+  // Unificado: blocos (editáveis + seções do sistema) antes/depois do corpo do
+  // relatório (sst_corpo) por ordem. Sem seções do sistema, mantém o legado.
   const temFixosSst = capitulosSst.some((c) => c.tipo === "fixo");
   const ordemCorpoSst = capitulosSst.find((c) => c.slug_fixo === "sst_corpo")?.ordem ?? 2000;
-  const editaveisSst = [...capitulosSst]
-    .filter((c) => c.tipo !== "fixo" && c.ativo !== false)
+  // Blocos ativos exceto o próprio corpo (sst_corpo é renderizado por este componente).
+  const blocosSst = [...capitulosSst]
+    .filter((c) => c.ativo !== false && c.slug_fixo !== "sst_corpo")
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+  // Títulos do sumário (na ordem; exclui o próprio sumário).
+  const sumarioTitulosSst = blocosSst
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresSst),
+    )
+    .filter((t) => t && t.trim());
+  function renderBlocoSst(c: (typeof blocosSst)[number]): React.ReactNode {
+    if (c.tipo === "fixo") {
+      if (c.slug_fixo === "identificacao_empresa") {
+        return (
+          <div key={c.id_capitulo} className="mb-6 break-inside-avoid">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              Identificação da Empresa
+            </h2>
+            <EmpresaInfoPanel empresa={empresa ?? null} />
+          </div>
+        );
+      }
+      if (c.slug_fixo === "sumario") {
+        return (
+          <div key={c.id_capitulo} className="mb-6 break-inside-avoid">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              Sumário
+            </h2>
+            <ol className="space-y-1">
+              {sumarioTitulosSst.map((t, i) => (
+                <li key={i} className="flex items-baseline gap-2 border-b border-dotted border-gray-300 py-0.5 text-xs text-gray-700">
+                  <span className="min-w-5 font-bold text-emerald-800">{i + 1}.</span>
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        );
+      }
+      return null;
+    }
+    return (
+      <TextosPadraoPrint key={c.id_capitulo} modulo="sst" capituloId={c.id_capitulo} valores={valoresSst} />
+    );
+  }
   const antesSst = temFixosSst
-    ? editaveisSst.filter((c) => (c.ordem ?? 0) < ordemCorpoSst).map((c) => (
-        <TextosPadraoPrint key={c.id_capitulo} modulo="sst" capituloId={c.id_capitulo} valores={valoresSst} />
-      ))
+    ? blocosSst.filter((c) => (c.ordem ?? 0) < ordemCorpoSst).map(renderBlocoSst)
     : <TextosPadraoPrint modulo="sst" valores={valoresSst} posicao="antes" />;
   const depoisSst = temFixosSst
-    ? editaveisSst.filter((c) => (c.ordem ?? 0) >= ordemCorpoSst).map((c) => (
-        <TextosPadraoPrint key={c.id_capitulo} modulo="sst" capituloId={c.id_capitulo} valores={valoresSst} />
-      ))
+    ? blocosSst.filter((c) => (c.ordem ?? 0) >= ordemCorpoSst).map(renderBlocoSst)
     : null;
   const dataInspFmt = fmtData(inspecao.data_inspecao);
 

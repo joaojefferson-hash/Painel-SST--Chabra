@@ -1,7 +1,10 @@
 import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
+import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/SecoesComuns";
+import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
+import { substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 import { renderEditaveis, renderEditavelUm } from "./shared";
 import {
   aplicarMatriz,
@@ -33,14 +36,7 @@ export interface DrpsTemplateProps {
     conclusoes_por_setor: Record<string, string> | null;
     conclusao_geral: string | null;
   };
-  empresa: {
-    nome_empresa: string;
-    cnpj: string | null;
-    cpf: string | null;
-    cei: string | null;
-    caepf: string | null;
-    cno: string | null;
-  } | null;
+  empresa: Partial<Empresa> | null;
   respondentes: DrpsRespondente[];
   probabilidades: DrpsProbabilidade[];
   planoMedidas: DrpsPlanoMedidas | null;
@@ -381,9 +377,24 @@ export default function DrpsTemplate({
     </section>
   ) : null;
 
+  // Blocos ordenados (mesma regra do modo unificado) p/ montar o sumário.
+  const blocosOrdenados = [...capitulos]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+  // Títulos para o sumário (exclui o próprio sumário).
+  const sumarioTitulos = blocosOrdenados
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
+    )
+    .filter((t) => t && t.trim());
+
   // Mapeia um slug fixo do DRPS (DRPS_FIXOS) para o nó de seção correspondente.
   function renderSecao(slug: string): React.ReactNode {
     switch (slug) {
+      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} />;
+      case "sumario":               return <SecaoSumario titulos={sumarioTitulos} />;
       case "drps_analise_setor": return <>{setoresNode}</>;
       case "drps_conclusao":     return conclusaoNode;
       case "drps_plano_medidas": return medidasNode;

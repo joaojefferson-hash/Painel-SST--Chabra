@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/client";
 import type { AepRelatorioLocal, AepSetorLocal } from "@/components/pdf/templates/AepTemplate";
+import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
@@ -137,6 +138,19 @@ export async function GET(
 
   const rel = normalizarRelatorio(rawRel);
 
+  // Empresa COMPLETA para a seção de sistema "Identificação da Empresa".
+  // O join acima só traz nome/cnpj (capa); aqui buscamos todos os campos.
+  const idEmpresa = (rawRel as Record<string, unknown>).id_empresa as string | null | undefined;
+  let empresaCompleta: Empresa | null = null;
+  if (idEmpresa) {
+    const { data: rawEmp } = await supabase
+      .from("empresas")
+      .select("*")
+      .eq("id_empresa", idEmpresa)
+      .single();
+    empresaCompleta = (rawEmp as unknown as Empresa) ?? null;
+  }
+
   // Busca capítulos editáveis (textos_padrao modulo=aep, ativos, ordenados)
   const { data: caps, error: capsError } = await supabase
     .from("textos_padrao")
@@ -200,6 +214,7 @@ export async function GET(
   const bodyHtml = renderToStaticMarkup(
     React.createElement(AepTemplate, {
       relatorio: rel,
+      empresa: empresaCompleta,
       capitulos,
       valoresVars,
       signatarios,

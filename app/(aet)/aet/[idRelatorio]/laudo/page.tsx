@@ -705,8 +705,9 @@ export default function AetLaudoPage({
 
       </div>
 
-      {/* ═══ SUMÁRIO — print only ═══ */}
-      {sumarioItems.length > 0 && (
+      {/* ═══ SUMÁRIO — print only (legado; suprimido quando existe o capítulo
+           do sistema "sumario", que é renderizado em fluxo e reposicionável) ═══ */}
+      {sumarioItems.length > 0 && !capitulos.some((c) => c.slug_fixo === "sumario") && (
         <section className="aet-sumario">
           <style>{`
             .aet-sumario {
@@ -809,6 +810,35 @@ export default function AetLaudoPage({
                 ) : null;
 
                 switch (cap.slug_fixo) {
+                  case "identificacao_empresa":
+                    content = (
+                      <div className="mb-6 break-inside-avoid">
+                        <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+                          Identificação da Empresa
+                        </h2>
+                        <EmpresaInfoPanel empresa={empresaFull ?? null} />
+                      </div>
+                    );
+                    break;
+
+                  case "sumario":
+                    content = sumarioItems.length > 0 ? (
+                      <div className="mb-6 break-inside-avoid">
+                        <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+                          Sumário
+                        </h2>
+                        <ol className="space-y-1">
+                          {sumarioItems.map((item, i) => (
+                            <li key={i} className="flex items-baseline gap-2 border-b border-dotted border-gray-300 py-0.5 text-xs text-gray-700">
+                              <span className="min-w-5 font-bold text-emerald-800">{i + 1}.</span>
+                              <span>{item.titulo}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    ) : null;
+                    break;
+
                   case "aet_agentes_ambientais":
                     content = rel.setores.length > 0 ? (
                       <Section num="9" title="Agentes Ambientais para as Áreas Operacionais">

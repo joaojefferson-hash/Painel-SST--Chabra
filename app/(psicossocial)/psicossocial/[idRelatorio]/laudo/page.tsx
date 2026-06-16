@@ -183,8 +183,43 @@ export default function PsicossocialLaudoPage({
     </section>
   ) : null;
 
+  // Títulos para o sumário em lista (exclui o próprio sumário), na ordem do laudo.
+  const sumarioTitulos = ordenados
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresVars),
+    )
+    .filter((t) => t && t.trim());
+
+  const identificacaoScreenNode = (
+    <section className="mb-6 break-inside-avoid">
+      <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+        Identificação da Empresa
+      </h2>
+      <EmpresaInfoPanel empresa={empresa ?? null} />
+    </section>
+  );
+
+  const sumarioListaScreenNode = sumarioTitulos.length > 0 ? (
+    <section className="mb-6 break-inside-avoid">
+      <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+        Sumário
+      </h2>
+      <ol className="space-y-1 text-xs text-gray-700">
+        {sumarioTitulos.map((t, i) => (
+          <li key={i} className="flex gap-2 border-b border-dotted border-gray-300 py-0.5">
+            <span className="min-w-5 font-bold text-emerald-700">{i + 1}.</span>
+            <span>{t}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  ) : null;
+
   function renderSecaoScreen(slug: string): React.ReactNode {
     switch (slug) {
+      case "identificacao_empresa": return identificacaoScreenNode;
+      case "sumario":               return sumarioListaScreenNode;
       case "drps_analise_setor": return <>{setoresScreenNode}</>;
       case "drps_conclusao":     return conclusaoScreenNode;
       case "drps_plano_medidas": return <DrpsGestaoResumoPrint idRelatorio={idRelatorio} />;
@@ -382,8 +417,6 @@ export default function PsicossocialLaudoPage({
         <div className="drps-print-container rounded border border-gray-300 bg-white p-6 shadow-sm">
           {temFixos ? (
             <>
-              {/* Sumário sempre no topo (não é um bloco reordenável) */}
-              {sumarioScreenNode}
               {ordenados.map((c) =>
                 c.tipo === "fixo" ? (
                   <React.Fragment key={c.id_capitulo}>
