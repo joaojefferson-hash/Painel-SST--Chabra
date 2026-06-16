@@ -46,6 +46,7 @@ import {
   useMedidasRecomendadasOpcoes,
   MEDIDAS_RECOMENDADAS_BASE,
 } from "@/lib/hooks/useMedidasRecomendadas";
+import { useAgravosOpcoes } from "@/lib/hooks/useAgravos";
 import {
   montarValoresVariaveis,
   substituirVariaveis,
@@ -1007,8 +1008,9 @@ function BlocoSetor({
 }) {
   const [textoLocal, setTextoLocal] = useState(conclusao);
   const [gerandoIA, setGerandoIA] = useState(false);
-  // Catálogo de medidas recomendadas (Configuração) — base do multi-select.
+  // Catálogos (Configuração) — base dos multi-selects de agravos e medidas.
   const medidasOpcoes = useMedidasRecomendadasOpcoes();
+  const agravosOpcoes = useAgravosOpcoes();
 
   useEffect(() => {
     setTextoLocal(conclusao);
@@ -1262,7 +1264,7 @@ function BlocoSetor({
               </div>
               <div className="print:hidden">
                 <MultiSelectInline
-                  opcoes={AGRAVOS_OPCOES}
+                  opcoes={agravosOpcoes}
                   selecionados={editor.agravosSel}
                   extras={editor.agravosExtras}
                   novoValor={editor.novoAgravo}
