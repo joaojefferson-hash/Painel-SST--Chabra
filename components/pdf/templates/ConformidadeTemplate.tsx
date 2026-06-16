@@ -1,6 +1,8 @@
 import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
+import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/SecoesComuns";
+import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import {
   substituirVariaveis,
@@ -29,7 +31,7 @@ export interface ConformidadeTemplateProps {
     data_inspecao: string | null;
     observacoes_gerais: string | null;
   };
-  empresa?: { nome_empresa: string; cnpj: string | null } | null;
+  empresa?: Partial<Empresa> | null;
   itens: ConformidadeItemLocal[];
   capitulos: TextoPadraoCapitulo[];
   valores: Record<string, string>;
@@ -150,7 +152,17 @@ export default function ConformidadeTemplate({
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
 
+  // Títulos para o sumário (exclui o próprio sumário).
+  const sumarioTitulos = blocos
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
+    )
+    .filter((t) => t && t.trim());
+
   const secoes: Record<string, React.ReactNode> = {
+    identificacao_empresa: <SecaoIdentificacaoEmpresa empresa={empresa} />,
+    sumario: <SecaoSumario titulos={sumarioTitulos} />,
     conformidade_resultado: <ResumoCards itens={itens} />,
     conformidade_itens: <ItensSection itens={itens} obsGerais={relatorio.observacoes_gerais} />,
     conformidade_assinatura: (
@@ -189,11 +201,9 @@ export default function ConformidadeTemplate({
         <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 700, color: "#111827" }}>{relatorio.nr_titulo}</h1>
         <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", fontSize: 11, color: "#374151" }}>
           <span><strong>Empresa:</strong> {empresa?.nome_empresa ?? "—"}</span>
-          <span><strong>CNPJ:</strong> {empresa?.cnpj ?? "—"}</span>
           <span><strong>Setor / Local:</strong> {relatorio.setor ?? "—"}</span>
-          <span><strong>Responsável técnico:</strong> {relatorio.responsavel ?? "—"}</span>
-          <span><strong>Responsável da empresa:</strong> {relatorio.responsavel_empresa ?? "—"}</span>
           <span><strong>Cidade:</strong> {relatorio.cidade ?? "—"}</span>
+          <span><strong>Data:</strong> {valores.data_inspecao ?? "—"}</span>
         </div>
       </div>
 

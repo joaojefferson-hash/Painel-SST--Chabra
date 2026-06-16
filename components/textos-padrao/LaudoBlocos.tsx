@@ -3,11 +3,13 @@
 import React from "react";
 import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import {
   substituirVariaveis,
   substituirVariaveisTexto,
 } from "@/lib/textos-padrao/variaveis";
 import type { ModuloTextoPadrao } from "@/lib/textos-padrao/types";
+import type { Empresa } from "@/lib/supabase/types";
 
 /**
  * Renderiza o corpo do laudo como uma LISTA ÚNICA de blocos na ordem definida
@@ -23,11 +25,14 @@ export default function LaudoBlocos({
   modulo,
   valores,
   secoes,
+  empresa,
 }: {
   modulo: ModuloTextoPadrao;
   valores: Record<string, string>;
   /** Mapa slug_fixo → conteúdo da seção do sistema. */
   secoes: Record<string, React.ReactNode>;
+  /** Empresa do documento — usada na seção "Identificação da Empresa". */
+  empresa?: Empresa | null;
 }) {
   const { data: capitulos = [] } = useTextosPadrao(modulo);
   const blocos = [...capitulos]
@@ -36,14 +41,50 @@ export default function LaudoBlocos({
 
   if (blocos.length === 0) return null;
 
+  // Títulos para o sumário (exclui o próprio sumário).
+  const sumarioTitulos = blocos
+    .filter((c) => c.slug_fixo !== "sumario")
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
+    )
+    .filter((t) => t && t.trim());
+
   return (
     <>
       {blocos.map((c) => {
         if (c.tipo === "fixo") {
+          // Override explícito tem prioridade.
           const secao = secoes[c.slug_fixo ?? ""];
-          return secao ? (
-            <React.Fragment key={c.id_capitulo}>{secao}</React.Fragment>
-          ) : null;
+          if (secao) return <React.Fragment key={c.id_capitulo}>{secao}</React.Fragment>;
+          // Seções comuns geradas automaticamente (todos os módulos).
+          if (c.slug_fixo === "identificacao_empresa") {
+            return (
+              <div key={c.id_capitulo} className="mb-6 break-inside-avoid">
+                <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+                  Identificação da Empresa
+                </h2>
+                <EmpresaInfoPanel empresa={empresa ?? null} />
+              </div>
+            );
+          }
+          if (c.slug_fixo === "sumario") {
+            return (
+              <div key={c.id_capitulo} className="mb-6 break-inside-avoid">
+                <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+                  Sumário
+                </h2>
+                <ol className="space-y-1">
+                  {sumarioTitulos.map((t, i) => (
+                    <li key={i} className="flex items-baseline gap-2 border-b border-dotted border-gray-300 py-0.5 text-xs text-gray-700">
+                      <span className="min-w-5 font-bold text-emerald-800">{i + 1}.</span>
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            );
+          }
+          return null;
         }
         // Capa (imagem de fundo) → usa o componente de print dedicado
         if (c.bg_imagem_url) {

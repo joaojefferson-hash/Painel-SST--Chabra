@@ -233,3 +233,33 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     ],
   },
 };
+
+/**
+ * Capítulos do sistema COMUNS a todos os módulos — reposicionáveis como
+ * qualquer seção fixa (modo unificado). São gerados automaticamente:
+ *  - identificacao_empresa: bloco com os dados de identificação da empresa
+ *    (substitui o antigo cabeçalho fixo, agora podendo ser movido).
+ *  - sumario: índice com os títulos dos capítulos na ordem do laudo.
+ * Ordem-base baixa para aparecerem no início por padrão; o usuário pode mover.
+ */
+export const FIXOS_COMUNS: FixoCapitulo[] = [
+  {
+    titulo: "Identificação da Empresa",
+    slug_fixo: "identificacao_empresa",
+    descricao:
+      "Dados de identificação da empresa (razão social, CNPJ, endereço etc.) — gerado automaticamente. Pode ser reposicionado no laudo.",
+    ordem_base: 50,
+  },
+  {
+    titulo: "Sumário",
+    slug_fixo: "sumario",
+    descricao:
+      "Índice com os títulos dos capítulos na ordem do laudo — gerado automaticamente. Pode ser reposicionado.",
+    ordem_base: 80,
+  },
+];
+
+// Injeta os fixos comuns no início da lista de fixos de cada módulo.
+for (const cfg of Object.values(MODULO_CONFIGS)) {
+  cfg.fixos = [...FIXOS_COMUNS, ...cfg.fixos];
+}

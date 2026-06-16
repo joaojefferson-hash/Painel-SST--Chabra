@@ -215,6 +215,7 @@ export default function LaudoConformidadePage({
       <LaudoBlocos
         modulo="conformidade"
         valores={valoresTextosPadrao}
+        empresa={empresa ?? null}
         secoes={{
           conformidade_resultado: (
             <section className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 print:grid-cols-4">
