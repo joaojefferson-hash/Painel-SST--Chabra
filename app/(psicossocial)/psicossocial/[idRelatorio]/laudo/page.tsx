@@ -541,28 +541,6 @@ function BlocoSetorLaudo({
             <td className="drps-label">Quantidade de Trabalhadores na Função</td>
             <td colSpan={3}>{relatorio.totalRespondentes}</td>
           </tr>
-          <tr>
-            <td className="drps-label align-top">
-              Possíveis Agravos à Saúde Mental
-              <div className="mt-1 text-[9px] font-normal italic text-gray-600">
-                Ex: tudo aquilo que pode acontecer com colaboradores se os riscos psicossociais não forem identificados e controlados.
-              </div>
-            </td>
-            <td colSpan={3} className="align-top whitespace-pre-wrap text-[11px]">
-              {drpsRel?.agravos_por_setor?.[relatorio.setor] ?? ""}
-            </td>
-          </tr>
-          <tr>
-            <td className="drps-label align-top">
-              Medidas de controle recomendadas (medidas que a empresa deve adotar)
-              <div className="mt-1 text-[9px] font-normal italic text-gray-600">
-                Ex: medidas que a empresa deve adotar para controlar os riscos psicossociais identificados.
-              </div>
-            </td>
-            <td colSpan={3} className="align-top whitespace-pre-wrap text-[11px]">
-              {drpsRel?.medidas_por_setor?.[relatorio.setor] ?? ""}
-            </td>
-          </tr>
           <tr><td className="drps-header-section" colSpan={4}>Classificação de Risco Psicossocial</td></tr>
           <tr>
             <td colSpan={4} className="text-center text-[11px] font-semibold uppercase tracking-wider" style={{ background: "#f0f9f4", color: "#1e4d28" }}>
@@ -606,6 +584,23 @@ function BlocoSetorLaudo({
       <div className="mt-2 text-[9px] text-gray-500">
         {relatorio.totalRespondentes} respondente(s) · {relatorio.topicos.length} tópico(s)
       </div>
+
+      <table className="drps-tabela mt-2">
+        <tbody>
+          <tr><td className="drps-header-section">Possíveis Agravos à Saúde Mental</td></tr>
+          <tr>
+            <td className="align-top whitespace-pre-wrap text-[11px]">
+              {drpsRel?.agravos_por_setor?.[relatorio.setor] ?? ""}
+            </td>
+          </tr>
+          <tr><td className="drps-header-section">Medidas de controle recomendadas (medidas que a empresa deve adotar)</td></tr>
+          <tr>
+            <td className="align-top whitespace-pre-wrap text-[11px]">
+              {drpsRel?.medidas_por_setor?.[relatorio.setor] ?? ""}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       {(() => {
         const conclusao = drpsRel?.conclusoes_por_setor?.[relatorio.setor] ?? "";
