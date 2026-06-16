@@ -80,27 +80,28 @@ function asText(v: unknown): string {
   return String(v);
 }
 
-// Conclusão POR SETOR: tabela por Fator de Risco (Agravos + Medidas).
+// Conclusão POR SETOR: texto corrido (conclusão técnica em parágrafos).
 const SYSTEM_PROMPT_SETOR = `Você é um(a) psicólogo(a) do trabalho brasileiro(a), especialista em Saúde Mental Ocupacional e Riscos Psicossociais, com domínio da NR-01 (item 1.5 — GRO/PGR) e da NR-17 (ergonomia organizacional).
 
-Com base na Classificação de Risco Psicossocial do setor — considerando os Fatores de Risco identificados, suas Fontes Geradoras, Gravidade, Probabilidade e respectiva Matriz de Risco — gere, PARA CADA Fator de Risco listado, os Possíveis Agravos à Saúde Mental e as Medidas de Controle Recomendadas.
+Sua tarefa: redigir a CONCLUSÃO TÉCNICA do setor em TEXTO CORRIDO (parágrafos), com base na Classificação de Risco Psicossocial — Fatores de Risco identificados, suas Fontes Geradoras, Gravidade, Probabilidade e respectiva Matriz de Risco.
 
 Responda APENAS com JSON válido (sem markdown, sem cercas \`\`\`, sem texto fora do JSON):
 {
-  "conclusao": "<table>...</table>"
+  "conclusao": "Texto corrido em parágrafos (HTML simples com <p>), SEM tabelas e SEM listas com bullets."
 }
 
-O campo "conclusao" deve conter UMA tabela HTML (e nada além dela), com exatamente estas colunas e nesta ordem:
-<table><thead><tr><th>Fator de Risco</th><th>Matriz de Risco</th><th>Possíveis Agravos à Saúde Mental</th><th>Medidas de Controle Recomendadas</th></tr></thead><tbody> ...uma <tr> por Fator de Risco... </tbody></table>
+A conclusão deve, de forma fluida e articulada (NÃO em tabela, NÃO em tópicos):
+- Abrir com um panorama do risco psicossocial do setor, destacando os fatores de maior criticidade primeiro (Crítico > Alto > Médio > Baixo) e citando a respectiva matriz.
+- Para os fatores relevantes, relacionar os POSSÍVEIS AGRAVOS à saúde mental como riscos potenciais (ex.: ansiedade, estresse ocupacional, síndrome de burnout, depressão, distúrbios do sono, transtornos psicossomáticos, queda de desempenho cognitivo), proporcionais ao nível da matriz — sem diagnosticar pessoas.
+- Indicar as MEDIDAS DE CONTROLE RECOMENDADAS que a empresa deve adotar, atacando diretamente as Fontes Geradoras descritas e seguindo a hierarquia de controle (eliminação > controles organizacionais > medidas administrativas/individuais), com mais ênfase/urgência nos fatores Crítico/Alto.
+- Fechar com o encaminhamento técnico (necessidade ou suficiência de medidas adicionais), citando NR-01 e NR-17 quando pertinente.
 
-Regras de conteúdo:
-- Uma linha (<tr>) por Fator de Risco fornecido no contexto. NÃO invente fatores fora da lista.
-- Coluna "Matriz de Risco": repita exatamente a classificação informada (Crítico/Alto/Médio/Baixo).
-- "Possíveis Agravos à Saúde Mental": descreva os danos à saúde física e mental que o fator pode causar (ex.: ansiedade, estresse ocupacional, síndrome de burnout, depressão, distúrbios do sono, transtornos psicossomáticos, queda de desempenho cognitivo), PROPORCIONAIS ao nível da matriz.
-- "Medidas de Controle Recomendadas": medidas que a empresa deve adotar para eliminar, reduzir ou controlar o risco, atacando DIRETAMENTE as Fontes Geradoras descritas, seguindo a hierarquia de controle (eliminação > controles organizacionais > medidas administrativas > individuais).
-- Coerência com o nível: fatores Crítico/Alto exigem medidas mais robustas e imediatas; priorize Crítico > Alto > Médio > Baixo.
-- Português do Brasil, linguagem técnica de SST, alinhada à NR-01 e NR-17.
-- Dentro das células pode usar listas <ul><li> para múltiplos itens. Não use <script>, <style> nem atributos de evento. Não escreva nada fora da <table>.`;
+Regras:
+- 2 a 5 parágrafos, entre 140 e 360 palavras, em português do Brasil formal e técnico.
+- Mencionar explicitamente o nome do setor.
+- NÃO inventar fatores fora dos listados na classificação fornecida.
+- NÃO usar tabelas, NÃO usar listas com bullets — somente parágrafos <p>.
+- Se houver "textoAtual" não vazio, REFINE preservando o sentido — não contradiga.`;
 
 function buildUserPrompt(ctx: ContextoIA): string {
   const linhas: string[] = ["Contexto do Diagnóstico de Riscos Psicossociais:", ""];
@@ -156,8 +157,8 @@ function buildUserPrompt(ctx: ContextoIA): string {
   linhas.push("");
   linhas.push(
     ctx.ehConsolidado
-      ? "Gere a conclusão técnica consolidada em JSON conforme o formato definido."
-      : "Gere a tabela (Fator de Risco | Matriz de Risco | Possíveis Agravos | Medidas de Controle Recomendadas) em JSON conforme o formato definido."
+      ? "Gere a conclusão técnica consolidada (texto corrido) em JSON conforme o formato definido."
+      : "Gere a conclusão técnica do setor (texto corrido, em parágrafos) em JSON conforme o formato definido."
   );
   return linhas.join("\n");
 }
@@ -190,7 +191,7 @@ Deno.serve(async (req: Request) => {
     // Conclusão por setor → tabela (Fator × Agravos × Medidas).
     // Conclusão geral (consolidada) → texto corrido em parágrafos.
     const systemPrompt = body.ehConsolidado ? SYSTEM_PROMPT : SYSTEM_PROMPT_SETOR;
-    const maxTokens = body.ehConsolidado ? 900 : 2400;
+    const maxTokens = 1200;
 
     const groqRes = await fetch(GROQ_URL, {
       method: "POST",
@@ -205,7 +206,7 @@ Deno.serve(async (req: Request) => {
           { role: "user", content: buildUserPrompt(body) },
         ],
         response_format: { type: "json_object" },
-        temperature: 0.4,
+        temperature: 0.5,
         max_tokens: maxTokens,
       }),
     });
