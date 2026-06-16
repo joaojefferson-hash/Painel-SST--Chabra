@@ -40,9 +40,12 @@ import {
 } from "@/lib/drps/calculos";
 import {
   AGRAVOS_OPCOES,
-  MEDIDAS_EXISTENTES_OPCOES,
   TOPICOS,
 } from "@/lib/drps/topicos";
+import {
+  useMedidasRecomendadasOpcoes,
+  MEDIDAS_RECOMENDADAS_BASE,
+} from "@/lib/hooks/useMedidasRecomendadas";
 import {
   montarValoresVariaveis,
   substituirVariaveis,
@@ -245,7 +248,7 @@ export default function AnalisePage({
     const novos: Record<string, SetorEditor> = {};
     for (const s of setoresUnicos) {
       const a = parseMultiSelect(agravosMap[s] ?? null, AGRAVOS_OPCOES);
-      const m = parseMultiSelect(medidasMap[s] ?? null, MEDIDAS_EXISTENTES_OPCOES);
+      const m = parseMultiSelect(medidasMap[s] ?? null, MEDIDAS_RECOMENDADAS_BASE);
       novos[s] = {
         agravosSel: a.selecionados,
         agravosExtras: a.extras,
@@ -1004,6 +1007,8 @@ function BlocoSetor({
 }) {
   const [textoLocal, setTextoLocal] = useState(conclusao);
   const [gerandoIA, setGerandoIA] = useState(false);
+  // Catálogo de medidas recomendadas (Configuração) — base do multi-select.
+  const medidasOpcoes = useMedidasRecomendadasOpcoes();
 
   useEffect(() => {
     setTextoLocal(conclusao);
@@ -1287,7 +1292,7 @@ function BlocoSetor({
               </div>
               <div className="print:hidden">
                 <MultiSelectInline
-                  opcoes={MEDIDAS_EXISTENTES_OPCOES}
+                  opcoes={medidasOpcoes}
                   selecionados={editor.medidasSel}
                   extras={editor.medidasExtras}
                   novoValor={editor.novaMedida}

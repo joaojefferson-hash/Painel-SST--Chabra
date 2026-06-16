@@ -21,6 +21,7 @@ import {
   Gauge,
   FlaskConical,
   Printer,
+  ClipboardList,
 } from "lucide-react";
 import SidebarShell, { type NavSection } from "@/components/layout/SidebarShell";
 import ModuleTopbar from "@/components/layout/ModuleTopbar";
@@ -38,6 +39,11 @@ const SECTIONS_LISTA: NavSection[] = [
   {
     label: "Configuração",
     items: [
+      {
+        href: "/psicossocial/medidas-recomendadas",
+        label: "Medidas Recomendadas",
+        icon: ClipboardList,
+      },
       {
         href: "/psicossocial/texto-padrao",
         label: "Texto Padrão",
@@ -101,6 +107,7 @@ function sectionsRelatorio(idRelatorio: string): NavSection[] {
       label: "Configuração",
       items: [
         { href: `${base}/metadados`, label: "Metadados do Relatório", icon: Building2 },
+        { href: "/psicossocial/medidas-recomendadas", label: "Medidas Recomendadas", icon: ClipboardList },
         { href: "/psicossocial/texto-padrao", label: "Texto Padrão", icon: FileEdit },
       ],
     },
@@ -128,6 +135,7 @@ function extrairIdRelatorio(pathname: string): string | null {
     "criterios",
     "metodologia",
     "texto-padrao",
+    "medidas-recomendadas",
     "dashboard-geral",
   ]);
   if (reservadas.has(candidato)) return null;
