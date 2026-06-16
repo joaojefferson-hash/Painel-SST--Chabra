@@ -73,6 +73,99 @@ select:focus {
   transform: translateY(-1px);
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   Design moderno — glass + gradientes + 3D sutil (SOMENTE TELA).
+   Tudo aqui é decorativo e é neutralizado em @media print mais abaixo.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Aurora animada de fundo do app */
+@keyframes aurora-shift {
+  0%   { background-position: 0% 50%, 100% 50%, 50% 0%; }
+  50%  { background-position: 100% 50%, 0% 50%, 50% 100%; }
+  100% { background-position: 0% 50%, 100% 50%, 50% 0%; }
+}
+.app-aurora {
+  background-color: #eef3f1;
+  background-image:
+    radial-gradient(55rem 55rem at 6% -12%, rgba(0,131,90,0.16), transparent 60%),
+    radial-gradient(48rem 48rem at 112% 8%, rgba(0,107,84,0.13), transparent 55%),
+    radial-gradient(42rem 42rem at 50% 118%, rgba(26,61,38,0.10), transparent 60%);
+  background-size: 200% 200%, 200% 200%, 200% 200%;
+  animation: aurora-shift 30s ease-in-out infinite;
+}
+
+/* Cartão de vidro (claro e escuro) */
+.glass {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.55);
+  box-shadow:
+    0 10px 30px -12px rgba(2,32,22,0.18),
+    0 2px 6px rgba(2,32,22,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.glass-dark {
+  background: linear-gradient(160deg, rgba(20,48,32,0.66), rgba(13,32,22,0.74));
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 12px 34px -14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+/* Tilt 3D sutil no hover (perspectiva) */
+.tilt-3d {
+  transform-style: preserve-3d;
+  transition: transform 280ms cubic-bezier(.2,.7,.3,1), box-shadow 280ms;
+  will-change: transform;
+}
+.tilt-3d:hover {
+  transform: perspective(900px) translateY(-4px) rotateX(3deg) rotateY(-3deg) scale(1.012);
+  box-shadow: 0 24px 48px -20px rgba(2,32,22,0.30), 0 6px 16px rgba(2,32,22,0.10);
+}
+
+/* Sheen — brilho que cruza no hover */
+.sheen { position: relative; overflow: hidden; isolation: isolate; }
+.sheen::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.45) 50%, transparent 70%);
+  transform: translateX(-130%);
+  transition: transform 750ms ease;
+  pointer-events: none;
+}
+.sheen:hover::after { transform: translateX(130%); }
+
+/* Texto com gradiente da marca */
+.text-gradient {
+  background: linear-gradient(90deg, #006B54, #00a36c 55%, #00835A);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Entrada suave (reveal) + escalonamento */
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal-up { animation: reveal-up 520ms cubic-bezier(.2,.7,.3,1) both; }
+.delay-1 { animation-delay: 60ms; }
+.delay-2 { animation-delay: 120ms; }
+.delay-3 { animation-delay: 180ms; }
+.delay-4 { animation-delay: 240ms; }
+.delay-5 { animation-delay: 300ms; }
+.delay-6 { animation-delay: 360ms; }
+
+/* Acessibilidade: respeita redução de movimento */
+@media (prefers-reduced-motion: reduce) {
+  .app-aurora,
+  .reveal-up { animation: none; }
+  .tilt-3d { transition: none; }
+  .tilt-3d:hover { transform: none; }
+  .sheen::after { transition: none; }
+}
+
 /* Print-only sections — hidden on screen, visible on print */
 .drps-sumario,
 .drps-gestao-resumo-print,
@@ -139,6 +232,25 @@ select:focus {
     height: auto !important;
     resize: none !important;
   }
+
+  /* Neutraliza as decorações modernas (glass/aurora/3D) na impressão/PDF */
+  .app-aurora { background: #fff !important; animation: none !important; }
+  .glass,
+  .glass-dark {
+    background: #fff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    border-color: #e5e7eb !important;
+  }
+  .tilt-3d { transform: none !important; box-shadow: none !important; }
+  .sheen::after { display: none !important; }
+  .text-gradient {
+    background: none !important;
+    -webkit-text-fill-color: #111827 !important;
+    color: #111827 !important;
+  }
+  .reveal-up { animation: none !important; }
 }
 
 /* TipTap rich text editor — estilos visuais do conteudo */

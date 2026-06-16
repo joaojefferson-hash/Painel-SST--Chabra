@@ -231,7 +231,7 @@ export default function DashboardPage() {
       <section className="grid gap-4 lg:grid-cols-3">
 
         {/* BarChart — inspeções por mês */}
-        <div className="lg:col-span-2 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="glass reveal-up lg:col-span-2 rounded-2xl p-5">
           <div className="mb-4 flex items-start justify-between">
             <div>
               <h2 className="text-sm font-semibold text-gray-800">Inspeções Concluídas por Mês</h2>
@@ -294,7 +294,7 @@ export default function DashboardPage() {
         </div>
 
         {/* PieChart — distribuição por status */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="glass reveal-up delay-1 rounded-2xl p-5">
           <div className="mb-4 flex items-start justify-between">
             <div>
               <h2 className="text-sm font-semibold text-gray-800">Por Status</h2>
@@ -379,7 +379,7 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <div className="glass reveal-up delay-2 overflow-hidden rounded-2xl">
           {loadingRecentes ? (
             <div className="p-4">
               <LoadingSkeleton rows={6} />
@@ -467,7 +467,7 @@ function KpiCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md",
+        "tilt-3d reveal-up relative overflow-hidden rounded-2xl border p-4 shadow-sm",
         warn ? "border-amber-200 bg-amber-50/60" : "border-gray-100 bg-white"
       )}
       style={!warn ? { background: `linear-gradient(135deg, ${from} 0%, #ffffff 100%)` } : undefined}
