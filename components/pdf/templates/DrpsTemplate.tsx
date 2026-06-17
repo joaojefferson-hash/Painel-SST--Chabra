@@ -89,6 +89,8 @@ const STYLE_BLOCK = `
 .drps-ex-table td.mes { text-align: center; font-weight: 700; color: #006B54; }
 .drps-ex-list { margin: 6pt 0 12pt 1.5em; padding: 0; font-size: 11pt; line-height: 1.6; }
 .drps-ex-list li { margin: 3pt 0; }
+.drps-conc-geral p { font-size: 12pt; line-height: 1.6; text-align: justify; color: #1f2937; margin: 0 0 12pt; text-indent: 1.25cm; }
+.drps-conc-geral ul, .drps-conc-geral ol { margin: 0 0 12pt 1.5em; font-size: 12pt; line-height: 1.6; }
 `;
 
 function corMatriz(m: NivelMatriz): string {
@@ -285,16 +287,77 @@ export default function DrpsTemplate({
     <BlocoSetor key={b.setor} {...b} rel={relatorio} empresa={empresa} />
   ));
 
+  // Numeração dos capítulos para casar com o Sumário (mesma ordem/filtro):
+  // exclui a capa e o próprio sumário. numPorSlug → seções do sistema;
+  // numPorId → capítulos editáveis.
+  const numPorSlug: Record<string, number> = {};
+  const numPorId: Record<string, number> = {};
+  {
+    const ordenadosNum = [...capitulos]
+      .filter((c) => c.ativo !== false)
+      .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+    let nSeq = 0;
+    for (const c of ordenadosNum) {
+      const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+      if (c.slug_fixo === "sumario" || ehCapa) continue;
+      nSeq += 1;
+      if (c.tipo === "fixo" && c.slug_fixo) numPorSlug[c.slug_fixo] = nSeq;
+      numPorId[c.id_capitulo] = nSeq;
+    }
+  }
+  const numLabel = (num: number | undefined, txt: string) => (num ? `${num}. ${txt}` : txt);
+
+  // Conclusão Geral é editada em RichTextEditor (HTML). Renderiza como HTML —
+  // antes saía como texto puro, exibindo as tags <p style="..."> literalmente.
   const conclusaoNode = relatorio.conclusao_geral ? (
     <section className="drps-sec">
-      <h2>Conclusão Geral</h2>
-      <p style={{ whiteSpace: "pre-wrap", textIndent: "1.25cm" }}>{relatorio.conclusao_geral}</p>
+      <h2>{numLabel(numPorSlug["drps_conclusao"], "Conclusão Geral")}</h2>
+      <div
+        className="drps-conc-geral"
+        dangerouslySetInnerHTML={{ __html: relatorio.conclusao_geral }}
+      />
+    </section>
+  ) : null;
+
+  // Caracterização dos Trabalhadores — distribuição quantitativa por setor/função
+  // (capítulo do sistema "drps_caracterizacao", antes não renderizado no corpo).
+  const totalTrabalhadores = blocos.reduce((s, b) => s + b.totalRespondentes, 0);
+  const caracterizacaoNode = blocos.length > 0 ? (
+    <section className="drps-sec">
+      <h2>{numLabel(numPorSlug["drps_caracterizacao"], "Caracterização dos Trabalhadores")}</h2>
+      <p style={{ textIndent: "1.25cm" }}>
+        Distribuição quantitativa dos trabalhadores avaliados por setor e função,
+        conforme os respondentes do Diagnóstico de Riscos Psicossociais.
+      </p>
+      <table className="drps-ex-table">
+        <thead>
+          <tr>
+            <th style={{ width: "32%" }}>Setor</th>
+            <th>Funções</th>
+            <th style={{ width: "16%", textAlign: "center" }}>Trabalhadores</th>
+          </tr>
+        </thead>
+        <tbody>
+          {blocos.map((b) => (
+            <tr key={b.setor}>
+              <td>{b.setor}</td>
+              <td>{b.funcoes || "—"}</td>
+              <td style={{ textAlign: "center" }}>{b.totalRespondentes}</td>
+            </tr>
+          ))}
+          <tr>
+            <td style={{ fontWeight: 700 }}>Total</td>
+            <td />
+            <td style={{ textAlign: "center", fontWeight: 700 }}>{totalTrabalhadores}</td>
+          </tr>
+        </tbody>
+      </table>
     </section>
   ) : null;
 
   const medidasNode = planoComConteudo.length > 0 ? (
     <section className="drps-sec">
-      <h2>Medidas de Controle — Plano Anual {anoMedidas}</h2>
+      <h2>{numLabel(numPorSlug["drps_plano_medidas"], `Medidas de Controle — Plano Anual ${anoMedidas}`)}</h2>
       <p style={{ textIndent: "1.25cm" }}>
         Cronograma das ações de controle dos riscos psicossociais identificados, com indicação dos meses de execução e responsáveis.
       </p>
@@ -324,7 +387,7 @@ export default function DrpsTemplate({
 
   const monitNode = topicosPorSetorMon.length > 0 ? (
     <section className="drps-sec">
-      <h2>Monitoramento do Desempenho</h2>
+      <h2>{numLabel(numPorSlug["drps_revisao"], "Monitoramento do Desempenho")}</h2>
       <p style={{ textIndent: "1.25cm" }}>
         Acompanhamento das intervenções por tópico psicossocial, por setor, com status de execução e data da próxima reavaliação.
       </p>
@@ -402,13 +465,25 @@ export default function DrpsTemplate({
   // Mapeia um slug fixo do DRPS (DRPS_FIXOS) para o nó de seção correspondente.
   function renderSecao(slug: string): React.ReactNode {
     switch (slug) {
-      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} />;
+      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} numero={numPorSlug["identificacao_empresa"]} />;
       case "sumario":               return <SecaoSumario titulos={sumarioTitulos} />;
-      case "drps_analise_setor": return <>{setoresNode}</>;
+      case "drps_caracterizacao": return caracterizacaoNode;
+      case "drps_analise_setor": return (
+        <>
+          <section className="drps-sec" style={{ pageBreakAfter: "avoid" }}>
+            <h2>{numLabel(numPorSlug["drps_analise_setor"], "Análise por Setor")}</h2>
+            <p style={{ textIndent: "1.25cm" }}>
+              Classificação dos fatores de risco psicossocial por setor avaliado, com
+              gravidade, probabilidade e matriz de risco conforme a NR-01.
+            </p>
+          </section>
+          {setoresNode}
+        </>
+      );
       case "drps_conclusao":     return conclusaoNode;
       case "drps_plano_medidas": return medidasNode;
       case "drps_revisao":       return <>{monitNode}{revisaoNode}</>;
-      // drps_caracterizacao e drps_assinatura não têm seção no corpo do PDF
+      // drps_assinatura não tem seção no corpo do PDF
       // (a folha de assinatura é renderizada sempre ao final).
       default:                   return null;
     }
@@ -433,7 +508,14 @@ export default function DrpsTemplate({
           c.tipo === "fixo" ? (
             <div key={c.id_capitulo} className={classeQuebraFixo(c)}>{renderSecao(c.slug_fixo ?? "")}</div>
           ) : (
-            <React.Fragment key={c.id_capitulo}>{renderEditavelUm(c, valores)}</React.Fragment>
+            <React.Fragment key={c.id_capitulo}>
+              {renderEditavelUm(
+                numPorId[c.id_capitulo]
+                  ? { ...c, titulo: `${numPorId[c.id_capitulo]}. ${c.titulo}` }
+                  : c,
+                valores,
+              )}
+            </React.Fragment>
           ),
         )
       ) : (

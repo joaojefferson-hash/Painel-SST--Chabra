@@ -75,13 +75,16 @@ function Campo({ label, valor }: { label: string; valor: string }) {
 
 export function SecaoIdentificacaoEmpresa({
   empresa,
+  numero,
 }: {
   empresa: Partial<Empresa> | null | undefined;
+  numero?: number;
 }) {
+  const titulo = numero ? `${numero}. Identificação da Empresa` : "Identificação da Empresa";
   if (!empresa) {
     return (
       <section style={{ marginBottom: 18, fontFamily: "Arial, Helvetica, sans-serif" }}>
-        {tituloSecao("Identificação da Empresa")}
+        {tituloSecao(titulo)}
         <p style={{ fontSize: 11, color: CINZA_LEVE }}>Empresa não informada.</p>
       </section>
     );
@@ -94,7 +97,7 @@ export function SecaoIdentificacaoEmpresa({
 
   return (
     <section style={{ marginBottom: 18, fontFamily: "Arial, Helvetica, sans-serif" }}>
-      {tituloSecao("Identificação da Empresa")}
+      {tituloSecao(titulo)}
       <div
         style={{
           display: "grid",

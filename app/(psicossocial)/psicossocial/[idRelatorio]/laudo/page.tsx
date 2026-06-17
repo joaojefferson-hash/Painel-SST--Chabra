@@ -148,6 +148,22 @@ export default function PsicossocialLaudoPage({
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
 
+  // Numeração dos capítulos para casar com o Sumário (mesma ordem/filtro):
+  // exclui capa e o próprio sumário. numPorSlug → seções do sistema; numPorId → editáveis.
+  const numPorSlug: Record<string, number> = {};
+  const numPorId: Record<string, number> = {};
+  {
+    let nSeq = 0;
+    for (const c of ordenados) {
+      const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+      if (c.slug_fixo === "sumario" || ehCapa) continue;
+      nSeq += 1;
+      if (c.tipo === "fixo" && c.slug_fixo) numPorSlug[c.slug_fixo] = nSeq;
+      numPorId[c.id_capitulo] = nSeq;
+    }
+  }
+  const numLabel = (num: number | undefined, txt: string) => (num ? `${num}. ${txt}` : txt);
+
   const sumarioScreenNode = (
     <DrpsSumarioPrint
       setores={relatoriosPorSetor.map((r) => r.setor)}
@@ -171,15 +187,58 @@ export default function PsicossocialLaudoPage({
     />
   ));
 
+  // Conclusão Geral vem do RichTextEditor (HTML) — renderiza como HTML; antes
+  // saía como texto puro, mostrando as tags <p style="..."> literalmente.
   const conclusaoScreenNode = relatorio?.conclusao_geral ? (
     <section className="drps-conclusao-geral-print">
       <style>{`
         .drps-conclusao-geral-print { page-break-before: always; font-family: 'Times New Roman', Times, serif; }
         .drps-conclusao-geral-print h2 { font-size: 16pt; font-weight: 700; color: #1e4d28; border-bottom: 2px solid #006B54; padding-bottom: 6px; margin: 0 0 14pt 0; text-transform: uppercase; letter-spacing: 0.05em; }
-        .drps-conclusao-geral-print p { font-size: 12pt; line-height: 1.6; text-align: justify; color: #1f2937; margin: 0 0 12pt 0; text-indent: 1.25cm; white-space: pre-wrap; }
+        .drps-conclusao-geral-print p { font-size: 12pt; line-height: 1.6; text-align: justify; color: #1f2937; margin: 0 0 12pt 0; text-indent: 1.25cm; }
+        .drps-conclusao-geral-print ul, .drps-conclusao-geral-print ol { margin: 0 0 12pt 1.5em; font-size: 12pt; line-height: 1.6; }
       `}</style>
-      <h2>Conclusão Geral</h2>
-      <p>{relatorio.conclusao_geral}</p>
+      <h2>{numLabel(numPorSlug["drps_conclusao"], "Conclusão Geral")}</h2>
+      <div dangerouslySetInnerHTML={{ __html: relatorio.conclusao_geral }} />
+    </section>
+  ) : null;
+
+  // Caracterização dos Trabalhadores — distribuição quantitativa por setor/função.
+  const totalTrabalhadoresScreen = relatoriosPorSetor.reduce(
+    (s, r) => s + r.totalRespondentes,
+    0,
+  );
+  const caracterizacaoScreenNode = relatoriosPorSetor.length > 0 ? (
+    <section className="mb-6 break-inside-avoid">
+      <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+        {numLabel(numPorSlug["drps_caracterizacao"], "Caracterização dos Trabalhadores")}
+      </h2>
+      <p className="mb-2 text-xs text-gray-600">
+        Distribuição quantitativa dos trabalhadores avaliados por setor e função,
+        conforme os respondentes do Diagnóstico de Riscos Psicossociais.
+      </p>
+      <table className="drps-tabela text-xs">
+        <thead>
+          <tr>
+            <th className="drps-label" style={{ width: "32%", textAlign: "left" }}>Setor</th>
+            <th className="drps-label" style={{ textAlign: "left" }}>Funções</th>
+            <th className="drps-label" style={{ width: "16%", textAlign: "center" }}>Trabalhadores</th>
+          </tr>
+        </thead>
+        <tbody>
+          {relatoriosPorSetor.map((r) => (
+            <tr key={r.setor}>
+              <td>{r.setor}</td>
+              <td>{r.funcoes || "—"}</td>
+              <td style={{ textAlign: "center" }}>{r.totalRespondentes}</td>
+            </tr>
+          ))}
+          <tr>
+            <td style={{ fontWeight: 700 }}>Total</td>
+            <td />
+            <td style={{ textAlign: "center", fontWeight: 700 }}>{totalTrabalhadoresScreen}</td>
+          </tr>
+        </tbody>
+      </table>
     </section>
   ) : null;
 
@@ -194,7 +253,7 @@ export default function PsicossocialLaudoPage({
   const identificacaoScreenNode = (
     <section className="mb-6 break-inside-avoid">
       <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
-        Identificação da Empresa
+        {numLabel(numPorSlug["identificacao_empresa"], "Identificação da Empresa")}
       </h2>
       <EmpresaInfoPanel empresa={empresa ?? null} />
     </section>
@@ -220,10 +279,20 @@ export default function PsicossocialLaudoPage({
     switch (slug) {
       case "identificacao_empresa": return identificacaoScreenNode;
       case "sumario":               return sumarioListaScreenNode;
-      case "drps_analise_setor": return <>{setoresScreenNode}</>;
+      case "drps_caracterizacao": return caracterizacaoScreenNode;
+      case "drps_analise_setor": return (
+        <>
+          <section className="mb-3 break-inside-avoid">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              {numLabel(numPorSlug["drps_analise_setor"], "Análise por Setor")}
+            </h2>
+          </section>
+          {setoresScreenNode}
+        </>
+      );
       case "drps_conclusao":     return conclusaoScreenNode;
-      case "drps_plano_medidas": return <DrpsGestaoResumoPrint idRelatorio={idRelatorio} />;
-      case "drps_revisao":       return <DrpsRelatorioExtrasPrint idRelatorio={idRelatorio} />;
+      case "drps_plano_medidas": return <DrpsGestaoResumoPrint idRelatorio={idRelatorio} numero={numPorSlug["drps_plano_medidas"]} />;
+      case "drps_revisao":       return <DrpsRelatorioExtrasPrint idRelatorio={idRelatorio} numero={numPorSlug["drps_revisao"]} />;
       default:                   return null;
     }
   }
@@ -259,7 +328,7 @@ export default function PsicossocialLaudoPage({
     return (
       <div className="mb-6 break-inside-avoid">
         <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
-          {substituirVariaveisTexto(c.titulo, valoresVars)}
+          {numLabel(numPorId[c.id_capitulo], substituirVariaveisTexto(c.titulo, valoresVars))}
         </h2>
         <div
           className="prose prose-sm max-w-none text-xs leading-relaxed text-gray-700 [&_p]:mb-2 [&_table]:w-full [&_td]:border [&_td]:border-gray-300 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-gray-300 [&_th]:bg-gray-50 [&_th]:px-2 [&_th]:py-1"

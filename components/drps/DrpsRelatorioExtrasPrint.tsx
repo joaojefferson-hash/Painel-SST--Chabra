@@ -41,10 +41,13 @@ import type {
 export default function DrpsRelatorioExtrasPrint({
   idRelatorio,
   anoMedidas,
+  numero,
 }: {
   idRelatorio: string;
   /** Ano usado pra carregar o plano de medidas (default: ano corrente). */
   anoMedidas?: number;
+  /** Número do capítulo no Sumário (prefixa o h2 de Monitoramento). */
+  numero?: number;
 }) {
   const ano = anoMedidas ?? new Date().getFullYear();
 
@@ -211,7 +214,7 @@ export default function DrpsRelatorioExtrasPrint({
       {/* === Monitoramento do Desempenho === */}
       {(monitoramentos.length > 0 || topicosPorSetor.length > 0) && (
         <section className="drps-extras-section">
-          <h2 className="drps-extras-h2">Monitoramento do Desempenho</h2>
+          <h2 className="drps-extras-h2">{numero ? `${numero}. ` : ""}Monitoramento do Desempenho</h2>
           <p className="drps-extras-p">
             Acompanhamento das intervenções por tópico psicossocial, por setor,
             com status de execução e data da próxima reavaliação.

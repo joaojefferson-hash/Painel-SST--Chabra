@@ -18,9 +18,11 @@ import {
 export default function DrpsGestaoResumoPrint({
   idRelatorio,
   anoMedidas,
+  numero,
 }: {
   idRelatorio: string;
   anoMedidas?: number;
+  numero?: number;
 }) {
   const ano = anoMedidas ?? new Date().getFullYear();
   const { data: planoDB } = useDrpsPlanoMedidas(idRelatorio, ano);
@@ -127,7 +129,7 @@ export default function DrpsGestaoResumoPrint({
         }
       `}</style>
 
-      <h2>Painel de Gestão — Resumo Executivo</h2>
+      <h2>{numero ? `${numero}. ` : ""}Painel de Gestão — Resumo Executivo</h2>
       <p className="intro">
         Indicadores consolidados das três frentes de gestão do programa de
         riscos psicossociais: Medidas de Controle (cronograma de implementação),
