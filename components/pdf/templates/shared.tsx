@@ -114,6 +114,34 @@ export function temSecoesSistema(capitulos: TextoPadraoCapitulo[]): boolean {
   return capitulos.some((c) => c.tipo === "fixo");
 }
 
+/** Prefixa "N. " a um texto quando há número. */
+export const numLabel = (num: number | undefined, txt: string): string =>
+  num ? `${num}. ${txt}` : txt;
+
+/**
+ * Numera os capítulos (na ordem do laudo) que passam no predicado `renderiza`,
+ * para casar Sumário ↔ corpo sem fantasmas/lacunas. Devolve mapas por slug
+ * (seções do sistema) e por id (editáveis).
+ */
+export function numerarCapitulos(
+  capitulos: TextoPadraoCapitulo[],
+  renderiza: (c: TextoPadraoCapitulo) => boolean,
+): { numPorSlug: Record<string, number>; numPorId: Record<string, number> } {
+  const numPorSlug: Record<string, number> = {};
+  const numPorId: Record<string, number> = {};
+  const ord = [...capitulos]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+  let n = 0;
+  for (const c of ord) {
+    if (!renderiza(c)) continue;
+    n += 1;
+    if (c.tipo === "fixo" && c.slug_fixo) numPorSlug[c.slug_fixo] = n;
+    numPorId[c.id_capitulo] = n;
+  }
+  return { numPorSlug, numPorId };
+}
+
 /**
  * Renderiza o corpo do laudo como lista única por `ordem` (editáveis + seções
  * do sistema intercalados). `renderSecao` mapeia cada slug_fixo ao seu nó.
@@ -123,17 +151,30 @@ export function renderUnificado(
   capitulos: TextoPadraoCapitulo[],
   valores: Record<string, string>,
   renderSecao: (slug: string) => React.ReactNode,
+  opts?: { numPorId?: Record<string, number> },
 ): React.ReactNode {
+  const numPorId = opts?.numPorId;
   return [...capitulos]
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
     .map((c) =>
       c.tipo === "fixo" ? (
-        <div key={c.id_capitulo} className={classeQuebraFixo(c)}>
+        <div
+          key={c.id_capitulo}
+          className={classeQuebraFixo(c)}
+          data-slug={c.slug_fixo ?? undefined}
+        >
           {renderSecao(c.slug_fixo ?? "")}
         </div>
       ) : (
-        <React.Fragment key={c.id_capitulo}>{renderEditavelUm(c, valores)}</React.Fragment>
+        <React.Fragment key={c.id_capitulo}>
+          {renderEditavelUm(
+            numPorId?.[c.id_capitulo]
+              ? { ...c, titulo: `${numPorId[c.id_capitulo]}. ${c.titulo}` }
+              : c,
+            valores,
+          )}
+        </React.Fragment>
       ),
     );
 }

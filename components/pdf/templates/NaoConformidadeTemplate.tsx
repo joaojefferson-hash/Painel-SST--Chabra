@@ -5,7 +5,7 @@ import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/Secoes
 import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import { substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
-import { TP_STYLE, renderEditaveis, CabecalhoLaudo, temSecoesSistema, renderUnificado } from "./shared";
+import { TP_STYLE, renderEditaveis, CabecalhoLaudo, temSecoesSistema, renderUnificado, numerarCapitulos, numLabel } from "./shared";
 
 export interface NaoConformidadeItemLocal {
   id_item: string;
@@ -172,13 +172,51 @@ export default function NaoConformidadeTemplate({
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
 
-  // Títulos para o sumário (exclui o próprio sumário).
+  // Título cadastrado de cada seção fixa (p/ cabeçalho numerado no corpo).
+  const tituloPorSlug: Record<string, string> = {};
+  for (const c of capitulos) if (c.slug_fixo) tituloPorSlug[c.slug_fixo] = c.titulo;
+
+  // Um capítulo só entra no Sumário/numeração se renderiza seção numerada.
+  function renderizaNumerado(c: TextoPadraoCapitulo): boolean {
+    if (c.ativo === false) return false;
+    const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+    if (ehCapa) return false;
+    if (c.tipo !== "fixo") return true;
+    switch (c.slug_fixo) {
+      case "identificacao_empresa": return true;
+      case "nc_descricao":          return true;
+      case "nc_assinatura":         return true;
+      // sumário não numera; nc_plano não renderiza seção própria (ações vão por item)
+      default:                      return false;
+    }
+  }
+
+  const { numPorSlug, numPorId } = numerarCapitulos(capitulos, renderizaNumerado);
+
+  // Títulos do sumário — só capítulos que viram seção numerada (mesmo predicado).
   const sumarioTitulos = blocos
-    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
+    .filter((c) => renderizaNumerado(c))
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
     )
     .filter((t) => t && t.trim());
+
+  const temAssinaturaFixo = capitulos.some(
+    (c) => c.tipo === "fixo" && c.slug_fixo === "nc_assinatura" && c.ativo !== false,
+  );
+
+  // Folha de assinaturas: quando há capítulo "nc_assinatura", renderiza na posição
+  // dele (numerada, quebra controlada pelo wrapper); senão, cai no fim (fallback).
+  const folhaNode = (
+    <FolhaAssinaturas
+      signatarios={signatarios}
+      empresa={folhaEmpresa}
+      dataHoraAssinatura={dataHoraAssinatura}
+      identificadorDocumento={identificadorDocumento}
+      quebraAntes={false}
+      numero={numPorSlug["nc_assinatura"]}
+    />
+  );
 
   // Seção do sistema "Não Conformidades" (resumo + itens + observações gerais).
   const descricaoNode = (
@@ -196,15 +234,21 @@ export default function NaoConformidadeTemplate({
 
   function renderSecaoNC(slug: string): React.ReactNode {
     switch (slug) {
-      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} />;
+      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} numero={numPorSlug["identificacao_empresa"]} />;
       case "sumario":               return <SecaoSumario titulos={sumarioTitulos} />;
-      case "nc_descricao":          return descricaoNode;
-      default:                      return null; // nc_plano (ações ficam por item) / nc_assinatura (folha no fim)
+      case "nc_descricao":          return (
+        <div className="tp-cap">
+          <h2>{numLabel(numPorSlug["nc_descricao"], tituloPorSlug["nc_descricao"] ?? "Descrição da Não Conformidade")}</h2>
+          {descricaoNode}
+        </div>
+      );
+      case "nc_assinatura":         return folhaNode;
+      default:                      return null; // nc_plano (ações ficam por item)
     }
   }
 
   const corpo = temSecoesSistema(capitulos)
-    ? renderUnificado(capitulos, valores, renderSecaoNC)
+    ? renderUnificado(capitulos, valores, renderSecaoNC, { numPorId })
     : (
       <>
         {renderEditaveis(capitulos, valores, "inicio")}
@@ -232,12 +276,15 @@ export default function NaoConformidadeTemplate({
 
       {corpo}
 
-      <FolhaAssinaturas
-        signatarios={signatarios}
-        empresa={folhaEmpresa}
-        dataHoraAssinatura={dataHoraAssinatura}
-        identificadorDocumento={identificadorDocumento}
-      />
+      {/* Fallback: sem capítulo de assinatura ativo, renderiza a folha no fim. */}
+      {!temAssinaturaFixo && (
+        <FolhaAssinaturas
+          signatarios={signatarios}
+          empresa={folhaEmpresa}
+          dataHoraAssinatura={dataHoraAssinatura}
+          identificadorDocumento={identificadorDocumento}
+        />
+      )}
     </>
   );
 }

@@ -20,6 +20,8 @@ interface Props {
   /** Quando setado, renderiza SÓ este capítulo (ignora o filtro de posição).
    *  Usado pela montagem por blocos ordenados (ex: laudo AEP). */
   capituloId?: string;
+  /** Número do capítulo no Sumário — prefixa o título (modo capituloId). */
+  numero?: number;
 }
 
 /**
@@ -37,6 +39,7 @@ export default function TextosPadraoPrint({
   valores,
   posicao = "antes",
   capituloId,
+  numero,
 }: Props) {
   const { data: capitulosTodos = [] } = useTextosPadrao(modulo);
 
@@ -215,7 +218,7 @@ export default function TextosPadraoPrint({
             )}
             {!ehCapa && (
               <h2 className="textos-padrao-capitulo-titulo">
-                {tituloSubstituido}
+                {numero && capituloId ? `${numero}. ` : ""}{tituloSubstituido}
               </h2>
             )}
             {ehCapa && c.caixas_texto && c.caixas_texto.length > 0 ? (

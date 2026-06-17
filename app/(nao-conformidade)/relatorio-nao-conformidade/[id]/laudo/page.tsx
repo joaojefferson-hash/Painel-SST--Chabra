@@ -132,12 +132,58 @@ export default function LaudoNaoConformidadePage({
   const blocosNC = [...capitulosNC]
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+  const tituloPorSlugNC: Record<string, string> = {};
+  for (const c of capitulosNC) if (c.slug_fixo) tituloPorSlugNC[c.slug_fixo] = c.titulo;
+
+  // Só entra no Sumário/numeração quem vira seção numerada (mesmo predicado do PDF).
+  const renderizaNumeradoNC = (c: (typeof capitulosNC)[number]): boolean => {
+    if (c.ativo === false) return false;
+    const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+    if (ehCapa) return false;
+    if (c.tipo !== "fixo") return true;
+    switch (c.slug_fixo) {
+      case "identificacao_empresa": return true;
+      case "nc_descricao":          return true;
+      case "nc_assinatura":         return true;
+      default:                      return false; // sumario, nc_plano
+    }
+  };
+
+  const numPorSlugNC: Record<string, number> = {};
+  const numPorIdNC: Record<string, number> = {};
+  {
+    let n = 0;
+    for (const c of blocosNC) {
+      if (!renderizaNumeradoNC(c)) continue;
+      n += 1;
+      if (c.tipo === "fixo" && c.slug_fixo) numPorSlugNC[c.slug_fixo] = n;
+      numPorIdNC[c.id_capitulo] = n;
+    }
+  }
+  const numLabelNC = (num: number | undefined, txt: string) => (num ? `${num}. ${txt}` : txt);
+
   const sumarioTitulos = blocosNC
-    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
+    .filter((c) => renderizaNumeradoNC(c))
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresTextosPadrao),
     )
     .filter((t) => t && t.trim());
+
+  const temAssinaturaFixoNC = capitulosNC.some(
+    (c) => c.tipo === "fixo" && c.slug_fixo === "nc_assinatura" && c.ativo !== false,
+  );
+
+  const assinaturaScreenNode = (
+    <AssinaturaRelatorio
+      nomeResponsavel={relatorio.responsavel ?? undefined}
+      dataRelatorio={formatarDataBR(relatorio.data_inspecao) || undefined}
+      tabelaNome="relatorios_nao_conformidade"
+      docId={id}
+      hideAcoes
+      numero={numPorSlugNC["nc_assinatura"]}
+    />
+  );
 
   function renderSecaoNCScreen(slug: string): React.ReactNode {
     switch (slug) {
@@ -145,7 +191,7 @@ export default function LaudoNaoConformidadePage({
         return (
           <div className="mb-6 break-inside-avoid">
             <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
-              Identificação da Empresa
+              {numLabelNC(numPorSlugNC["identificacao_empresa"], "Identificação da Empresa")}
             </h2>
             <EmpresaInfoPanel empresa={empresa ?? null} />
           </div>
@@ -167,7 +213,16 @@ export default function LaudoNaoConformidadePage({
           </div>
         );
       case "nc_descricao":
-        return descricaoScreenNode;
+        return (
+          <div className="mb-6">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              {numLabelNC(numPorSlugNC["nc_descricao"], tituloPorSlugNC["nc_descricao"] ?? "Descrição da Não Conformidade")}
+            </h2>
+            {descricaoScreenNode}
+          </div>
+        );
+      case "nc_assinatura":
+        return assinaturaScreenNode;
       default:
         return null;
     }
@@ -175,16 +230,13 @@ export default function LaudoNaoConformidadePage({
 
   const temFixosNC = capitulosNC.some((c) => c.tipo === "fixo");
   const corpoScreen = temFixosNC ? (
-    [...capitulosNC]
-      .filter((c) => c.ativo !== false)
-      .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
-      .map((c) =>
-        c.tipo === "fixo" ? (
-          <React.Fragment key={c.id_capitulo}>{renderSecaoNCScreen(c.slug_fixo ?? "")}</React.Fragment>
-        ) : (
-          <TextosPadraoPrint key={c.id_capitulo} modulo="nao_conformidade" capituloId={c.id_capitulo} valores={valoresTextosPadrao} />
-        ),
-      )
+    blocosNC.map((c) =>
+      c.tipo === "fixo" ? (
+        <React.Fragment key={c.id_capitulo}>{renderSecaoNCScreen(c.slug_fixo ?? "")}</React.Fragment>
+      ) : (
+        <TextosPadraoPrint key={c.id_capitulo} modulo="nao_conformidade" capituloId={c.id_capitulo} valores={valoresTextosPadrao} numero={numPorIdNC[c.id_capitulo]} />
+      ),
+    )
   ) : (
     <>
       <TextosPadraoPrint modulo="nao_conformidade" valores={valoresTextosPadrao} posicao="inicio" />
@@ -322,14 +374,8 @@ export default function LaudoNaoConformidadePage({
       {/* Corpo do laudo — ordem unificada (sistema + editáveis) ou layout legado */}
       {corpoScreen}
 
-      {/* Assinatura */}
-      <AssinaturaRelatorio
-        nomeResponsavel={relatorio.responsavel ?? undefined}
-        dataRelatorio={formatarDataBR(relatorio.data_inspecao) || undefined}
-        tabelaNome="relatorios_nao_conformidade"
-        docId={id}
-        hideAcoes
-      />
+      {/* Assinatura — só no fim quando não há capítulo "nc_assinatura" ativo. */}
+      {!temAssinaturaFixoNC && assinaturaScreenNode}
 
       <p className="text-center text-[9px] text-gray-500 print:mt-4">
         Relatório de Não Conformidade gerado por Chabra — Segurança e Saúde do Trabalho ·{" "}
