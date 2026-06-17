@@ -2,7 +2,7 @@
 
 import React, { use, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BadgeCheck, Download, Loader2, FlaskConical, FileText, Pencil } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Download, Loader2 } from "lucide-react";
 import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
@@ -268,79 +268,6 @@ export default function LaudoAnaliseQuimicoPage({
         subtitulo={analise.titulo}
         terciario={empresa?.nome_empresa ?? null}
       />
-
-      {/* Cabeçalho do relatório */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm print:border-0 print:shadow-none">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex size-12 shrink-0 items-center justify-center rounded-xl text-white"
-            style={{ backgroundColor: "#0EA5E9" }}
-          >
-            <FlaskConical className="size-6" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-sky-600">
-              Análise de Químicos Chabra
-            </p>
-            <h1 className="truncate text-xl font-bold text-gray-900">{analise.titulo}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
-              <span className="inline-flex items-center gap-1">
-                {analise.modo === "PDF" ? (
-                  <FileText className="size-3" />
-                ) : (
-                  <Pencil className="size-3" />
-                )}
-                {analise.modo === "PDF"
-                  ? `PDF: ${analise.fonte_arquivo ?? ""}`
-                  : "Entrada Manual"}
-              </span>
-              {empresa && <span>Empresa: {empresa.nome_empresa}</span>}
-              {analise.usuario_nome && <span>Responsável: {analise.usuario_nome}</span>}
-              <span>{new Date(analise.created_at).toLocaleString("pt-BR")}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Dados do produto */}
-        {(analise.nome_quimico ||
-          analise.numero_cas ||
-          analise.formula_quimica ||
-          analise.forma_fisica ||
-          analise.concentracao) && (
-          <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 pt-3 text-xs md:grid-cols-3 lg:grid-cols-5">
-            {analise.nome_quimico && (
-              <div>
-                <p className="text-[9px] font-bold uppercase text-gray-500">Nome Químico</p>
-                <p className="text-gray-900">{analise.nome_quimico}</p>
-              </div>
-            )}
-            {analise.numero_cas && (
-              <div>
-                <p className="text-[9px] font-bold uppercase text-gray-500">CAS</p>
-                <p className="text-gray-900">{analise.numero_cas}</p>
-              </div>
-            )}
-            {analise.formula_quimica && (
-              <div>
-                <p className="text-[9px] font-bold uppercase text-gray-500">Fórmula</p>
-                <p className="text-gray-900">{analise.formula_quimica}</p>
-              </div>
-            )}
-            {analise.forma_fisica && (
-              <div>
-                <p className="text-[9px] font-bold uppercase text-gray-500">Forma Física</p>
-                <p className="text-gray-900">{analise.forma_fisica}</p>
-              </div>
-            )}
-            {analise.concentracao && (
-              <div>
-                <p className="text-[9px] font-bold uppercase text-gray-500">Concentração</p>
-                <p className="text-gray-900">{analise.concentracao}</p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Conclusão rápida */}
       <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm print:border-0 print:shadow-none print:p-2">

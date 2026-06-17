@@ -377,19 +377,6 @@ export default function AnaliseQuimicosTemplate({
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: STYLE_BLOCK }} />
 
-      {/* Cabeçalho — enxuto; os dados da empresa vão no capítulo
-          "Identificação da Empresa". */}
-      <div style={{ marginBottom: 20, borderBottom: `3px solid ${VERDE}`, paddingBottom: 14 }}>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#0284c7" }}>
-          Análise de Agente Químico
-        </p>
-        <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 700, color: "#111827" }}>{analise.titulo}</h1>
-        <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", fontSize: 11, color: "#374151" }}>
-          <span><strong>Empresa:</strong> {empresa?.nome_empresa ?? "—"}</span>
-          <span><strong>Origem:</strong> {analise.modo === "PDF" ? `FISPQ: ${analise.fonte_arquivo ?? ""}` : "Entrada manual"}</span>
-        </div>
-      </div>
-
       {corpo}
 
       <FolhaAssinaturas

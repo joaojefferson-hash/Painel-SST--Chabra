@@ -167,6 +167,7 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
     ordenacaoUnificada: true,
     fixos: [
       { titulo: "Análise Química (corpo do laudo)", slug_fixo: "quimicos_analise", descricao: "Corpo completo da análise: identificação, NR-15/16, aposentadoria, controles, parecer — gerado automaticamente.", ordem_base: 2000 },
+      { titulo: "Assinatura do Responsável Técnico", slug_fixo: "quimicos_assinatura", descricao: "Rodapé de assinatura — gerado automaticamente.", ordem_base: 9000 },
     ],
   },
   apreciacao_maquinas: {
@@ -197,6 +198,7 @@ export const MODULO_CONFIGS: Record<ModuloTextoPadrao, ModuloConfig> = {
       { titulo: "Indicadores de Necessidade de AET", slug_fixo: "aep_escalonamento", descricao: "Lista de setores que exigem AET completa — gerado automaticamente.", ordem_base: 3000 },
       { titulo: "Triagem Ergonômica por Setor", slug_fixo: "aep_triagem", descricao: "Tabela de riscos ergonômicos por setor — gerado automaticamente.", ordem_base: 3500 },
       { titulo: "Considerações Finais e Encaminhamentos", slug_fixo: "aep_consideracoes", descricao: "Conclusão do relatório — gerado automaticamente.", ordem_base: 5000 },
+      { titulo: "Assinatura do Responsável Técnico", slug_fixo: "aep_assinatura", descricao: "Rodapé de assinatura — gerado automaticamente.", ordem_base: 9000 },
     ],
   },
   aet: {

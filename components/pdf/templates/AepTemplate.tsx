@@ -18,7 +18,6 @@ import {
   substituirVariaveis,
   substituirVariaveisTexto,
 } from "@/lib/textos-padrao/variaveis";
-import { formatarDataBR } from "@/lib/textos-padrao/formatters";
 
 // ── Tipos locais (não importa de useAep.ts — é "use client") ──────────────────
 
@@ -669,16 +668,11 @@ export default function AepTemplate({
   dataHoraAssinatura,
   identificadorDocumento,
 }: AepTemplateProps) {
-  // Empresa do join (nome/cnpj) para a capa enxuta; a seção de sistema
-  // "Identificação da Empresa" usa a empresa COMPLETA recebida via prop.
-  const empresaCapa = rel.empresas;
   const setoresComAet = rel.setores.filter((s) => s.necessita_aet);
-  const totalRiscos = rel.setores.reduce((a, s) => a + s.riscos.length, 0);
 
   // Laudo montado como LISTA ÚNICA de blocos, na ordem definida em
-  // textos_padrao(modulo='aep'). Capa (acima) e assinatura (abaixo) são
-  // estruturais. Cada bloco é um texto editável ou uma seção do sistema
-  // (despachada pelo slug_fixo).
+  // textos_padrao(modulo='aep'). Cada bloco é um texto editável ou uma seção
+  // do sistema (despachada pelo slug_fixo).
   const blocosOrdenados = [...capitulos]
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
@@ -688,8 +682,8 @@ export default function AepTemplate({
   for (const c of capitulos) if (c.slug_fixo) tituloPorSlug[c.slug_fixo] = c.titulo;
 
   // Um capítulo só entra no Sumário/numeração se renderiza seção numerada.
-  // NÃO há capítulo de assinatura no AEP — a FolhaAssinaturas é hardcoded no
-  // fim, sem número, e fica fora do sumário/numeração.
+  // Quando há capítulo "aep_assinatura", a FolhaAssinaturas é renderizada na
+  // posição dele (numerada); senão, cai no fim como fallback, sem número.
   function renderizaNumerado(c: TextoPadraoCapitulo): boolean {
     if (c.ativo === false) return false;
     const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
@@ -701,6 +695,7 @@ export default function AepTemplate({
       case "aep_triagem":           return true;
       // aep_consideracoes só renderiza seção quando há conclusão preenchida.
       case "aep_consideracoes":     return !!rel.conclusao?.trim();
+      case "aep_assinatura":        return true;
       default:                      return false; // sumario
     }
   }
@@ -828,6 +823,23 @@ export default function AepTemplate({
     </div>
   ) : null;
 
+  const temAssinaturaFixo = capitulos.some(
+    (c) => c.tipo === "fixo" && c.slug_fixo === "aep_assinatura" && c.ativo !== false,
+  );
+
+  // Folha de assinaturas: quando há capítulo "aep_assinatura", renderiza na
+  // posição dele (numerada, quebra controlada pelo wrapper); senão, cai no fim.
+  const folhaNode = (
+    <FolhaAssinaturas
+      signatarios={signatarios}
+      empresa={folhaEmpresa}
+      dataHoraAssinatura={dataHoraAssinatura}
+      identificadorDocumento={identificadorDocumento}
+      quebraAntes={false}
+      numero={numPorSlug["aep_assinatura"]}
+    />
+  );
+
   function renderBloco(c: TextoPadraoCapitulo) {
     if (c.tipo === "fixo") {
       let conteudoFixo: React.ReactNode = null;
@@ -847,6 +859,9 @@ export default function AepTemplate({
         case "aep_consideracoes":
           conteudoFixo = secaoConsideracoes;
           break;
+        case "aep_assinatura":
+          conteudoFixo = folhaNode;
+          break;
         default:
           conteudoFixo = null;
       }
@@ -862,77 +877,20 @@ export default function AepTemplate({
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: STYLE_BLOCK }} />
 
-      {/* Capa */}
-      <div
-        style={{
-          marginBottom: 40,
-          borderBottom: "4px solid #047857",
-          paddingBottom: 24,
-          textAlign: "center",
-        }}
-      >
-        <p
-          style={{
-            margin: 0,
-            fontSize: 11,
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            color: "#059669",
-          }}
-        >
-          Análise Ergonômica Preliminar
-        </p>
-        <h1
-          style={{
-            margin: "8px 0 0",
-            fontSize: 24,
-            fontWeight: 700,
-            color: "#111827",
-          }}
-        >
-          {empresaCapa?.nome_empresa}
-        </h1>
-        <div
-          style={{
-            marginTop: 16,
-            display: "flex",
-            justifyContent: "center",
-            gap: 24,
-            fontSize: 11,
-            color: "#4b5563",
-          }}
-        >
-          <span>
-            Setores: <strong>{rel.setores.length}</strong>
-          </span>
-          <span>
-            Riscos identificados: <strong>{totalRiscos}</strong>
-          </span>
-          {setoresComAet.length > 0 && (
-            <span style={{ color: "#c2410c", fontWeight: 600 }}>
-              ⚠ {setoresComAet.length} setor(es) requer(em) AET
-            </span>
-          )}
-        </div>
-        {rel.data_elaboracao && (
-          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#6b7280" }}>
-            Data: {formatarDataBR(rel.data_elaboracao)}
-          </p>
-        )}
-      </div>
-
       {/* Corpo do laudo — blocos na ordem definida (textos editáveis +
-          seções do sistema), entre a capa e a folha de assinatura */}
+          seções do sistema). O laudo começa pela capa (capítulo editável),
+          como no Não-Conformidade. */}
       {blocosOrdenados.map((c) => renderBloco(c))}
 
-      {/* Folha de assinaturas digital (ICP-Brasil) */}
-      <FolhaAssinaturas
-        signatarios={signatarios}
-        empresa={folhaEmpresa}
-        dataHoraAssinatura={dataHoraAssinatura}
-        identificadorDocumento={identificadorDocumento}
-      />
+      {/* Fallback: sem capítulo de assinatura ativo, renderiza a folha no fim. */}
+      {!temAssinaturaFixo && (
+        <FolhaAssinaturas
+          signatarios={signatarios}
+          empresa={folhaEmpresa}
+          dataHoraAssinatura={dataHoraAssinatura}
+          identificadorDocumento={identificadorDocumento}
+        />
+      )}
     </>
   );
 }

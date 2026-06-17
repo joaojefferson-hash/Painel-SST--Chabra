@@ -240,7 +240,6 @@ function PlanoAcaoSection({ acoes, titulo }: { acoes: ApreciacaoAcaoLocal[]; tit
 
 export default function ApreciacaoTemplate({
   apreciacao,
-  maquinaNome,
   empresa,
   itens,
   acoes,
@@ -251,10 +250,6 @@ export default function ApreciacaoTemplate({
   dataHoraAssinatura,
   identificadorDocumento,
 }: ApreciacaoTemplateProps) {
-  const dataAp = apreciacao.data_apreciacao
-    ? new Date(apreciacao.data_apreciacao + "T00:00").toLocaleDateString("pt-BR")
-    : "—";
-
   // Título cadastrado de cada seção fixa (p/ cabeçalho numerado no corpo).
   const tituloPorSlug: Record<string, string> = {};
   for (const c of capitulos) if (c.slug_fixo) tituloPorSlug[c.slug_fixo] = c.titulo;
@@ -365,23 +360,6 @@ export default function ApreciacaoTemplate({
     <>
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: STYLE_BLOCK }} />
-
-      {/* Cabeçalho enxuto — identificação completa da empresa fica na seção
-          "identificacao_empresa"; dados da máquina, em "apreciacao_identificacao". */}
-      <div style={{ marginBottom: 16, borderBottom: `3px solid ${LARANJA}`, paddingBottom: 14 }}>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: LARANJA }}>
-          Apreciação de Risco — NR-12
-        </p>
-        <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 700, color: "#111827" }}>
-          {apreciacao.titulo || `Apreciação ${maquinaNome}`}
-        </h1>
-        <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", fontSize: 11, color: "#374151" }}>
-          <span><strong>Empresa:</strong> {empresa?.nome_empresa ?? "—"}</span>
-          <span><strong>Máquina:</strong> {maquinaNome}</span>
-          <span><strong>Setor / Local:</strong> {apreciacao.setor ?? "—"}</span>
-          <span><strong>Data:</strong> {dataAp}</span>
-        </div>
-      </div>
 
       {apreciacao.observacoes_gerais && (
         <div className="campo" style={{ marginBottom: 8 }}>

@@ -293,7 +293,6 @@ export default function AepLaudoPage({
 
   const empresa = rel?.empresas as { nome_empresa?: string; cnpj?: string | null } | null;
   const setoresComAet = rel?.setores.filter((s) => s.necessita_aet) ?? [];
-  const totalRiscos = rel?.setores.reduce((a, s) => a + s.riscos.length, 0) ?? 0;
 
   const valoresVars = useMemo(
     () => (rel ? montarValoresAep(rel) : {}),
@@ -322,6 +321,7 @@ export default function AepLaudoPage({
           case "aep_escalonamento":     return true;
           case "aep_triagem":           return true;
           case "aep_consideracoes":     return temConclusao;
+          case "aep_assinatura":        return true;
           default:                      return false; // sumario
         }
       },
@@ -351,6 +351,25 @@ export default function AepLaudoPage({
   const numLabel = (num: number | undefined, txt: string) => (num ? `${num}. ${txt}` : txt);
 
   if (!rel) return null;
+
+  const temAssinaturaFixo = capsAep.some(
+    (c) => c.tipo === "fixo" && c.slug_fixo === "aep_assinatura" && c.ativo !== false,
+  );
+
+  // Assinatura: quando há capítulo "aep_assinatura", renderiza na posição dele
+  // (numerada); senão, cai no fim como fallback, sem número.
+  const assinaturaScreenNode = (
+    <AssinaturaRelatorio
+      nomeResponsavel={rel.responsavel_elaboracao ?? undefined}
+      cargoResponsavel={rel.titulo_profissional ?? undefined}
+      dataRelatorio={formatarDataBR(rel.data_elaboracao) || undefined}
+      tabelaNome="aep_relatorios"
+      docId={idRelatorio}
+      hideAcoes
+      seloSoQuandoAssinado
+      numero={numPorSlug["aep_assinatura"]}
+    />
+  );
 
   return (
     <>
@@ -446,30 +465,9 @@ export default function AepLaudoPage({
       {/* Laudo */}
       <div data-pdf-content className="mx-auto max-w-4xl bg-white px-8 py-10 shadow-sm print:shadow-none print:p-0 print:max-w-none">
 
-        {/* Capa */}
-        <div className="mb-10 border-b-4 border-emerald-700 pb-6 text-center print:mb-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">Análise Ergonômica Preliminar</p>
-          <h1 className="mt-2 text-2xl font-bold text-gray-900">{empresa?.nome_empresa}</h1>
-          {empresa?.cnpj && <p className="mt-1 text-xs text-gray-500">CNPJ: {empresa.cnpj}</p>}
-          <div className="mt-4 flex justify-center gap-6 text-xs text-gray-600">
-            <span>Setores: <strong>{rel.setores.length}</strong></span>
-            <span>Riscos identificados: <strong>{totalRiscos}</strong></span>
-            {setoresComAet.length > 0 && (
-              <span className="text-orange-600 font-semibold">
-                <AlertTriangle className="inline size-3 mr-1" />
-                {setoresComAet.length} setor(es) requer(em) AET
-              </span>
-            )}
-          </div>
-          {rel.data_elaboracao && (
-            <p className="mt-2 text-xs text-gray-500">
-              Data: {new Date(rel.data_elaboracao).toLocaleDateString("pt-BR")}
-            </p>
-          )}
-        </div>
-
         {/* Corpo do laudo — blocos na ordem definida em Texto Padrão (textos
-            editáveis + seções do sistema). Mesma ordem do PDF gerado. */}
+            editáveis + seções do sistema). Mesma ordem do PDF gerado.
+            (Cabeçalho do topo removido — o laudo começa pela capa.) */}
         {[...capsAep]
           .filter((c) => c.ativo !== false)
           .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
@@ -550,6 +548,9 @@ export default function AepLaudoPage({
                   </Section>
                 ) : null;
               }
+              if (c.slug_fixo === "aep_assinatura") {
+                return <div key={c.id_capitulo}>{assinaturaScreenNode}</div>;
+              }
               return null;
             }
             // Texto editável — visível na tela e no print (o TextosPadraoPrint
@@ -577,16 +578,8 @@ export default function AepLaudoPage({
             );
           })}
 
-        {/* Assinatura */}
-        <AssinaturaRelatorio
-          nomeResponsavel={rel.responsavel_elaboracao ?? undefined}
-          cargoResponsavel={rel.titulo_profissional ?? undefined}
-          dataRelatorio={formatarDataBR(rel.data_elaboracao) || undefined}
-          tabelaNome="aep_relatorios"
-          docId={idRelatorio}
-          hideAcoes
-          seloSoQuandoAssinado
-        />
+        {/* Assinatura — só no fim quando não há capítulo "aep_assinatura" ativo. */}
+        {!temAssinaturaFixo && assinaturaScreenNode}
       </div>
     </>
   );

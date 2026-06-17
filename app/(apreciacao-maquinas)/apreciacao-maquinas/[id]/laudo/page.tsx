@@ -2,7 +2,7 @@
 
 import React, { use, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BadgeCheck, Download, Loader2, AlertTriangle, Cog } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Download, Loader2, AlertTriangle } from "lucide-react";
 import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
@@ -131,8 +131,6 @@ export default function LaudoApreciacaoMaquinasPage({
       </div>
     );
   }
-
-  const finalizada = apreciacao.status === "FINALIZADO";
 
   // Título cadastrado de cada seção fixa (p/ cabeçalho numerado no corpo).
   const tituloPorSlugAp: Record<string, string> = {};
@@ -396,75 +394,20 @@ export default function LaudoApreciacaoMaquinasPage({
         }
       />
 
-      {/* Título */}
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
-          <Cog className="size-5 text-orange-600" />
-          {apreciacao.titulo || `Apreciação ${maquinaNome}`}
-        </h1>
-        <p className="text-xs text-gray-500">
-          {empresaNome}
-          {apreciacao.setor ? ` · ${apreciacao.setor}` : ""} · Criada{" "}
-          {new Date(apreciacao.created_at).toLocaleDateString("pt-BR")}
-          {apreciacao.finalizado_em
-            ? ` · Finalizada ${new Date(apreciacao.finalizado_em).toLocaleDateString("pt-BR")}`
-            : ""}
-        </p>
-        <span
-          className={`mt-1 inline-block rounded-full px-3 py-1 text-xs font-bold print:hidden ${
-            finalizada ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-          }`}
-        >
-          {finalizada ? "Finalizada" : "Rascunho"}
-        </span>
-      </div>
+      {/* Observações gerais (mesma posição do PDF: antes do corpo). */}
+      {apreciacao.observacoes_gerais && (
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Observações Gerais</p>
+          <p className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap">{apreciacao.observacoes_gerais}</p>
+        </section>
+      )}
 
-      {/* Dados gerais — somente leitura (cabeçalho fixo no topo) */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">Dados Gerais</h2>
-        <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          <DataItem label="Empresa" value={empresaNome} />
-          <DataItem label="Máquina" value={maquinaNome} />
-          <DataItem label="Setor" value={apreciacao.setor ?? "—"} />
-          <DataItem label="Cidade" value={apreciacao.cidade ?? "—"} />
-          <DataItem label="Responsável técnico (Chabra)" value={apreciacao.responsavel ?? "—"} />
-          <DataItem label="Responsável da empresa" value={apreciacao.responsavel_empresa ?? "—"} />
-          <DataItem
-            label="Data da apreciação"
-            value={
-              apreciacao.data_apreciacao
-                ? new Date(apreciacao.data_apreciacao + "T00:00").toLocaleDateString("pt-BR")
-                : "—"
-            }
-          />
-          {apreciacao.risco_residual && (
-            <DataItem label="Risco Residual" value={apreciacao.risco_residual} />
-          )}
-        </div>
-        {apreciacao.observacoes_gerais && (
-          <div className="mt-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Observações Gerais</p>
-            <p className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap">{apreciacao.observacoes_gerais}</p>
-          </div>
-        )}
-      </section>
-
-      {/* Corpo do laudo — ordem unificada (sistema + editáveis) ou layout legado */}
+      {/* Corpo do laudo — ordem unificada (sistema + editáveis) ou layout legado.
+          (Cabeçalho do topo removido — o laudo começa pela capa, como no NC.) */}
       {corpoScreen}
 
       {/* Assinatura — só no fim quando não há capítulo "apreciacao_assinatura" ativo. */}
       {!temAssinaturaFixoAp && assinaturaScreenNode}
-    </div>
-  );
-}
-
-// ─── Subcomponentes ───────────────────────────────────────────────────────────
-
-function DataItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">{label}</span>
-      <span className="text-sm text-gray-900">{value}</span>
     </div>
   );
 }

@@ -241,20 +241,6 @@ export default function ConformidadeTemplate({
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: STYLE_BLOCK }} />
 
-      {/* Cabeçalho */}
-      <div style={{ marginBottom: 24, borderBottom: "3px solid #0f766e", paddingBottom: 16 }}>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#0f766e" }}>
-          Relatório de Conformidade — {relatorio.nr_codigo}
-        </p>
-        <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 700, color: "#111827" }}>{relatorio.nr_titulo}</h1>
-        <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", fontSize: 11, color: "#374151" }}>
-          <span><strong>Empresa:</strong> {empresa?.nome_empresa ?? "—"}</span>
-          <span><strong>Setor / Local:</strong> {relatorio.setor ?? "—"}</span>
-          <span><strong>Cidade:</strong> {relatorio.cidade ?? "—"}</span>
-          <span><strong>Data:</strong> {valores.data_inspecao ?? "—"}</span>
-        </div>
-      </div>
-
       {blocos.map((c) => renderBloco(c))}
 
       {/* Fallback: sem capítulo de assinatura ativo, renderiza a folha no fim. */}

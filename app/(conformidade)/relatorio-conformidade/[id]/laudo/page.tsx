@@ -72,7 +72,6 @@ export default function LaudoConformidadePage({
   }
 
   const { relatorio, itens } = data;
-  const finalizado = relatorio.status === "FINALIZADO";
 
   const valoresTextosPadrao: Record<string, string> = {
     ...montarValoresEmpresa(empresa),
@@ -342,42 +341,6 @@ export default function LaudoConformidadePage({
         }
       />
 
-      {/* Cabeçalho */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border-0 print:shadow-none print:p-2">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-teal-700">
-              Relatório de Conformidade — {relatorio.nr_codigo}
-            </p>
-            <h1 className="mt-1 text-2xl font-bold text-gray-900">{relatorio.nr_titulo}</h1>
-          </div>
-          <span
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
-              finalizado ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-            }`}
-          >
-            {finalizado ? "FINALIZADO" : "RASCUNHO"}
-          </span>
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          <DataItem label="Empresa" value={empresa?.nome_empresa ?? "—"} />
-          <DataItem label="CNPJ" value={empresa?.cnpj ?? "—"} />
-          <DataItem label="Setor / Local" value={relatorio.setor ?? "—"} />
-          <DataItem label="Responsável técnico (Chabra)" value={relatorio.responsavel ?? "—"} />
-          <DataItem label="Responsável da empresa" value={relatorio.responsavel_empresa ?? "—"} />
-          <DataItem label="Cidade" value={relatorio.cidade ?? "—"} />
-          <DataItem
-            label="Data da inspeção"
-            value={
-              relatorio.data_inspecao
-                ? new Date(relatorio.data_inspecao + "T00:00").toLocaleDateString("pt-BR")
-                : "—"
-            }
-          />
-          <DataItem label="Criado em" value={new Date(relatorio.created_at).toLocaleString("pt-BR")} />
-        </div>
-      </section>
-
       {/* Corpo do laudo — blocos na ordem definida em Texto Padrão (texto
           editável + seções do sistema). Mesma ordem/numeração do PDF gerado. */}
       {corpoScreen}
@@ -407,15 +370,6 @@ export default function LaudoConformidadePage({
 }
 
 // ─── Subcomponentes ───────────────────────────────────────────────────────────
-
-function DataItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">{label}</span>
-      <span className="text-sm text-gray-900">{value}</span>
-    </div>
-  );
-}
 
 function ResumoCard({
   label,
