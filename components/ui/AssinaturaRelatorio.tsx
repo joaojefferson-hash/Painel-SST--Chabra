@@ -192,9 +192,15 @@ export default function AssinaturaRelatorio({
 
       {/* ── Bloco final de assinatura — nova página no print quando não há espaço ── */}
       <div className="assinatura-bloco-final mt-8 border-t border-gray-200 pt-8 print:mt-12">
-        <p className="mb-6 text-center text-xs font-medium uppercase tracking-widest text-gray-400">
-          {numero ? `${numero}. ` : ""}Folha de Assinaturas
-        </p>
+        {numero ? (
+          <h2 className="mb-4 border-b-2 border-emerald-700 pb-1 text-sm font-bold uppercase text-emerald-900">
+            {numero}. Folha de Assinaturas
+          </h2>
+        ) : (
+          <p className="mb-6 text-center text-xs font-medium uppercase tracking-widest text-gray-400">
+            Folha de Assinaturas
+          </p>
+        )}
 
         <div className="flex flex-col gap-8 sm:flex-row sm:justify-around sm:gap-6">
           {/* ── Técnico responsável ── */}

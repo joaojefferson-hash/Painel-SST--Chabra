@@ -435,19 +435,34 @@ export default function FolhaAssinaturas({
         padding: "32px 0 16px",
       }}
     >
-      {/* Título */}
+      {/* Título — quando é capítulo numerado (DRPS), segue o estilo das demais
+          seções (alinhado à esquerda); senão, fica centralizado (demais laudos). */}
       <h2
-        style={{
-          textAlign: "center",
-          textTransform: "uppercase",
-          letterSpacing: "0.15em",
-          fontSize: 14,
-          fontWeight: 700,
-          color: CINZA_TEXTO,
-          marginBottom: 24,
-          borderBottom: `2px solid ${VERDE}`,
-          paddingBottom: 10,
-        }}
+        style={
+          numero
+            ? {
+                textAlign: "left",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                fontSize: 16,
+                fontWeight: 700,
+                color: "#1e4d28",
+                marginBottom: 14,
+                borderBottom: `2px solid ${VERDE}`,
+                paddingBottom: 6,
+              }
+            : {
+                textAlign: "center",
+                textTransform: "uppercase",
+                letterSpacing: "0.15em",
+                fontSize: 14,
+                fontWeight: 700,
+                color: CINZA_TEXTO,
+                marginBottom: 24,
+                borderBottom: `2px solid ${VERDE}`,
+                paddingBottom: 10,
+              }
+        }
       >
         {numero ? `${numero}. ` : ""}Folha de Assinaturas
       </h2>
