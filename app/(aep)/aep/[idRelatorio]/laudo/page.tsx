@@ -300,19 +300,55 @@ export default function AepLaudoPage({
     [rel]
   );
 
-  // Blocos ordenados (mesma regra do corpo) p/ montar o sumário.
-  const sumarioTitulos = useMemo(
+  // Blocos ordenados (mesma regra do corpo) + numeração espelhada do PDF.
+  // Só entra no Sumário/numeração quem vira seção numerada. NÃO há capítulo de
+  // assinatura no AEP — a assinatura é hardcoded no fim, sem número.
+  const temConclusao = !!rel?.conclusao?.trim();
+  const tituloPorSlug = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const c of capsAep) if (c.slug_fixo) m[c.slug_fixo] = c.titulo;
+    return m;
+  }, [capsAep]);
+
+  const renderizaNumerado = useMemo(
     () =>
-      [...capsAep]
-        .filter((c) => c.ativo !== false)
-        .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
-        .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
-        .map((c) =>
-          c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresVars),
-        )
-        .filter((t) => t && t.trim()),
-    [capsAep, valoresVars],
+      (c: (typeof capsAep)[number]): boolean => {
+        if (c.ativo === false) return false;
+        const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+        if (ehCapa) return false;
+        if (c.tipo !== "fixo") return true;
+        switch (c.slug_fixo) {
+          case "identificacao_empresa": return true;
+          case "aep_escalonamento":     return true;
+          case "aep_triagem":           return true;
+          case "aep_consideracoes":     return temConclusao;
+          default:                      return false; // sumario
+        }
+      },
+    [temConclusao],
   );
+
+  const { numPorSlug, numPorId, sumarioTitulos } = useMemo(() => {
+    const blocos = [...capsAep]
+      .filter((c) => c.ativo !== false)
+      .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+    const numPorSlug: Record<string, number> = {};
+    const numPorId: Record<string, number> = {};
+    let n = 0;
+    for (const c of blocos) {
+      if (!renderizaNumerado(c)) continue;
+      n += 1;
+      if (c.tipo === "fixo" && c.slug_fixo) numPorSlug[c.slug_fixo] = n;
+      numPorId[c.id_capitulo] = n;
+    }
+    const sumarioTitulos = blocos
+      .filter((c) => renderizaNumerado(c))
+      .map((c) => (c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresVars)))
+      .filter((t) => t && t.trim());
+    return { numPorSlug, numPorId, sumarioTitulos };
+  }, [capsAep, valoresVars, renderizaNumerado]);
+
+  const numLabel = (num: number | undefined, txt: string) => (num ? `${num}. ${txt}` : txt);
 
   if (!rel) return null;
 
@@ -443,7 +479,7 @@ export default function AepLaudoPage({
                 return (
                   <div key={c.id_capitulo} className="mb-6 break-inside-avoid">
                     <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
-                      Identificação da Empresa
+                      {numLabel(numPorSlug["identificacao_empresa"], "Identificação da Empresa")}
                     </h2>
                     <EmpresaInfoPanel empresa={empresaFull ?? null} />
                   </div>
@@ -468,7 +504,7 @@ export default function AepLaudoPage({
               }
               if (c.slug_fixo === "aep_escalonamento") {
                 return (
-                  <Section key={c.id_capitulo} titulo="Indicadores de Necessidade de AET Completa">
+                  <Section key={c.id_capitulo} titulo={numLabel(numPorSlug["aep_escalonamento"], tituloPorSlug["aep_escalonamento"] ?? "Indicadores de Necessidade de AET Completa")}>
                     {setoresComAet.length > 0 ? (
                       <>
                         <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 mb-3">
@@ -500,7 +536,7 @@ export default function AepLaudoPage({
               }
               if (c.slug_fixo === "aep_triagem") {
                 return (
-                  <Section key={c.id_capitulo} titulo="Triagem Ergonômica por Setor">
+                  <Section key={c.id_capitulo} titulo={numLabel(numPorSlug["aep_triagem"], tituloPorSlug["aep_triagem"] ?? "Triagem Ergonômica por Setor")}>
                     {rel.setores.map((setor, idx) => (
                       <SetorBlock key={setor.id} setor={setor} idx={idx} />
                     ))}
@@ -509,7 +545,7 @@ export default function AepLaudoPage({
               }
               if (c.slug_fixo === "aep_consideracoes") {
                 return rel.conclusao?.trim() ? (
-                  <Section key={c.id_capitulo} titulo="Considerações Finais e Encaminhamentos">
+                  <Section key={c.id_capitulo} titulo={numLabel(numPorSlug["aep_consideracoes"], tituloPorSlug["aep_consideracoes"] ?? "Considerações Finais e Encaminhamentos")}>
                     <p className="text-xs leading-relaxed text-gray-700 whitespace-pre-line">{rel.conclusao}</p>
                   </Section>
                 ) : null;
@@ -531,7 +567,7 @@ export default function AepLaudoPage({
             return (
               <div key={c.id_capitulo} className="mb-6 break-inside-avoid">
                 <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
-                  {substituirVariaveisTexto(c.titulo, valoresVars)}
+                  {numLabel(numPorId[c.id_capitulo], substituirVariaveisTexto(c.titulo, valoresVars))}
                 </h2>
                 <div
                   className="prose prose-sm max-w-none text-xs leading-relaxed text-gray-700 [&_p]:mb-2 [&_table]:w-full [&_td]:border [&_td]:border-gray-300 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-gray-300 [&_th]:bg-gray-50 [&_th]:px-2 [&_th]:py-1"

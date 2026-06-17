@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import React, { use, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck, Download, Loader2, AlertCircle } from "lucide-react";
 import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
@@ -12,8 +12,9 @@ import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import toast from "react-hot-toast";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
-import LaudoBlocos from "@/components/textos-padrao/LaudoBlocos";
-import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
+import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
+import { montarValoresEmpresa, formatarDataBR, substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 import { useRelatorioConformidade } from "@/lib/hooks/useRelatoriosConformidade";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -32,6 +33,8 @@ export default function LaudoConformidadePage({
   const { data: pdfCongelado } = usePdfCongelado("conformidade", id);
   const baseCongeladaUrl = pdfCongelado?.pdf_url ?? undefined;
   const [baixando, setBaixando] = useState(false);
+
+  const { data: capitulosConf = [] } = useTextosPadrao("conformidade");
 
   async function handleBaixarPdf() {
     if (!pdfAssinado) return;
@@ -91,6 +94,171 @@ export default function LaudoConformidadePage({
   const pendentes = itens.filter((i) => i.situacao === "PENDENTE").length;
   const avaliados = conformes + naoAplicaveis;
   const pct = total > 0 ? Math.round((avaliados / total) * 100) : 0;
+
+  // Blocos ordenados (mesma regra do corpoScreen) p/ montar o sumário.
+  const blocosConf = [...capitulosConf]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+  const tituloPorSlugConf: Record<string, string> = {};
+  for (const c of capitulosConf) if (c.slug_fixo) tituloPorSlugConf[c.slug_fixo] = c.titulo;
+
+  // Só entra no Sumário/numeração quem vira seção numerada (mesmo predicado do PDF).
+  const renderizaNumeradoConf = (c: (typeof capitulosConf)[number]): boolean => {
+    if (c.ativo === false) return false;
+    const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+    if (ehCapa) return false;
+    if (c.tipo !== "fixo") return true;
+    switch (c.slug_fixo) {
+      case "identificacao_empresa":   return true;
+      case "conformidade_resultado":  return true;
+      case "conformidade_itens":      return true;
+      case "conformidade_assinatura": return true;
+      default:                        return false; // sumario
+    }
+  };
+
+  const numPorSlugConf: Record<string, number> = {};
+  const numPorIdConf: Record<string, number> = {};
+  {
+    let n = 0;
+    for (const c of blocosConf) {
+      if (!renderizaNumeradoConf(c)) continue;
+      n += 1;
+      if (c.tipo === "fixo" && c.slug_fixo) numPorSlugConf[c.slug_fixo] = n;
+      numPorIdConf[c.id_capitulo] = n;
+    }
+  }
+  const numLabelConf = (num: number | undefined, txt: string) => (num ? `${num}. ${txt}` : txt);
+
+  const sumarioTitulos = blocosConf
+    .filter((c) => renderizaNumeradoConf(c))
+    .map((c) =>
+      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresTextosPadrao),
+    )
+    .filter((t) => t && t.trim());
+
+  const temAssinaturaFixoConf = capitulosConf.some(
+    (c) => c.tipo === "fixo" && c.slug_fixo === "conformidade_assinatura" && c.ativo !== false,
+  );
+
+  const assinaturaScreenNode = (
+    <AssinaturaRelatorio
+      nomeResponsavel={relatorio.responsavel ?? undefined}
+      dataRelatorio={formatarDataBR(relatorio.data_inspecao) || undefined}
+      tabelaNome="relatorios_conformidade"
+      docId={id}
+      hideAcoes
+      numero={numPorSlugConf["conformidade_assinatura"]}
+    />
+  );
+
+  function renderSecaoConfScreen(slug: string): React.ReactNode {
+    switch (slug) {
+      case "identificacao_empresa":
+        return (
+          <div className="mb-6 break-inside-avoid">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              {numLabelConf(numPorSlugConf["identificacao_empresa"], "Identificação da Empresa")}
+            </h2>
+            <EmpresaInfoPanel empresa={empresa ?? null} />
+          </div>
+        );
+      case "sumario":
+        return (
+          <div className="mb-6 break-inside-avoid">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              Sumário
+            </h2>
+            <ol className="space-y-1">
+              {sumarioTitulos.map((t, i) => (
+                <li key={i} className="flex items-baseline gap-2 border-b border-dotted border-gray-300 py-0.5 text-xs text-gray-700">
+                  <span className="min-w-5 font-bold text-emerald-800">{i + 1}.</span>
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        );
+      case "conformidade_resultado":
+        return (
+          <div className="mb-6 break-inside-avoid">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              {numLabelConf(numPorSlugConf["conformidade_resultado"], tituloPorSlugConf["conformidade_resultado"] ?? "Resultado da Avaliação")}
+            </h2>
+            <section className="grid grid-cols-2 gap-2 sm:grid-cols-4 print:grid-cols-4">
+              <ResumoCard label="Conformes" valor={conformes} cor="emerald" total={total} />
+              <ResumoCard label="Não aplicáveis" valor={naoAplicaveis} cor="gray" total={total} />
+              <ResumoCard label="Pendentes" valor={pendentes} cor="amber" total={total} />
+              <ResumoCard label="Avaliação" valor={`${pct}%`} cor="teal" />
+            </section>
+          </div>
+        );
+      case "conformidade_itens":
+        return (
+          <div className="mb-6">
+            <section className="mb-6 space-y-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700 print:text-base">
+                {numLabelConf(numPorSlugConf["conformidade_itens"], tituloPorSlugConf["conformidade_itens"] ?? "Itens do Checklist")} ({itens.length})
+              </h2>
+              <div className="space-y-2">
+                {itens.map((item) => (
+                  <ItemRowReadOnly key={item.id_item} item={item} />
+                ))}
+              </div>
+            </section>
+            {relatorio.observacoes_gerais && (
+              <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm print:border-0 print:shadow-none print:p-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-600">Observações Gerais</p>
+                <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{relatorio.observacoes_gerais}</p>
+              </section>
+            )}
+          </div>
+        );
+      case "conformidade_assinatura":
+        return assinaturaScreenNode;
+      default:
+        return null;
+    }
+  }
+
+  const temFixosConf = capitulosConf.some((c) => c.tipo === "fixo");
+  const corpoScreen = temFixosConf ? (
+    blocosConf.map((c) =>
+      c.tipo === "fixo" ? (
+        <React.Fragment key={c.id_capitulo}>{renderSecaoConfScreen(c.slug_fixo ?? "")}</React.Fragment>
+      ) : (
+        <TextosPadraoPrint key={c.id_capitulo} modulo="conformidade" capituloId={c.id_capitulo} valores={valoresTextosPadrao} numero={numPorIdConf[c.id_capitulo]} />
+      ),
+    )
+  ) : (
+    <>
+      <TextosPadraoPrint modulo="conformidade" valores={valoresTextosPadrao} posicao="inicio" />
+      <section className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 print:grid-cols-4">
+        <ResumoCard label="Conformes" valor={conformes} cor="emerald" total={total} />
+        <ResumoCard label="Não aplicáveis" valor={naoAplicaveis} cor="gray" total={total} />
+        <ResumoCard label="Pendentes" valor={pendentes} cor="amber" total={total} />
+        <ResumoCard label="Avaliação" valor={`${pct}%`} cor="teal" />
+      </section>
+      <section className="mb-6 space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700 print:text-base">
+          Itens do Checklist ({itens.length})
+        </h2>
+        <div className="space-y-2">
+          {itens.map((item) => (
+            <ItemRowReadOnly key={item.id_item} item={item} />
+          ))}
+        </div>
+      </section>
+      {relatorio.observacoes_gerais && (
+        <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm print:border-0 print:shadow-none print:p-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-600">Observações Gerais</p>
+          <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{relatorio.observacoes_gerais}</p>
+        </section>
+      )}
+      <TextosPadraoPrint modulo="conformidade" valores={valoresTextosPadrao} posicao="fim" />
+    </>
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 print:max-w-none print:space-y-2">
@@ -211,51 +379,11 @@ export default function LaudoConformidadePage({
       </section>
 
       {/* Corpo do laudo — blocos na ordem definida em Texto Padrão (texto
-          editável + seções do sistema). Mesma ordem do PDF gerado. */}
-      <LaudoBlocos
-        modulo="conformidade"
-        valores={valoresTextosPadrao}
-        empresa={empresa ?? null}
-        secoes={{
-          conformidade_resultado: (
-            <section className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 print:grid-cols-4">
-              <ResumoCard label="Conformes" valor={conformes} cor="emerald" total={total} />
-              <ResumoCard label="Não aplicáveis" valor={naoAplicaveis} cor="gray" total={total} />
-              <ResumoCard label="Pendentes" valor={pendentes} cor="amber" total={total} />
-              <ResumoCard label="Avaliação" valor={`${pct}%`} cor="teal" />
-            </section>
-          ),
-          conformidade_itens: (
-            <>
-              <section className="mb-6 space-y-2">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700 print:text-base">
-                  Itens do Checklist ({itens.length})
-                </h2>
-                <div className="space-y-2">
-                  {itens.map((item) => (
-                    <ItemRowReadOnly key={item.id_item} item={item} />
-                  ))}
-                </div>
-              </section>
-              {relatorio.observacoes_gerais && (
-                <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm print:border-0 print:shadow-none print:p-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-600">Observações Gerais</p>
-                  <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{relatorio.observacoes_gerais}</p>
-                </section>
-              )}
-            </>
-          ),
-          conformidade_assinatura: (
-            <AssinaturaRelatorio
-              nomeResponsavel={relatorio.responsavel ?? undefined}
-              dataRelatorio={formatarDataBR(relatorio.data_inspecao) || undefined}
-              tabelaNome="relatorios_conformidade"
-              docId={id}
-              hideAcoes
-            />
-          ),
-        }}
-      />
+          editável + seções do sistema). Mesma ordem/numeração do PDF gerado. */}
+      {corpoScreen}
+
+      {/* Assinatura — só no fim quando não há capítulo "conformidade_assinatura" ativo. */}
+      {!temAssinaturaFixoConf && assinaturaScreenNode}
 
       {/* Rodapé */}
       <p className="text-center text-[9px] text-gray-500 print:mt-4">

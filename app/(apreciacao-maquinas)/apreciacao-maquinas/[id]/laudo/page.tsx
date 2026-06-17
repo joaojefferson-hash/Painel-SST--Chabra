@@ -134,10 +134,69 @@ export default function LaudoApreciacaoMaquinasPage({
 
   const finalizada = apreciacao.status === "FINALIZADO";
 
+  // Título cadastrado de cada seção fixa (p/ cabeçalho numerado no corpo).
+  const tituloPorSlugAp: Record<string, string> = {};
+  for (const c of capitulosAp) if (c.slug_fixo) tituloPorSlugAp[c.slug_fixo] = c.titulo;
+
+  // Conclusão Técnica só renderiza quando há parecer/recomendações.
+  const temConclusaoAp = !!(apreciacao.conclusao_tecnica || apreciacao.recomendacoes);
+
+  // Só entra no Sumário/numeração quem vira seção numerada (mesmo predicado do PDF).
+  const renderizaNumeradoAp = (c: (typeof capitulosAp)[number]): boolean => {
+    if (c.ativo === false) return false;
+    const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+    if (ehCapa) return false;
+    if (c.tipo !== "fixo") return true;
+    switch (c.slug_fixo) {
+      case "identificacao_empresa": return true;
+      case "apreciacao_checklist":  return true;
+      case "apreciacao_risco":      return temConclusaoAp;
+      case "apreciacao_plano":      return true;
+      case "apreciacao_assinatura": return true;
+      default:                      return false; // sumario, apreciacao_identificacao
+    }
+  };
+
+  const blocosAp = [...capitulosAp]
+    .filter((c) => c.ativo !== false)
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+  const numPorSlugAp: Record<string, number> = {};
+  const numPorIdAp: Record<string, number> = {};
+  {
+    let n = 0;
+    for (const c of blocosAp) {
+      if (!renderizaNumeradoAp(c)) continue;
+      n += 1;
+      if (c.tipo === "fixo" && c.slug_fixo) numPorSlugAp[c.slug_fixo] = n;
+      numPorIdAp[c.id_capitulo] = n;
+    }
+  }
+  const numLabelAp = (num: number | undefined, txt: string) => (num ? `${num}. ${txt}` : txt);
+
+  const temAssinaturaFixoAp = capitulosAp.some(
+    (c) => c.tipo === "fixo" && c.slug_fixo === "apreciacao_assinatura" && c.ativo !== false,
+  );
+
+  const assinaturaScreenNode = (
+    <div className="print:break-inside-avoid">
+      <AssinaturaRelatorio
+        nomeResponsavel={apreciacao.responsavel ?? undefined}
+        dataRelatorio={formatarDataBR(apreciacao.data_apreciacao) || undefined}
+        tabelaNome="apreciacoes_maquinas"
+        docId={id}
+        hideAcoes
+        numero={numPorSlugAp["apreciacao_assinatura"]}
+      />
+    </div>
+  );
+
   // Seções do sistema (reusadas nos dois modos de render).
   const checklistScreenNode = (
     <section className="space-y-4">
-      <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700">Checklist NR-12</h2>
+      <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700">
+        {numLabelAp(numPorSlugAp["apreciacao_checklist"], tituloPorSlugAp["apreciacao_checklist"] ?? "Checklist NR-12")}
+      </h2>
       {itensPorCategoria.map((grupo) => (
         <div key={grupo.categoria} className="space-y-2 print:break-inside-avoid">
           <h3 className="rounded-md bg-orange-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-orange-700 print:bg-transparent print:border-b print:border-orange-300 print:rounded-none print:text-orange-900">
@@ -153,9 +212,11 @@ export default function LaudoApreciacaoMaquinasPage({
     </section>
   );
 
-  const conclusaoScreenNode = (apreciacao.conclusao_tecnica || apreciacao.recomendacoes) ? (
+  const conclusaoScreenNode = temConclusaoAp ? (
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
-      <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">Conclusão Técnica</h2>
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">
+        {numLabelAp(numPorSlugAp["apreciacao_risco"], tituloPorSlugAp["apreciacao_risco"] ?? "Conclusão Técnica")}
+      </h2>
       {apreciacao.conclusao_tecnica && (
         <div className="mb-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Parecer técnico</p>
@@ -173,16 +234,16 @@ export default function LaudoApreciacaoMaquinasPage({
 
   const planoScreenNode = (
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm print:border print:border-gray-300 print:shadow-none print:p-3 print:break-inside-avoid">
-      <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">Plano de Ação</h2>
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">
+        {numLabelAp(numPorSlugAp["apreciacao_plano"], tituloPorSlugAp["apreciacao_plano"] ?? "Plano de Ação")}
+      </h2>
       <PlanoAcaoTable idApreciacao={apreciacao.id_apreciacao} apreciacao={apreciacao} itens={itens} readOnly={true} />
     </section>
   );
 
-  // Títulos para o sumário (exclui o próprio sumário), na ordem dos blocos.
-  const sumarioTitulos = [...capitulosAp]
-    .filter((c) => c.ativo !== false)
-    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
-    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
+  // Títulos do sumário — só capítulos que viram seção numerada (mesmo predicado do PDF).
+  const sumarioTitulos = blocosAp
+    .filter((c) => renderizaNumeradoAp(c))
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresTextosPadrao),
     )
@@ -191,7 +252,7 @@ export default function LaudoApreciacaoMaquinasPage({
   const identificacaoEmpresaScreenNode = (
     <div className="mb-6 break-inside-avoid">
       <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
-        Identificação da Empresa
+        {numLabelAp(numPorSlugAp["identificacao_empresa"], "Identificação da Empresa")}
       </h2>
       <EmpresaInfoPanel empresa={empresa ?? null} />
     </div>
@@ -220,22 +281,22 @@ export default function LaudoApreciacaoMaquinasPage({
       case "apreciacao_checklist":  return checklistScreenNode;
       case "apreciacao_risco":      return conclusaoScreenNode;
       case "apreciacao_plano":      return planoScreenNode;
-      default:                      return null;
+      case "apreciacao_assinatura": return assinaturaScreenNode;
+      default:                      return null; // apreciacao_identificacao (dados no cabeçalho)
     }
   }
 
   const temFixosAp = capitulosAp.some((c) => c.tipo === "fixo");
   const corpoScreen = temFixosAp ? (
-    [...capitulosAp]
-      .filter((c) => c.ativo !== false)
-      .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
-      .map((c) =>
-        c.tipo === "fixo" ? (
-          <React.Fragment key={c.id_capitulo}>{renderSecaoApScreen(c.slug_fixo ?? "")}</React.Fragment>
-        ) : (
-          <TextosPadraoPrint key={c.id_capitulo} modulo="apreciacao_maquinas" capituloId={c.id_capitulo} valores={valoresTextosPadrao} />
-        ),
-      )
+    blocosAp.map((c) =>
+      c.tipo === "fixo" ? (
+        <div key={c.id_capitulo} data-slug={c.slug_fixo ?? undefined}>
+          {renderSecaoApScreen(c.slug_fixo ?? "")}
+        </div>
+      ) : (
+        <TextosPadraoPrint key={c.id_capitulo} modulo="apreciacao_maquinas" capituloId={c.id_capitulo} valores={valoresTextosPadrao} numero={numPorIdAp[c.id_capitulo]} />
+      ),
+    )
   ) : (
     <>
       <TextosPadraoPrint modulo="apreciacao_maquinas" valores={valoresTextosPadrao} posicao="inicio" />
@@ -391,16 +452,8 @@ export default function LaudoApreciacaoMaquinasPage({
       {/* Corpo do laudo — ordem unificada (sistema + editáveis) ou layout legado */}
       {corpoScreen}
 
-      {/* Assinatura */}
-      <div className="print:break-inside-avoid">
-        <AssinaturaRelatorio
-          nomeResponsavel={apreciacao.responsavel ?? undefined}
-          dataRelatorio={formatarDataBR(apreciacao.data_apreciacao) || undefined}
-          tabelaNome="apreciacoes_maquinas"
-          docId={id}
-          hideAcoes
-        />
-      </div>
+      {/* Assinatura — só no fim quando não há capítulo "apreciacao_assinatura" ativo. */}
+      {!temAssinaturaFixoAp && assinaturaScreenNode}
     </div>
   );
 }

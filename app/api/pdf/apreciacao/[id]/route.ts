@@ -191,6 +191,8 @@ ${bodyWithoutStyle}
     const { gerarPdf } = await import("@/lib/pdf/gerar-pdf");
     const pdfBuffer = await gerarPdf(fullHtml, {
       margens: { top: "20mm", bottom: "20mm", left: "18mm", right: "15mm" },
+      // Numeração só após o sumário (capa/identificação/sumário ficam sem número).
+      numeroPaginasAposSeletor: '[data-slug="sumario"]',
     });
 
     const pdfFinal = await aplicarAnexosNoPdf(supabase, "apreciacao_maquinas", id, pdfBuffer);

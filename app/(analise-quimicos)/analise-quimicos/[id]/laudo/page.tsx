@@ -96,8 +96,39 @@ export default function LaudoAnaliseQuimicoPage({
   const blocosQ = [...capitulosQ]
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+  const tituloPorSlugQ: Record<string, string> = {};
+  for (const c of capitulosQ) if (c.slug_fixo) tituloPorSlugQ[c.slug_fixo] = c.titulo;
+
+  // Só entra no Sumário/numeração quem vira seção numerada (mesmo predicado do PDF).
+  // A assinatura é hardcoded no fim — não há capítulo de assinatura.
+  const renderizaNumeradoQ = (c: (typeof capitulosQ)[number]): boolean => {
+    if (c.ativo === false) return false;
+    const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+    if (ehCapa) return false;
+    if (c.tipo !== "fixo") return true;
+    switch (c.slug_fixo) {
+      case "identificacao_empresa": return true;
+      case "quimicos_analise":      return true;
+      default:                      return false; // sumario
+    }
+  };
+
+  const numPorSlugQ: Record<string, number> = {};
+  const numPorIdQ: Record<string, number> = {};
+  {
+    let n = 0;
+    for (const c of blocosQ) {
+      if (!renderizaNumeradoQ(c)) continue;
+      n += 1;
+      if (c.tipo === "fixo" && c.slug_fixo) numPorSlugQ[c.slug_fixo] = n;
+      numPorIdQ[c.id_capitulo] = n;
+    }
+  }
+  const numLabelQ = (num: number | undefined, txt: string) => (num ? `${num}. ${txt}` : txt);
+
   const sumarioTitulos = blocosQ
-    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
+    .filter((c) => renderizaNumeradoQ(c))
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresTextosPadrao),
     )
@@ -109,7 +140,7 @@ export default function LaudoAnaliseQuimicoPage({
         return (
           <div className="mb-6 break-inside-avoid">
             <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
-              Identificação da Empresa
+              {numLabelQ(numPorSlugQ["identificacao_empresa"], "Identificação da Empresa")}
             </h2>
             <EmpresaInfoPanel empresa={empresa ?? null} />
           </div>
@@ -131,7 +162,14 @@ export default function LaudoAnaliseQuimicoPage({
           </div>
         );
       case "quimicos_analise":
-        return analiseBodyScreenNode;
+        return (
+          <div className="mb-6">
+            <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
+              {numLabelQ(numPorSlugQ["quimicos_analise"], tituloPorSlugQ["quimicos_analise"] ?? "Análise Técnica")}
+            </h2>
+            {analiseBodyScreenNode}
+          </div>
+        );
       default:
         return null;
     }
@@ -143,7 +181,7 @@ export default function LaudoAnaliseQuimicoPage({
       c.tipo === "fixo" ? (
         <React.Fragment key={c.id_capitulo}>{renderSecaoQScreen(c.slug_fixo ?? "")}</React.Fragment>
       ) : (
-        <TextosPadraoPrint key={c.id_capitulo} modulo="analise_quimicos" capituloId={c.id_capitulo} valores={valoresTextosPadrao} />
+        <TextosPadraoPrint key={c.id_capitulo} modulo="analise_quimicos" capituloId={c.id_capitulo} valores={valoresTextosPadrao} numero={numPorIdQ[c.id_capitulo]} />
       ),
     )
   ) : (

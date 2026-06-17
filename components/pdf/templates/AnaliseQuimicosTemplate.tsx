@@ -6,7 +6,7 @@ import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import type { ConclusaoRapidaQuimico, CondicoesUsoQuimico } from "@/lib/supabase/types";
 import { substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
-import { TP_STYLE, renderEditaveis, renderUnificado, temSecoesSistema } from "./shared";
+import { TP_STYLE, renderEditaveis, renderUnificado, temSecoesSistema, numerarCapitulos, numLabel } from "./shared";
 
 export interface AnaliseQuimicosTemplateProps {
   analise: {
@@ -163,11 +163,31 @@ export default function AnaliseQuimicosTemplate({
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
 
-  // Títulos para o sumário (exclui o próprio sumário).
+  // Título cadastrado de cada seção fixa (p/ cabeçalho numerado no corpo).
+  const tituloPorSlug: Record<string, string> = {};
+  for (const cap of capitulos) if (cap.slug_fixo) tituloPorSlug[cap.slug_fixo] = cap.titulo;
+
+  // Um capítulo só entra no Sumário/numeração se renderiza seção numerada.
+  // A folha de assinaturas é hardcoded no fim — não há capítulo de assinatura.
+  function renderizaNumerado(cap: TextoPadraoCapitulo): boolean {
+    if (cap.ativo === false) return false;
+    const ehCapa = !!cap.bg_imagem_url || (cap.titulo ?? "").trim().toLowerCase() === "capa";
+    if (ehCapa) return false;
+    if (cap.tipo !== "fixo") return true;
+    switch (cap.slug_fixo) {
+      case "identificacao_empresa": return true;
+      case "quimicos_analise":      return true;
+      default:                      return false; // sumário não numera
+    }
+  }
+
+  const { numPorSlug, numPorId } = numerarCapitulos(capitulos, renderizaNumerado);
+
+  // Títulos do sumário — só capítulos que viram seção numerada (mesmo predicado).
   const sumarioTitulos = blocos
-    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
-    .map((c) =>
-      c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
+    .filter((cap) => renderizaNumerado(cap))
+    .map((cap) =>
+      cap.tipo === "fixo" ? cap.titulo : substituirVariaveisTexto(cap.titulo, valores),
     )
     .filter((t) => t && t.trim());
 
@@ -330,15 +350,20 @@ export default function AnaliseQuimicosTemplate({
 
   function renderSecaoQ(slug: string): React.ReactNode {
     switch (slug) {
-      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} />;
+      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} numero={numPorSlug["identificacao_empresa"]} />;
       case "sumario":               return <SecaoSumario titulos={sumarioTitulos} />;
-      case "quimicos_analise":      return analiseBodyNode;
+      case "quimicos_analise":      return (
+        <div className="tp-cap">
+          <h2>{numLabel(numPorSlug["quimicos_analise"], tituloPorSlug["quimicos_analise"] ?? "Análise Técnica")}</h2>
+          {analiseBodyNode}
+        </div>
+      );
       default:                      return null;
     }
   }
 
   const corpo = temSecoesSistema(capitulos)
-    ? renderUnificado(capitulos, valores, renderSecaoQ)
+    ? renderUnificado(capitulos, valores, renderSecaoQ, { numPorId })
     : (
       <>
         {renderEditaveis(capitulos, valores, "inicio")}

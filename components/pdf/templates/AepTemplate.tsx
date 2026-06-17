@@ -11,7 +11,7 @@ import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/SecoesComuns";
-import { classeQuebraFixo } from "@/components/pdf/templates/shared";
+import { classeQuebraFixo, numerarCapitulos, numLabel } from "@/components/pdf/templates/shared";
 import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import {
@@ -683,9 +683,33 @@ export default function AepTemplate({
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
 
-  // Títulos para o sumário (exclui o próprio sumário).
+  // Título cadastrado de cada seção fixa (p/ cabeçalho numerado no corpo).
+  const tituloPorSlug: Record<string, string> = {};
+  for (const c of capitulos) if (c.slug_fixo) tituloPorSlug[c.slug_fixo] = c.titulo;
+
+  // Um capítulo só entra no Sumário/numeração se renderiza seção numerada.
+  // NÃO há capítulo de assinatura no AEP — a FolhaAssinaturas é hardcoded no
+  // fim, sem número, e fica fora do sumário/numeração.
+  function renderizaNumerado(c: TextoPadraoCapitulo): boolean {
+    if (c.ativo === false) return false;
+    const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+    if (ehCapa) return false;
+    if (c.tipo !== "fixo") return true;
+    switch (c.slug_fixo) {
+      case "identificacao_empresa": return true;
+      case "aep_escalonamento":     return true;
+      case "aep_triagem":           return true;
+      // aep_consideracoes só renderiza seção quando há conclusão preenchida.
+      case "aep_consideracoes":     return !!rel.conclusao?.trim();
+      default:                      return false; // sumario
+    }
+  }
+
+  const { numPorSlug, numPorId } = numerarCapitulos(capitulos, renderizaNumerado);
+
+  // Títulos para o sumário — só capítulos que viram seção numerada.
   const sumarioTitulos = blocosOrdenados
-    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
+    .filter((c) => renderizaNumerado(c))
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresVars),
     )
@@ -696,7 +720,7 @@ export default function AepTemplate({
     const orientacao = c.orientacao ?? "retrato";
     const novaPagina = ehCapa || (c.quebra_pagina ?? "nova") === "nova";
     const conteudo = substituirVariaveis(c.conteudo, valoresVars);
-    const titulo = substituirVariaveisTexto(c.titulo, valoresVars);
+    const titulo = numLabel(numPorId[c.id_capitulo], substituirVariaveisTexto(c.titulo, valoresVars));
     const classes = [
       "textos-padrao-capitulo",
       orientacao === "paisagem"
@@ -748,7 +772,7 @@ export default function AepTemplate({
 
   const secaoIndicadores = (
     <div style={{ marginBottom: 24 }}>
-      <SectionTitulo titulo="Indicadores de Necessidade de AET Completa" />
+      <SectionTitulo titulo={numLabel(numPorSlug["aep_escalonamento"], tituloPorSlug["aep_escalonamento"] ?? "Indicadores de Necessidade de AET Completa")} />
       {setoresComAet.length > 0 ? (
         <>
           <div
@@ -788,7 +812,7 @@ export default function AepTemplate({
 
   const secaoTriagem = (
     <div style={{ marginBottom: 24 }}>
-      <SectionTitulo titulo="Triagem Ergonômica por Setor" />
+      <SectionTitulo titulo={numLabel(numPorSlug["aep_triagem"], tituloPorSlug["aep_triagem"] ?? "Triagem Ergonômica por Setor")} />
       {rel.setores.map((setor, idx) => (
         <SetorBlock key={setor.id} setor={setor} idx={idx} />
       ))}
@@ -797,7 +821,7 @@ export default function AepTemplate({
 
   const secaoConsideracoes = rel.conclusao?.trim() ? (
     <div style={{ marginBottom: 24 }}>
-      <SectionTitulo titulo="Considerações Finais e Encaminhamentos" />
+      <SectionTitulo titulo={numLabel(numPorSlug["aep_consideracoes"], tituloPorSlug["aep_consideracoes"] ?? "Considerações Finais e Encaminhamentos")} />
       <p style={{ margin: 0, fontSize: 11, lineHeight: 1.7, color: "#374151", whiteSpace: "pre-line" }}>
         {rel.conclusao}
       </p>
@@ -809,7 +833,7 @@ export default function AepTemplate({
       let conteudoFixo: React.ReactNode = null;
       switch (c.slug_fixo) {
         case "identificacao_empresa":
-          conteudoFixo = <SecaoIdentificacaoEmpresa empresa={empresa} />;
+          conteudoFixo = <SecaoIdentificacaoEmpresa empresa={empresa} numero={numPorSlug["identificacao_empresa"]} />;
           break;
         case "sumario":
           conteudoFixo = <SecaoSumario titulos={sumarioTitulos} />;
@@ -827,7 +851,7 @@ export default function AepTemplate({
           conteudoFixo = null;
       }
       return conteudoFixo ? (
-        <div key={c.id_capitulo} className={classeQuebraFixo(c)}>{conteudoFixo}</div>
+        <div key={c.id_capitulo} className={classeQuebraFixo(c)} data-slug={c.slug_fixo ?? undefined}>{conteudoFixo}</div>
       ) : null;
     }
     return renderEditavel(c);

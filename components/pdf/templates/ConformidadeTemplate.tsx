@@ -2,7 +2,7 @@ import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/SecoesComuns";
-import { classeQuebraFixo } from "@/components/pdf/templates/shared";
+import { classeQuebraFixo, numerarCapitulos, numLabel } from "@/components/pdf/templates/shared";
 import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import {
@@ -92,10 +92,10 @@ function ResumoCards({ itens }: { itens: ConformidadeItemLocal[] }) {
   );
 }
 
-function ItensSection({ itens, obsGerais }: { itens: ConformidadeItemLocal[]; obsGerais: string | null }) {
+function ItensSection({ itens, obsGerais, titulo }: { itens: ConformidadeItemLocal[]; obsGerais: string | null; titulo: string }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <p className="sec-titulo">Itens do Checklist ({itens.length})</p>
+      <p className="sec-titulo">{titulo} ({itens.length})</p>
       {itens.map((item) => {
         const st = corStatus(item.situacao);
         return (
@@ -155,25 +155,65 @@ export default function ConformidadeTemplate({
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
 
-  // Títulos para o sumário (exclui o próprio sumário).
+  // Título cadastrado de cada seção fixa (p/ cabeçalho numerado no corpo).
+  const tituloPorSlug: Record<string, string> = {};
+  for (const c of capitulos) if (c.slug_fixo) tituloPorSlug[c.slug_fixo] = c.titulo;
+
+  // Um capítulo só entra no Sumário/numeração se renderiza seção numerada.
+  function renderizaNumerado(c: TextoPadraoCapitulo): boolean {
+    if (c.ativo === false) return false;
+    const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+    if (ehCapa) return false;
+    if (c.tipo !== "fixo") return true;
+    switch (c.slug_fixo) {
+      case "identificacao_empresa":   return true;
+      case "conformidade_resultado":  return true;
+      case "conformidade_itens":      return true;
+      case "conformidade_assinatura": return true;
+      // sumário não numera.
+      default:                        return false;
+    }
+  }
+
+  const { numPorSlug, numPorId } = numerarCapitulos(capitulos, renderizaNumerado);
+
+  // Títulos do sumário — só capítulos que viram seção numerada (mesmo predicado).
   const sumarioTitulos = blocos
-    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
+    .filter((c) => renderizaNumerado(c))
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
     )
     .filter((t) => t && t.trim());
 
+  const temAssinaturaFixo = capitulos.some(
+    (c) => c.tipo === "fixo" && c.slug_fixo === "conformidade_assinatura" && c.ativo !== false,
+  );
+
   const secoes: Record<string, React.ReactNode> = {
-    identificacao_empresa: <SecaoIdentificacaoEmpresa empresa={empresa} />,
+    identificacao_empresa: <SecaoIdentificacaoEmpresa empresa={empresa} numero={numPorSlug["identificacao_empresa"]} />,
     sumario: <SecaoSumario titulos={sumarioTitulos} />,
-    conformidade_resultado: <ResumoCards itens={itens} />,
-    conformidade_itens: <ItensSection itens={itens} obsGerais={relatorio.observacoes_gerais} />,
+    // ResumoCards não tem cabeçalho próprio → envolve num cabeçalho numerado.
+    conformidade_resultado: (
+      <div className="tp-cap">
+        <h2>{numLabel(numPorSlug["conformidade_resultado"], tituloPorSlug["conformidade_resultado"] ?? "Resultado da Avaliação")}</h2>
+        <ResumoCards itens={itens} />
+      </div>
+    ),
+    conformidade_itens: (
+      <ItensSection
+        itens={itens}
+        obsGerais={relatorio.observacoes_gerais}
+        titulo={numLabel(numPorSlug["conformidade_itens"], tituloPorSlug["conformidade_itens"] ?? "Itens do Checklist")}
+      />
+    ),
     conformidade_assinatura: (
       <FolhaAssinaturas
         signatarios={signatarios}
         empresa={folhaEmpresa}
         dataHoraAssinatura={dataHoraAssinatura}
         identificadorDocumento={identificadorDocumento}
+        quebraAntes={false}
+        numero={numPorSlug["conformidade_assinatura"]}
       />
     ),
   };
@@ -181,11 +221,16 @@ export default function ConformidadeTemplate({
   function renderBloco(c: TextoPadraoCapitulo) {
     if (c.tipo === "fixo") {
       const s = secoes[c.slug_fixo ?? ""];
-      return s ? <div key={c.id_capitulo} className={classeQuebraFixo(c)}>{s}</div> : null;
+      return s ? (
+        <div key={c.id_capitulo} className={classeQuebraFixo(c)} data-slug={c.slug_fixo ?? undefined}>{s}</div>
+      ) : null;
     }
+    const titulo = numPorId[c.id_capitulo]
+      ? `${numPorId[c.id_capitulo]}. ${substituirVariaveisTexto(c.titulo, valores)}`
+      : substituirVariaveisTexto(c.titulo, valores);
     return (
       <div key={c.id_capitulo} className="tp-cap">
-        {!c.bg_imagem_url && <h2>{substituirVariaveisTexto(c.titulo, valores)}</h2>}
+        {!c.bg_imagem_url && <h2>{titulo}</h2>}
         <div className="corpo" dangerouslySetInnerHTML={{ __html: substituirVariaveis(c.conteudo, valores) }} />
       </div>
     );
@@ -211,6 +256,16 @@ export default function ConformidadeTemplate({
       </div>
 
       {blocos.map((c) => renderBloco(c))}
+
+      {/* Fallback: sem capítulo de assinatura ativo, renderiza a folha no fim. */}
+      {!temAssinaturaFixo && (
+        <FolhaAssinaturas
+          signatarios={signatarios}
+          empresa={folhaEmpresa}
+          dataHoraAssinatura={dataHoraAssinatura}
+          identificadorDocumento={identificadorDocumento}
+        />
+      )}
     </>
   );
 }

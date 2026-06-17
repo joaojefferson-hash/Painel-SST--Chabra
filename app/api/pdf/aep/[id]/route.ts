@@ -245,6 +245,8 @@ ${bodyWithoutStyle}
   const { gerarPdf } = await import("@/lib/pdf/gerar-pdf");
   const pdfBuffer = await gerarPdf(fullHtml, {
     margens: { top: "25mm", bottom: "25mm", left: "30mm", right: "20mm" },
+    // Numeração só após o sumário (capa/identificação/sumário ficam sem número).
+    numeroPaginasAposSeletor: '[data-slug="sumario"]',
   });
 
   const pdfFinal = await aplicarAnexosNoPdf(supabase, "aep", id, pdfBuffer);

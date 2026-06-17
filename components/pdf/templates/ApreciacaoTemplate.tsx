@@ -5,7 +5,7 @@ import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/Secoes
 import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import { substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
-import { TP_STYLE, renderEditaveis, temSecoesSistema, renderUnificado } from "./shared";
+import { TP_STYLE, renderEditaveis, temSecoesSistema, renderUnificado, numerarCapitulos, numLabel } from "./shared";
 import {
   CATEGORIAS_NR12_LABELS,
   CATEGORIAS_NR12_ORDEM,
@@ -129,7 +129,7 @@ function corStatusAcao(s: string) {
   return { bg: "#fef3c7", fg: "#b45309", bd: "#fcd34d" };
 }
 
-function ChecklistSection({ itens }: { itens: ApreciacaoItemLocal[] }) {
+function ChecklistSection({ itens, titulo }: { itens: ApreciacaoItemLocal[]; titulo: string }) {
   const grupos = CATEGORIAS_NR12_ORDEM.map((cat) => ({
     categoria: cat as CategoriaNR12,
     label: CATEGORIAS_NR12_LABELS[cat as CategoriaNR12],
@@ -138,7 +138,7 @@ function ChecklistSection({ itens }: { itens: ApreciacaoItemLocal[] }) {
 
   return (
     <div>
-      <p className="sec-titulo">Checklist NR-12 ({itens.length})</p>
+      <p className="sec-titulo">{titulo} ({itens.length})</p>
       {grupos.map((g) => (
         <div key={g.categoria}>
           <p className="cat-titulo">{g.label} ({g.itens.length})</p>
@@ -203,10 +203,10 @@ function ChecklistSection({ itens }: { itens: ApreciacaoItemLocal[] }) {
   );
 }
 
-function PlanoAcaoSection({ acoes }: { acoes: ApreciacaoAcaoLocal[] }) {
+function PlanoAcaoSection({ acoes, titulo }: { acoes: ApreciacaoAcaoLocal[]; titulo: string }) {
   return (
     <div>
-      <p className="sec-titulo">Plano de Ação ({acoes.length})</p>
+      <p className="sec-titulo">{titulo} ({acoes.length})</p>
       {acoes.length === 0 && (
         <p style={{ fontSize: 10.5, color: "#6b7280" }}>Nenhuma ação cadastrada.</p>
       )}
@@ -255,21 +255,71 @@ export default function ApreciacaoTemplate({
     ? new Date(apreciacao.data_apreciacao + "T00:00").toLocaleDateString("pt-BR")
     : "—";
 
-  // Títulos para o sumário (exclui o próprio sumário), na ordem dos blocos.
+  // Título cadastrado de cada seção fixa (p/ cabeçalho numerado no corpo).
+  const tituloPorSlug: Record<string, string> = {};
+  for (const c of capitulos) if (c.slug_fixo) tituloPorSlug[c.slug_fixo] = c.titulo;
+
+  // Conclusão Técnica só renderiza quando há parecer/recomendações.
+  const temConclusao = !!(apreciacao.conclusao_tecnica || apreciacao.recomendacoes);
+
+  // Um capítulo só entra no Sumário/numeração se renderiza seção numerada.
+  function renderizaNumerado(c: TextoPadraoCapitulo): boolean {
+    if (c.ativo === false) return false;
+    const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+    if (ehCapa) return false;
+    if (c.tipo !== "fixo") return true;
+    switch (c.slug_fixo) {
+      case "identificacao_empresa": return true;
+      case "apreciacao_checklist":  return true;
+      case "apreciacao_risco":      return temConclusao; // só numera se há conteúdo
+      case "apreciacao_plano":      return true;
+      case "apreciacao_assinatura": return true;
+      // sumário não numera; apreciacao_identificacao não renderiza seção própria
+      // (os dados da máquina ficam no cabeçalho fixo do topo).
+      default:                      return false;
+    }
+  }
+
+  const { numPorSlug, numPorId } = numerarCapitulos(capitulos, renderizaNumerado);
+
+  // Títulos do sumário — só capítulos que viram seção numerada (mesmo predicado).
   const sumarioTitulos = [...capitulos]
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
-    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
+    .filter((c) => renderizaNumerado(c))
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
     )
     .filter((t) => t && t.trim());
 
+  const temAssinaturaFixo = capitulos.some(
+    (c) => c.tipo === "fixo" && c.slug_fixo === "apreciacao_assinatura" && c.ativo !== false,
+  );
+
+  // Folha de assinaturas: quando há capítulo "apreciacao_assinatura", renderiza
+  // na posição dele (numerada, quebra controlada pelo wrapper); senão, cai no
+  // fim (fallback).
+  const folhaNode = (
+    <FolhaAssinaturas
+      signatarios={signatarios}
+      empresa={folhaEmpresa}
+      dataHoraAssinatura={dataHoraAssinatura}
+      identificadorDocumento={identificadorDocumento}
+      quebraAntes={false}
+      numero={numPorSlug["apreciacao_assinatura"]}
+    />
+  );
+
   // Seções do sistema como nós nomeados (reutilizados nos dois modos).
-  const checklistNode = <ChecklistSection itens={itens} />;
-  const conclusaoNode = (apreciacao.conclusao_tecnica || apreciacao.recomendacoes) ? (
+  const checklistNode = (
+    <ChecklistSection
+      itens={itens}
+      titulo={numLabel(numPorSlug["apreciacao_checklist"], tituloPorSlug["apreciacao_checklist"] ?? "Checklist NR-12")}
+    />
+  );
+  const conclusaoNode = temConclusao ? (
     <div>
-      <p className="sec-titulo">Conclusão Técnica</p>
+      <p className="sec-titulo">{numLabel(numPorSlug["apreciacao_risco"], tituloPorSlug["apreciacao_risco"] ?? "Conclusão Técnica")}</p>
       {apreciacao.conclusao_tecnica && (
         <div className="campo"><p className="rot">Parecer técnico</p><p className="val">{apreciacao.conclusao_tecnica}</p></div>
       )}
@@ -278,23 +328,29 @@ export default function ApreciacaoTemplate({
       )}
     </div>
   ) : null;
-  const planoNode = <PlanoAcaoSection acoes={acoes} />;
+  const planoNode = (
+    <PlanoAcaoSection
+      acoes={acoes}
+      titulo={numLabel(numPorSlug["apreciacao_plano"], tituloPorSlug["apreciacao_plano"] ?? "Plano de Ação")}
+    />
+  );
 
   // Mapeia os slugs fixos do módulo às seções (cabeçalho fica fixo no topo;
-  // a folha de assinatura, sempre ao final).
+  // a folha de assinatura entra na posição do capítulo "apreciacao_assinatura").
   function renderSecaoApreciacao(slug: string): React.ReactNode {
     switch (slug) {
-      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} />;
+      case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} numero={numPorSlug["identificacao_empresa"]} />;
       case "sumario":               return <SecaoSumario titulos={sumarioTitulos} />;
       case "apreciacao_checklist":  return checklistNode;
       case "apreciacao_risco":      return conclusaoNode;
       case "apreciacao_plano":      return planoNode;
-      default:                      return null;
+      case "apreciacao_assinatura": return folhaNode;
+      default:                      return null; // apreciacao_identificacao (dados no cabeçalho)
     }
   }
 
   const corpo = temSecoesSistema(capitulos)
-    ? renderUnificado(capitulos, valores, renderSecaoApreciacao)
+    ? renderUnificado(capitulos, valores, renderSecaoApreciacao, { numPorId })
     : (
       <>
         {renderEditaveis(capitulos, valores, "inicio")}
@@ -336,12 +392,15 @@ export default function ApreciacaoTemplate({
 
       {corpo}
 
-      <FolhaAssinaturas
-        signatarios={signatarios}
-        empresa={folhaEmpresa}
-        dataHoraAssinatura={dataHoraAssinatura}
-        identificadorDocumento={identificadorDocumento}
-      />
+      {/* Fallback: sem capítulo de assinatura ativo, renderiza a folha no fim. */}
+      {!temAssinaturaFixo && (
+        <FolhaAssinaturas
+          signatarios={signatarios}
+          empresa={folhaEmpresa}
+          dataHoraAssinatura={dataHoraAssinatura}
+          identificadorDocumento={identificadorDocumento}
+        />
+      )}
     </>
   );
 }
