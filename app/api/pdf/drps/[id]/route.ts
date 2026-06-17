@@ -162,7 +162,8 @@ ${bodyWithoutStyle}
     const { gerarPdf } = await import("@/lib/pdf/gerar-pdf");
     const pdfBuffer = await gerarPdf(fullHtml, {
       margens: { top: "14mm", bottom: "14mm", left: "12mm", right: "12mm" },
-      numeroPaginas: true,
+      // Numeração só após o sumário (capa/identificação/sumário ficam sem número).
+      numeroPaginasAposSeletor: '[data-slug="sumario"]',
     });
 
     const pdfFinal = await aplicarAnexosNoPdf(supabase, "psicossocial", id, pdfBuffer);

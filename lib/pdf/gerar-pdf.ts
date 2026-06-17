@@ -19,8 +19,22 @@ export interface GerarPdfOpts {
   }
   /** Imprime fundos e cores CSS. Padrão: true. */
   printBackground?: boolean
-  /** Exibe "página X / Y" no rodapé à direita de cada página. Padrão: false. */
+  /** Exibe "página X / Y" no rodapé à direita de TODAS as páginas. Padrão: false. */
   numeroPaginas?: boolean
+  /**
+   * Numera no rodapé à direita SOMENTE as páginas após o elemento que casa com
+   * este seletor CSS (ex.: '[data-slug="sumario"]'). As páginas iniciais
+   * (capa, sumário) ficam sem número; a contagem recomeça em 1 na primeira
+   * página de conteúdo. Implementado via pdf-lib (o footer do Puppeteer não
+   * permite deslocar a numeração).
+   */
+  numeroPaginasAposSeletor?: string
+}
+
+/** Converte "12mm" → pontos PDF (1pt = 1/72in). */
+function mmParaPt(v: string): number {
+  const n = parseFloat(v)
+  return Number.isFinite(n) ? (n * 72) / 25.4 : 34
 }
 
 const MARGENS_PADRAO: NonNullable<GerarPdfOpts['margens']> = {
@@ -97,14 +111,69 @@ export async function gerarPdf(
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'networkidle0' })
     const margens = opts?.margens ?? MARGENS_PADRAO
-    // Rodapé com numeração à direita (alinhado à margem direita da página).
+    const seletor = opts?.numeroPaginasAposSeletor
+
+    const basePdfOpts = {
+      format: 'A4' as const,
+      printBackground: opts?.printBackground ?? true,
+      margin: margens,
+    }
+
+    // Caso A: numeração a partir de um seletor — pdf-lib desenha "X / Y" só nas
+    // páginas após o miolo inicial (capa/sumário), recomeçando em 1.
+    if (seletor) {
+      const fullRaw = await page.pdf(basePdfOpts)
+      let offset = 0
+      try {
+        const achou = await page.evaluate((sel: string) => {
+          const el = document.querySelector(sel)
+          if (!el) return false
+          let n = el.nextElementSibling
+          while (n) {
+            const prox = n.nextElementSibling
+            n.remove()
+            n = prox
+          }
+          return true
+        }, seletor)
+        if (achou) {
+          const frontRaw = await page.pdf(basePdfOpts)
+          const { PDFDocument } = await import('pdf-lib')
+          offset = (await PDFDocument.load(frontRaw)).getPageCount()
+        }
+      } catch {
+        offset = 0
+      }
+
+      const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib')
+      const doc = await PDFDocument.load(fullRaw)
+      const font = await doc.embedFont(StandardFonts.Helvetica)
+      const pages = doc.getPages()
+      const numeradas = Math.max(0, pages.length - offset)
+      const margemDir = mmParaPt(margens.right)
+      for (let i = offset; i < pages.length; i++) {
+        const p = pages[i]
+        const { width } = p.getSize()
+        const txt = `${i - offset + 1} / ${numeradas}`
+        const size = 8
+        const w = font.widthOfTextAtSize(txt, size)
+        p.drawText(txt, {
+          x: width - margemDir - w,
+          y: 18,
+          size,
+          font,
+          color: rgb(0.42, 0.45, 0.5),
+        })
+      }
+      return Buffer.from(await doc.save())
+    }
+
+    // Caso B: numeração simples em todas as páginas (footer do Puppeteer).
     const footerTemplate = opts?.numeroPaginas
       ? `<div style="width:100%; font-size:8px; color:#6b7280; font-family: Arial, Helvetica, sans-serif; padding:0 ${margens.right}; text-align:right;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>`
       : '<div></div>'
     const raw = await page.pdf({
-      format: 'A4',
-      printBackground: opts?.printBackground ?? true,
-      margin: margens,
+      ...basePdfOpts,
       displayHeaderFooter: !!opts?.numeroPaginas,
       headerTemplate: '<div></div>',
       footerTemplate,

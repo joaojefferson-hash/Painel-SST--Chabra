@@ -522,7 +522,7 @@ export default function DrpsTemplate({
       {temFixos ? (
         ordenados.map((c) =>
           c.tipo === "fixo" ? (
-            <div key={c.id_capitulo} className={classeQuebraFixo(c)}>{renderSecao(c.slug_fixo ?? "")}</div>
+            <div key={c.id_capitulo} className={classeQuebraFixo(c)} data-slug={c.slug_fixo ?? undefined}>{renderSecao(c.slug_fixo ?? "")}</div>
           ) : (
             <React.Fragment key={c.id_capitulo}>
               {renderEditavelUm(
