@@ -63,6 +63,12 @@ export interface FolhaAssinaturasProps {
   dataHoraAssinatura: string;
   /** Identificador único exibido no rodapé (ex: "AEP-2026-d3f9a1b2"). */
   identificadorDocumento: string;
+  /**
+   * Força quebra de página antes da folha (default true). No DRPS a quebra é
+   * controlada pelo capítulo "Assinatura Técnica" (Nova página/Continuação),
+   * então é passado false para respeitar o toggle.
+   */
+  quebraAntes?: boolean;
 }
 
 // ── Paleta ───────────────────────────────────────────────────────────────────
@@ -413,6 +419,7 @@ export default function FolhaAssinaturas({
   empresa,
   dataHoraAssinatura,
   identificadorDocumento,
+  quebraAntes = true,
 }: FolhaAssinaturasProps) {
   const totalColunas = signatarios.length + (empresa ? 1 : 0);
 
@@ -420,8 +427,8 @@ export default function FolhaAssinaturas({
     <div
       style={{
         fontFamily: "Arial, Helvetica, sans-serif",
-        pageBreakBefore: "always",
-        breakBefore: "page",
+        pageBreakBefore: quebraAntes ? "always" : "auto",
+        breakBefore: quebraAntes ? "page" : "auto",
         padding: "32px 0 16px",
       }}
     >

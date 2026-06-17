@@ -79,7 +79,7 @@ const STYLE_BLOCK = `
 .tp-capa { position: relative; width: 100%; margin-bottom: 16pt; page-break-after: always; }
 .tp-capa img.bg { width: 100%; height: auto; display: block; }
 .tp-capa .caixa { position: absolute; white-space: pre-wrap; line-height: 1.3; }
-.drps-sec { page-break-before: always; font-family: 'Times New Roman', Times, serif; }
+.drps-sec { font-family: 'Times New Roman', Times, serif; }
 .drps-sec h2 { font-size: 16pt; font-weight: 700; color: #1e4d28; border-bottom: 2px solid #006B54; padding-bottom: 6px; margin: 0 0 14pt; text-transform: uppercase; letter-spacing: .05em; }
 .drps-sec h3 { font-size: 13pt; font-weight: 700; color: #1e4d28; margin: 14pt 0 6pt; }
 .drps-sec p { font-size: 12pt; line-height: 1.6; text-align: justify; color: #1f2937; margin: 0 0 12pt; }
@@ -462,12 +462,15 @@ export default function DrpsTemplate({
     )
     .filter((t) => t && t.trim());
 
+  // quebraAntes=false: a quebra da folha é controlada pelo wrapper do capítulo
+  // "Assinatura Técnica" (classeQuebraFixo), respeitando Nova página/Continuação.
   const folhaNode = (
     <FolhaAssinaturas
       signatarios={signatarios}
       empresa={folhaEmpresa}
       dataHoraAssinatura={dataHoraAssinatura}
       identificadorDocumento={identificadorDocumento}
+      quebraAntes={false}
     />
   );
 
@@ -479,13 +482,13 @@ export default function DrpsTemplate({
       case "drps_caracterizacao": return caracterizacaoNode;
       case "drps_analise_setor": return (
         <>
-          <section className="drps-sec" style={{ pageBreakAfter: "avoid" }}>
+          <div className="drps-sec" style={{ pageBreakAfter: "avoid" }}>
             <h2>{numLabel(numPorSlug["drps_analise_setor"], "Análise por Setor")}</h2>
             <p style={{ textIndent: "1.25cm" }}>
               Classificação dos fatores de risco psicossocial por setor avaliado, com
               gravidade, probabilidade e matriz de risco conforme a NR-01.
             </p>
-          </section>
+          </div>
           {setoresNode}
         </>
       );
@@ -547,8 +550,16 @@ export default function DrpsTemplate({
         </>
       )}
 
-      {/* Fallback: sem capítulo de assinatura ativo, renderiza a folha no fim. */}
-      {!temAssinaturaFixo && folhaNode}
+      {/* Fallback: sem capítulo de assinatura ativo, renderiza a folha no fim
+          (com quebra de página própria, já que não há wrapper controlando). */}
+      {!temAssinaturaFixo && (
+        <FolhaAssinaturas
+          signatarios={signatarios}
+          empresa={folhaEmpresa}
+          dataHoraAssinatura={dataHoraAssinatura}
+          identificadorDocumento={identificadorDocumento}
+        />
+      )}
     </>
   );
 }
