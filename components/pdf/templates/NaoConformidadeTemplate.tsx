@@ -5,7 +5,7 @@ import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/Secoes
 import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import { substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
-import { TP_STYLE, renderEditaveis, CabecalhoLaudo, temSecoesSistema, renderUnificado, numerarCapitulos, numLabel } from "./shared";
+import { TP_STYLE, renderEditaveis, temSecoesSistema, renderUnificado, numerarCapitulos, numLabel } from "./shared";
 
 export interface NaoConformidadeItemLocal {
   id_item: string;
@@ -261,18 +261,6 @@ export default function NaoConformidadeTemplate({
     <>
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: STYLE_BLOCK }} />
-
-      <CabecalhoLaudo
-        cor="#b91c1c"
-        rotulo="Relatório de Não Conformidade"
-        titulo={relatorio.titulo}
-        linhas={[
-          ["Empresa", empresa?.nome_empresa ?? "—"],
-          ["Setor / Local", relatorio.setor ?? "—"],
-          ["Cidade", relatorio.cidade ?? "—"],
-          ["Data", valores.data_inspecao ?? "—"],
-        ]}
-      />
 
       {corpo}
 
