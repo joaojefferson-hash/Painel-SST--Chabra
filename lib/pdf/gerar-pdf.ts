@@ -19,6 +19,8 @@ export interface GerarPdfOpts {
   }
   /** Imprime fundos e cores CSS. Padrão: true. */
   printBackground?: boolean
+  /** Exibe "página X / Y" no rodapé à direita de cada página. Padrão: false. */
+  numeroPaginas?: boolean
 }
 
 const MARGENS_PADRAO: NonNullable<GerarPdfOpts['margens']> = {
@@ -94,10 +96,18 @@ export async function gerarPdf(
   try {
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'networkidle0' })
+    const margens = opts?.margens ?? MARGENS_PADRAO
+    // Rodapé com numeração à direita (alinhado à margem direita da página).
+    const footerTemplate = opts?.numeroPaginas
+      ? `<div style="width:100%; font-size:8px; color:#6b7280; font-family: Arial, Helvetica, sans-serif; padding:0 ${margens.right}; text-align:right;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>`
+      : '<div></div>'
     const raw = await page.pdf({
       format: 'A4',
       printBackground: opts?.printBackground ?? true,
-      margin: opts?.margens ?? MARGENS_PADRAO,
+      margin: margens,
+      displayHeaderFooter: !!opts?.numeroPaginas,
+      headerTemplate: '<div></div>',
+      footerTemplate,
     })
     return Buffer.isBuffer(raw) ? raw : Buffer.from(raw)
   } finally {
