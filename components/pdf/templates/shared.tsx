@@ -62,11 +62,17 @@ export function renderEditavelUm(
   c: TextoPadraoCapitulo,
   valores: Record<string, string>,
 ): React.ReactNode {
-  if (c.bg_imagem_url) {
+  // É capa quando tem imagem de fundo OU o título é "capa". Capas não mostram
+  // cabeçalho de título; sem imagem, fica como placeholder (até subir a arte).
+  const ehCapa =
+    !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+  if (ehCapa) {
     return (
       <div key={c.id_capitulo} className="tp-capa">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="bg" src={c.bg_imagem_url} alt="" />
+        {c.bg_imagem_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="bg" src={c.bg_imagem_url} alt="" />
+        )}
         {(c.caixas_texto ?? []).map((cx) => (
           <div
             key={cx.id}

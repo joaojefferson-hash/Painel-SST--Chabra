@@ -185,7 +185,8 @@ export default function TextosPadraoPrint({
       `}</style>
 
       {capitulos.map((c, idx) => {
-        const ehCapa = !!c.bg_imagem_url;
+        const ehCapa =
+          !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
         const orientacao = c.orientacao ?? "retrato";
         // Primeiro capítulo: sempre nova página (não tem o que continuar).
         // Capa: sempre nova página (ocupa folha inteira).
