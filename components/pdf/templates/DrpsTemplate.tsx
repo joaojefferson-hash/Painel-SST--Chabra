@@ -287,9 +287,27 @@ export default function DrpsTemplate({
     <BlocoSetor key={b.setor} {...b} rel={relatorio} empresa={empresa} />
   ));
 
-  // Numeração dos capítulos para casar com o Sumário (mesma ordem/filtro):
-  // exclui a capa e o próprio sumário. numPorSlug → seções do sistema;
-  // numPorId → capítulos editáveis.
+  // Um capítulo só entra no Sumário e na numeração se renderiza uma SEÇÃO
+  // NUMERADA de fato no corpo. Evita itens fantasmas (ex.: Plano de Medidas
+  // vazio) e lacunas (capa/sumário/assinatura não numerados).
+  function renderizaNumerado(c: TextoPadraoCapitulo): boolean {
+    if (c.ativo === false) return false;
+    const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+    if (ehCapa) return false;
+    if (c.tipo !== "fixo") return true; // editável sempre tem título
+    switch (c.slug_fixo) {
+      case "identificacao_empresa": return true;
+      case "drps_caracterizacao":   return blocos.length > 0;
+      case "drps_analise_setor":    return blocos.length > 0;
+      case "drps_conclusao":        return !!relatorio.conclusao_geral;
+      case "drps_plano_medidas":    return planoComConteudo.length > 0;
+      case "drps_revisao":          return topicosPorSetorMon.length > 0 || !!revisao;
+      // sumário e assinatura não são seções numeradas
+      default:                      return false;
+    }
+  }
+
+  // Numeração dos capítulos para casar com o Sumário (mesma ordem/predicado).
   const numPorSlug: Record<string, number> = {};
   const numPorId: Record<string, number> = {};
   {
@@ -298,8 +316,7 @@ export default function DrpsTemplate({
       .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
     let nSeq = 0;
     for (const c of ordenadosNum) {
-      const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
-      if (c.slug_fixo === "sumario" || ehCapa) continue;
+      if (!renderizaNumerado(c)) continue;
       nSeq += 1;
       if (c.tipo === "fixo" && c.slug_fixo) numPorSlug[c.slug_fixo] = nSeq;
       numPorId[c.id_capitulo] = nSeq;
@@ -454,9 +471,10 @@ export default function DrpsTemplate({
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
 
-  // Títulos para o sumário (exclui o próprio sumário).
+  // Títulos para o sumário — só capítulos que viram seção numerada (mesmo
+  // predicado da numeração), garantindo Sumário ↔ corpo sem fantasmas/lacunas.
   const sumarioTitulos = blocosOrdenados
-    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
+    .filter((c) => renderizaNumerado(c))
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valores),
     )

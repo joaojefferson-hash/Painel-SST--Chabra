@@ -153,15 +153,31 @@ export default function PsicossocialLaudoPage({
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
 
-  // Numeração dos capítulos para casar com o Sumário (mesma ordem/filtro):
-  // exclui capa e o próprio sumário. numPorSlug → seções do sistema; numPorId → editáveis.
+  // Só entram no Sumário/numeração os capítulos que renderizam seção numerada
+  // no corpo (evita fantasmas/lacunas). Sumário e assinatura não numeram.
+  const renderizaNumerado = (c: TextoPadraoCapitulo): boolean => {
+    if (c.ativo === false) return false;
+    const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+    if (ehCapa) return false;
+    if (c.tipo !== "fixo") return true;
+    switch (c.slug_fixo) {
+      case "identificacao_empresa": return true;
+      case "drps_caracterizacao":   return relatoriosPorSetor.length > 0;
+      case "drps_analise_setor":    return relatoriosPorSetor.length > 0;
+      case "drps_conclusao":        return !!relatorio?.conclusao_geral;
+      case "drps_plano_medidas":    return true; // DrpsGestaoResumoPrint sempre renderiza
+      case "drps_revisao":          return true; // DrpsRelatorioExtrasPrint renderiza
+      default:                      return false; // sumario, assinatura
+    }
+  };
+
+  // Numeração dos capítulos para casar com o Sumário (mesma ordem/predicado).
   const numPorSlug: Record<string, number> = {};
   const numPorId: Record<string, number> = {};
   {
     let nSeq = 0;
     for (const c of ordenados) {
-      const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
-      if (c.slug_fixo === "sumario" || ehCapa) continue;
+      if (!renderizaNumerado(c)) continue;
       nSeq += 1;
       if (c.tipo === "fixo" && c.slug_fixo) numPorSlug[c.slug_fixo] = nSeq;
       numPorId[c.id_capitulo] = nSeq;
@@ -247,9 +263,9 @@ export default function PsicossocialLaudoPage({
     </section>
   ) : null;
 
-  // Títulos para o sumário em lista (exclui o próprio sumário), na ordem do laudo.
+  // Títulos do sumário — só capítulos que viram seção numerada (mesmo predicado).
   const sumarioTitulos = ordenados
-    .filter((c) => c.slug_fixo !== "sumario" && !c.bg_imagem_url && (c.titulo ?? "").trim().toLowerCase() !== "capa")
+    .filter((c) => renderizaNumerado(c))
     .map((c) =>
       c.tipo === "fixo" ? c.titulo : substituirVariaveisTexto(c.titulo, valoresVars),
     )
