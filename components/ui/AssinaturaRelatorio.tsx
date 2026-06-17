@@ -17,6 +17,7 @@ export default function AssinaturaRelatorio({
   docId,
   hideAcoes = false,
   seloSoQuandoAssinado = true,
+  numero,
 }: {
   nomeResponsavel?: string;
   cargoResponsavel?: string;
@@ -34,6 +35,8 @@ export default function AssinaturaRelatorio({
    *  Passe `false` apenas se quiser o selo antecipado quando o responsável tem
    *  certificado cadastrado. */
   seloSoQuandoAssinado?: boolean;
+  /** Número do capítulo no Sumário (prefixa o título "Folha de Assinaturas"). */
+  numero?: number;
 }) {
   const user = useUserStore((s) => s.user);
   const { data: configs } = useConfiguracoes();
@@ -190,7 +193,7 @@ export default function AssinaturaRelatorio({
       {/* ── Bloco final de assinatura — nova página no print quando não há espaço ── */}
       <div className="assinatura-bloco-final mt-8 border-t border-gray-200 pt-8 print:mt-12">
         <p className="mb-6 text-center text-xs font-medium uppercase tracking-widest text-gray-400">
-          Folha de Assinaturas
+          {numero ? `${numero}. ` : ""}Folha de Assinaturas
         </p>
 
         <div className="flex flex-col gap-8 sm:flex-row sm:justify-around sm:gap-6">

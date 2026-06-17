@@ -302,7 +302,8 @@ export default function DrpsTemplate({
       case "drps_conclusao":        return !!relatorio.conclusao_geral;
       case "drps_plano_medidas":    return planoComConteudo.length > 0;
       case "drps_revisao":          return topicosPorSetorMon.length > 0 || !!revisao;
-      // sumário e assinatura não são seções numeradas
+      case "drps_assinatura":       return true; // folha de assinaturas é capítulo numerado
+      // sumário não é seção numerada
       default:                      return false;
     }
   }
@@ -489,6 +490,7 @@ export default function DrpsTemplate({
       dataHoraAssinatura={dataHoraAssinatura}
       identificadorDocumento={identificadorDocumento}
       quebraAntes={false}
+      numero={numPorSlug["drps_assinatura"]}
     />
   );
 

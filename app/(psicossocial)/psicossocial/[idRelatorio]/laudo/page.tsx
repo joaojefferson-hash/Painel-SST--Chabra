@@ -167,7 +167,8 @@ export default function PsicossocialLaudoPage({
       case "drps_conclusao":        return !!relatorio?.conclusao_geral;
       case "drps_plano_medidas":    return true; // DrpsGestaoResumoPrint sempre renderiza
       case "drps_revisao":          return true; // DrpsRelatorioExtrasPrint renderiza
-      default:                      return false; // sumario, assinatura
+      case "drps_assinatura":       return true; // folha de assinaturas é capítulo numerado
+      default:                      return false; // sumario
     }
   };
 
@@ -302,6 +303,7 @@ export default function PsicossocialLaudoPage({
       tabelaNome="drps_relatorios_analise"
       docId={idRelatorio}
       hideAcoes
+      numero={numPorSlug["drps_assinatura"]}
     />
   );
 

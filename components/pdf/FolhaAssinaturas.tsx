@@ -69,6 +69,8 @@ export interface FolhaAssinaturasProps {
    * então é passado false para respeitar o toggle.
    */
   quebraAntes?: boolean;
+  /** Número do capítulo no Sumário (prefixa o título "Folha de Assinaturas"). */
+  numero?: number;
 }
 
 // ── Paleta ───────────────────────────────────────────────────────────────────
@@ -420,6 +422,7 @@ export default function FolhaAssinaturas({
   dataHoraAssinatura,
   identificadorDocumento,
   quebraAntes = true,
+  numero,
 }: FolhaAssinaturasProps) {
   const totalColunas = signatarios.length + (empresa ? 1 : 0);
 
@@ -446,7 +449,7 @@ export default function FolhaAssinaturas({
           paddingBottom: 10,
         }}
       >
-        Folha de Assinaturas
+        {numero ? `${numero}. ` : ""}Folha de Assinaturas
       </h2>
 
       {/* Grid de colunas: signatários + empresa */}
