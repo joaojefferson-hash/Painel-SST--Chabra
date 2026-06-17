@@ -462,6 +462,15 @@ export default function DrpsTemplate({
     )
     .filter((t) => t && t.trim());
 
+  const folhaNode = (
+    <FolhaAssinaturas
+      signatarios={signatarios}
+      empresa={folhaEmpresa}
+      dataHoraAssinatura={dataHoraAssinatura}
+      identificadorDocumento={identificadorDocumento}
+    />
+  );
+
   // Mapeia um slug fixo do DRPS (DRPS_FIXOS) para o nó de seção correspondente.
   function renderSecao(slug: string): React.ReactNode {
     switch (slug) {
@@ -483,8 +492,7 @@ export default function DrpsTemplate({
       case "drps_conclusao":     return conclusaoNode;
       case "drps_plano_medidas": return medidasNode;
       case "drps_revisao":       return <>{monitNode}{revisaoNode}</>;
-      // drps_assinatura não tem seção no corpo do PDF
-      // (a folha de assinatura é renderizada sempre ao final).
+      case "drps_assinatura":    return folhaNode;
       default:                   return null;
     }
   }
@@ -494,6 +502,11 @@ export default function DrpsTemplate({
   // intercalados). Sem fixos, usa o layout posicional legado (fallback que
   // garante que o PDF nunca perca as seções do sistema).
   const temFixos = capitulos.some((c) => c.tipo === "fixo");
+  // Se o capítulo "Assinatura Técnica" estiver ativo, a folha é renderizada na
+  // posição dele (via renderSecao); senão, cai no fim como fallback.
+  const temAssinaturaFixo = capitulos.some(
+    (c) => c.tipo === "fixo" && c.slug_fixo === "drps_assinatura" && c.ativo !== false,
+  );
   const ordenados = [...capitulos]
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
@@ -534,12 +547,8 @@ export default function DrpsTemplate({
         </>
       )}
 
-      <FolhaAssinaturas
-        signatarios={signatarios}
-        empresa={folhaEmpresa}
-        dataHoraAssinatura={dataHoraAssinatura}
-        identificadorDocumento={identificadorDocumento}
-      />
+      {/* Fallback: sem capítulo de assinatura ativo, renderiza a folha no fim. */}
+      {!temAssinaturaFixo && folhaNode}
     </>
   );
 }

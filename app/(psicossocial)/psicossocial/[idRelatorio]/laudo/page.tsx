@@ -144,6 +144,11 @@ export default function PsicossocialLaudoPage({
   // (tipo fixo) em drps_texto_padrao, o corpo é montado por `ordem` (editáveis +
   // seções intercalados). Sem fixos, mantém o layout posicional legado.
   const temFixos = capitulosDrps.some((c) => c.tipo === "fixo");
+  // Se "Assinatura Técnica" estiver ativo, a folha é renderizada na posição dele;
+  // senão, cai no fim (fallback) — espelha o template PDF.
+  const temAssinaturaFixo = capitulosDrps.some(
+    (c) => c.tipo === "fixo" && c.slug_fixo === "drps_assinatura" && c.ativo !== false,
+  );
   const ordenados = [...capitulosDrps]
     .filter((c) => c.ativo !== false)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
@@ -275,6 +280,15 @@ export default function PsicossocialLaudoPage({
     </section>
   ) : null;
 
+  const assinaturaScreenNode = (
+    <AssinaturaRelatorio
+      nomeResponsavel={relatorio?.responsavel_tecnico ?? undefined}
+      tabelaNome="drps_relatorios_analise"
+      docId={idRelatorio}
+      hideAcoes
+    />
+  );
+
   function renderSecaoScreen(slug: string): React.ReactNode {
     switch (slug) {
       case "identificacao_empresa": return identificacaoScreenNode;
@@ -293,6 +307,7 @@ export default function PsicossocialLaudoPage({
       case "drps_conclusao":     return conclusaoScreenNode;
       case "drps_plano_medidas": return <DrpsGestaoResumoPrint idRelatorio={idRelatorio} numero={numPorSlug["drps_plano_medidas"]} />;
       case "drps_revisao":       return <DrpsRelatorioExtrasPrint idRelatorio={idRelatorio} numero={numPorSlug["drps_revisao"]} />;
+      case "drps_assinatura":    return assinaturaScreenNode;
       default:                   return null;
     }
   }
@@ -506,12 +521,8 @@ export default function PsicossocialLaudoPage({
             </>
           )}
 
-          <AssinaturaRelatorio
-            nomeResponsavel={relatorio?.responsavel_tecnico ?? undefined}
-            tabelaNome="drps_relatorios_analise"
-            docId={idRelatorio}
-            hideAcoes
-          />
+          {/* Fallback: sem capítulo de assinatura ativo, renderiza a folha no fim. */}
+          {!temAssinaturaFixo && assinaturaScreenNode}
 
           <p className="mt-6 text-center text-[9px] text-gray-500 print:hidden">
             Documento gerado pelo Painel SST Chabra em{" "}
