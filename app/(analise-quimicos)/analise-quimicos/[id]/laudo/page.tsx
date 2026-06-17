@@ -110,6 +110,7 @@ export default function LaudoAnaliseQuimicoPage({
     switch (c.slug_fixo) {
       case "identificacao_empresa": return true;
       case "quimicos_analise":      return true;
+      case "quimicos_assinatura":   return true;
       default:                      return false; // sumario
     }
   };
@@ -134,8 +135,23 @@ export default function LaudoAnaliseQuimicoPage({
     )
     .filter((t) => t && t.trim());
 
+  const temAssinaturaFixoQ = capitulosQ.some(
+    (c) => c.tipo === "fixo" && c.slug_fixo === "quimicos_assinatura" && c.ativo !== false,
+  );
+  const assinaturaScreenNode = (
+    <AssinaturaRelatorio
+      nomeResponsavel={analise.usuario_nome ?? undefined}
+      dataRelatorio={formatarDataBR(analise.created_at) || undefined}
+      tabelaNome="analises_quimicos"
+      docId={id}
+      hideAcoes
+      numero={numPorSlugQ["quimicos_assinatura"]}
+    />
+  );
+
   function renderSecaoQScreen(slug: string): React.ReactNode {
     switch (slug) {
+      case "quimicos_assinatura":   return assinaturaScreenNode;
       case "identificacao_empresa":
         return (
           <div className="mb-6 break-inside-avoid">
@@ -278,14 +294,8 @@ export default function LaudoAnaliseQuimicoPage({
       {/* Corpo do laudo — ordem unificada (sistema + editáveis) ou layout legado */}
       {corpoScreen}
 
-      {/* Assinatura */}
-      <AssinaturaRelatorio
-        nomeResponsavel={analise.usuario_nome ?? undefined}
-        dataRelatorio={formatarDataBR(analise.created_at) || undefined}
-        tabelaNome="analises_quimicos"
-        docId={id}
-        hideAcoes
-      />
+      {/* Assinatura — só no fim quando não há capítulo "quimicos_assinatura" ativo. */}
+      {!temAssinaturaFixoQ && assinaturaScreenNode}
 
       {/* Rodapé */}
       <p className="text-center text-[9px] text-gray-500 print:mt-4">

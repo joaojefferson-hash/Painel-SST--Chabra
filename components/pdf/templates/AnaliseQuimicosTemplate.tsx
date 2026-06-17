@@ -177,6 +177,7 @@ export default function AnaliseQuimicosTemplate({
     switch (cap.slug_fixo) {
       case "identificacao_empresa": return true;
       case "quimicos_analise":      return true;
+      case "quimicos_assinatura":   return true;
       default:                      return false; // sumário não numera
     }
   }
@@ -348,6 +349,20 @@ export default function AnaliseQuimicosTemplate({
     </>
   );
 
+  const temAssinaturaFixo = capitulos.some(
+    (cap) => cap.tipo === "fixo" && cap.slug_fixo === "quimicos_assinatura" && cap.ativo !== false,
+  );
+  const folhaNode = (
+    <FolhaAssinaturas
+      signatarios={signatarios}
+      empresa={folhaEmpresa}
+      dataHoraAssinatura={dataHoraAssinatura}
+      identificadorDocumento={identificadorDocumento}
+      quebraAntes={false}
+      numero={numPorSlug["quimicos_assinatura"]}
+    />
+  );
+
   function renderSecaoQ(slug: string): React.ReactNode {
     switch (slug) {
       case "identificacao_empresa": return <SecaoIdentificacaoEmpresa empresa={empresa} numero={numPorSlug["identificacao_empresa"]} />;
@@ -358,6 +373,7 @@ export default function AnaliseQuimicosTemplate({
           {analiseBodyNode}
         </div>
       );
+      case "quimicos_assinatura":   return folhaNode;
       default:                      return null;
     }
   }
@@ -379,12 +395,15 @@ export default function AnaliseQuimicosTemplate({
 
       {corpo}
 
-      <FolhaAssinaturas
-        signatarios={signatarios}
-        empresa={folhaEmpresa}
-        dataHoraAssinatura={dataHoraAssinatura}
-        identificadorDocumento={identificadorDocumento}
-      />
+      {/* Fallback: sem capítulo de assinatura ativo, renderiza a folha no fim. */}
+      {!temAssinaturaFixo && (
+        <FolhaAssinaturas
+          signatarios={signatarios}
+          empresa={folhaEmpresa}
+          dataHoraAssinatura={dataHoraAssinatura}
+          identificadorDocumento={identificadorDocumento}
+        />
+      )}
     </>
   );
 }
