@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Plus, ClipboardList, ChartBar, Search } from "lucide-react";
+import { Plus, ChartBar, Search } from "lucide-react";
 import { Suspense } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -18,6 +18,7 @@ import {
   type OrdemInspecao,
 } from "@/lib/hooks/useInspecao";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
+import { useUnidades } from "@/lib/hooks/useUnidades";
 import { useCanCreate, useCanDelete, useIsAdmin } from "@/lib/hooks/useUsuario";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { registrarSoftNaLixeira } from "@/lib/hooks/useLixeira";
@@ -89,13 +90,18 @@ function InspecoesInner() {
 
   const empresaParam = params.get("empresa");
   const [empresaId, setEmpresaId] = useState<string | null>(empresaParam);
+  const [idUnidade, setIdUnidade] = useState<string>("");
+  const [dataIni, setDataIni] = useState<string>("");
+  const [dataFim, setDataFim] = useState<string>("");
   const [filtro, setFiltro] = useState<FiltroInspecao>("Todos");
   const [ordem, setOrdem] = useState<OrdemInspecao>("recentes");
   const [buscaTecnico, setBuscaTecnico] = useState("");
   const [page, setPage] = useState(1);
 
+  const { data: unidades = [] } = useUnidades();
+
   // Reseta para página 1 quando qualquer filtro muda
-  useEffect(() => { setPage(1); }, [empresaId, filtro, ordem, buscaTecnico]);
+  useEffect(() => { setPage(1); }, [empresaId, idUnidade, dataIni, dataFim, filtro, ordem, buscaTecnico]);
 
   // Sincroniza empresa na URL para deep-linking
   useEffect(() => {
@@ -111,6 +117,9 @@ function InspecoesInner() {
   const { lista, counts } = useInspecoesPaginadas({
     idEmpresa: empresaId,
     tecnico: buscaTecnico,
+    idUnidade: idUnidade || null,
+    dataIni,
+    dataFim,
     filtro,
     ordem,
     page,
@@ -123,8 +132,6 @@ function InspecoesInner() {
   const isLoading = lista.isLoading;
   const isFetching = lista.isFetching;
   const countData = counts.data;
-
-  const enabled = !!empresaId || buscaTecnico.trim().length >= 2;
 
   return (
     <div className="space-y-4">
@@ -158,15 +165,58 @@ function InspecoesInner() {
         </div>
       </div>
 
-      <div className="relative max-w-xs">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Buscar por técnico..."
-          value={buscaTecnico}
-          onChange={(e) => setBuscaTecnico(e.target.value)}
-          className="w-full rounded-md border border-gray-300 bg-white py-1.5 pl-8 pr-3 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
-        />
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="relative max-w-xs flex-1 min-w-[180px]">
+          <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-gray-500">Técnico</label>
+          <Search className="pointer-events-none absolute left-2.5 top-[31px] size-3.5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por técnico..."
+            value={buscaTecnico}
+            onChange={(e) => setBuscaTecnico(e.target.value)}
+            className="w-full rounded-md border border-gray-300 bg-white py-1.5 pl-8 pr-3 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-gray-500">Unidade</label>
+          <select
+            value={idUnidade}
+            onChange={(e) => setIdUnidade(e.target.value)}
+            className="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+          >
+            <option value="">Todas as unidades</option>
+            {unidades.map((u) => (
+              <option key={u.id_unidade} value={u.id_unidade}>{u.nome}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-gray-500">De</label>
+          <input
+            type="date"
+            value={dataIni}
+            onChange={(e) => setDataIni(e.target.value)}
+            className="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-gray-500">Até</label>
+          <input
+            type="date"
+            value={dataFim}
+            onChange={(e) => setDataFim(e.target.value)}
+            className="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+          />
+        </div>
+        {(idUnidade || dataIni || dataFim || buscaTecnico) && (
+          <button
+            type="button"
+            onClick={() => { setIdUnidade(""); setDataIni(""); setDataFim(""); setBuscaTecnico(""); }}
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       {empresaId && empresa && (
@@ -175,8 +225,7 @@ function InspecoesInner() {
         </div>
       )}
 
-      {empresaId && (
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
           {FILTROS.map((f) => (
             <button
               key={f.value}
@@ -207,26 +256,13 @@ function InspecoesInner() {
               ))}
             </select>
           </div>
-        </div>
-      )}
+      </div>
 
       <div className={cn(
         "reveal-up overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm",
         isFetching && "opacity-70 transition-opacity"
       )}>
-        {!enabled ? (
-          <div className="flex flex-col items-center justify-center p-14 text-center">
-            <div className="flex size-14 items-center justify-center rounded-2xl bg-verde-light">
-              <ClipboardList className="size-7 text-verde-primary" />
-            </div>
-            <p className="mt-4 text-sm font-semibold text-gray-800">
-              Selecione uma empresa ou busque pelo técnico
-            </p>
-            <p className="mt-1 text-xs text-gray-400">
-              Digite ao menos 2 caracteres no campo acima para buscar por técnico
-            </p>
-          </div>
-        ) : isLoading ? (
+        {isLoading ? (
           <div className="p-5">
             <LoadingSkeleton rows={6} />
           </div>
