@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   PieChart,
   Pie,
@@ -14,16 +14,18 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { AlertTriangle, BarChart2, Download, Loader2 } from "lucide-react";
+import { AlertTriangle, BarChart2, ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import {
   useProdUnidades,
-  useProdDocumentos,
+  useProdSnapshots,
   useProdColaboradores,
-  STATUS_LABEL,
-  STATUS_PIE_COLOR,
-  type StatusDocumentoSST,
 } from "@/lib/hooks/useProdutividade";
+
+const MESES_LABEL = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 function KpiCard({
   label,
@@ -46,91 +48,92 @@ function KpiCard({
 }
 
 export default function ProdutividadeDashboard() {
+  const today = new Date();
+  const [mes, setMes] = useState(today.getMonth() + 1);
+  const [ano, setAno] = useState(today.getFullYear());
   const [unidadeFilter, setUnidadeFilter] = useState("");
 
   const { data: unidades = [], isLoading: loadingU } = useProdUnidades();
-  const { data: documentos = [], isLoading: loadingD } = useProdDocumentos(
-    unidadeFilter ? { idUnidade: unidadeFilter } : undefined
-  );
+  const { data: snapshots = [], isLoading: loadingS } = useProdSnapshots(mes, ano);
   const { data: colaboradores = [] } = useProdColaboradores();
 
-  const isLoading = loadingU || loadingD;
+  const isLoading = loadingU || loadingS;
 
-  // Contagens por status
-  const total       = documentos.length;
-  const emDia       = documentos.filter((d) => d.status === "em_dia").length;
-  const vencidos    = documentos.filter((d) => d.status === "vencido").length;
-  const aVencer     = documentos.filter((d) => d.status === "a_vencer").length;
-  const pendentes   = documentos.filter((d) =>
-    ["pendente_visita", "pendente_informacao", "pendente_ssg", "pendente_revisao", "nao_iniciado"].includes(d.status)
-  ).length;
-  const clientesUnicos = new Set(documentos.map((d) => d.id_empresa)).size;
+  function prevMes() { if (mes === 1) { setMes(12); setAno((a) => a - 1); } else setMes((m) => m - 1); }
+  function nextMes() { if (mes === 12) { setMes(1); setAno((a) => a + 1); } else setMes((m) => m + 1); }
 
-  // Alertas: vencendo em 30 e 60 dias
-  const hoje  = new Date().toISOString().slice(0, 10);
-  const em30d = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
-  const em60d = new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10);
-  const vencendo30 = documentos.filter(
-    (d) => d.data_vencimento && d.data_vencimento >= hoje && d.data_vencimento <= em30d
+  // Snapshot por unidade (filtrado por unidade selecionada, se houver).
+  const linhas = useMemo(() => {
+    const porUnidade = new Map(snapshots.map((s) => [s.id_unidade, s]));
+    return unidades
+      .filter((u) => !unidadeFilter || u.id === unidadeFilter)
+      .map((u) => {
+        const s = porUnidade.get(u.id);
+        return {
+          unidade: u,
+          pagantes: s?.clientes_pagantes ?? 0,
+          cortesia: s?.clientes_cortesia ?? 0,
+          vencidos: s?.vencidos ?? 0,
+          vencendo: s?.vencendo ?? 0,
+          inspecao: s?.inspecao_pendente ?? 0,
+          colaboradores: colaboradores.filter((c) => c.id_unidade === u.id && c.ativo).length,
+        };
+      });
+  }, [snapshots, unidades, unidadeFilter, colaboradores]);
+
+  const tot = linhas.reduce(
+    (a, l) => {
+      a.pagantes += l.pagantes; a.cortesia += l.cortesia;
+      a.vencidos += l.vencidos; a.vencendo += l.vencendo; a.inspecao += l.inspecao;
+      return a;
+    },
+    { pagantes: 0, cortesia: 0, vencidos: 0, vencendo: 0, inspecao: 0 },
   );
-  const vencendo60 = documentos.filter(
-    (d) => d.data_vencimento && d.data_vencimento > em30d && d.data_vencimento <= em60d
-  );
+  const totalClientes = tot.pagantes + tot.cortesia;
+  const temDados = linhas.some((l) => l.pagantes || l.cortesia || l.vencidos || l.vencendo || l.inspecao);
 
-  // Pie data
-  const statusCount: Partial<Record<StatusDocumentoSST, number>> = {};
-  for (const d of documentos) {
-    statusCount[d.status] = (statusCount[d.status] ?? 0) + 1;
-  }
-  const pieData = (Object.entries(statusCount) as [StatusDocumentoSST, number][])
-    .map(([status, value]) => ({ name: STATUS_LABEL[status], value, status }))
-    .sort((a, b) => b.value - a.value);
+  // Gráfico de barras por unidade (pendências).
+  const barData = linhas
+    .map((l) => ({
+      name: l.unidade.nome.length > 10 ? l.unidade.nome.slice(0, 10) + "…" : l.unidade.nome,
+      Vencidos: l.vencidos,
+      Vencendo: l.vencendo,
+      "Insp. pendente": l.inspecao,
+    }))
+    .filter((u) => u.Vencidos > 0 || u.Vencendo > 0 || u["Insp. pendente"] > 0);
 
-  // Bar data por unidade
-  const barData = unidades.map((u) => {
-    const uDocs = documentos.filter((d) => d.id_unidade === u.id);
-    return {
-      name: u.nome.length > 10 ? u.nome.slice(0, 10) + "…" : u.nome,
-      "Em Dia":    uDocs.filter((d) => d.status === "em_dia").length,
-      "A Vencer":  uDocs.filter((d) => d.status === "a_vencer").length,
-      "Pendentes": uDocs.filter((d) =>
-        ["pendente_visita", "pendente_informacao", "pendente_ssg", "pendente_revisao", "nao_iniciado"].includes(d.status)
-      ).length,
-      "Vencidos":  uDocs.filter((d) => d.status === "vencido").length,
-    };
-  }).filter((u) => Object.values(u).some((v) => typeof v === "number" && v > 0));
+  // Pizza: composição das pendências.
+  const pieData = [
+    { name: "Vencidos", value: tot.vencidos, color: "#ef4444" },
+    { name: "Vencendo", value: tot.vencendo, color: "#eab308" },
+    { name: "Insp. pendente", value: tot.inspecao, color: "#f97316" },
+  ].filter((p) => p.value > 0);
 
-  // Ranking unidades por pendências
-  const ranking = unidades
-    .map((u) => {
-      const uDocs = documentos.filter((d) => d.id_unidade === u.id);
-      const pend = uDocs.filter((d) =>
-        ["vencido", "a_vencer", "pendente_visita", "pendente_informacao", "pendente_ssg", "pendente_revisao", "nao_iniciado"].includes(d.status)
-      ).length;
-      return {
-        ...u,
-        totalDocs: uDocs.length,
-        colaboradores: colaboradores.filter((c) => c.id_unidade === u.id).length,
-        pendentes: pend,
-      };
-    })
-    .sort((a, b) => b.pendentes - a.pendentes);
+  // Ranking por pendências (vencidos + vencendo + inspeção).
+  const ranking = [...linhas]
+    .map((l) => ({ ...l, pend: l.vencidos + l.vencendo + l.inspecao }))
+    .sort((a, b) => b.pend - a.pend);
 
   function exportExcel() {
-    const rows = documentos.map((d) => ({
-      Empresa:        d.nome_empresa ?? d.id_empresa,
-      Unidade:        unidades.find((u) => u.id === d.id_unidade)?.nome ?? d.id_unidade,
-      "Tipo":         d.tipo_documento,
-      Status:         STATUS_LABEL[d.status],
-      Emissão:        d.data_emissao ?? "",
-      Vencimento:     d.data_vencimento ?? "",
-      Responsável:    d.responsavel_nome ?? "",
-      Observações:    d.observacoes ?? "",
+    const rows = linhas.map((l) => ({
+      Unidade: l.unidade.nome,
+      Responsável: l.unidade.responsavel ?? "",
+      Pagantes: l.pagantes,
+      Cortesia: l.cortesia,
+      Vencidos: l.vencidos,
+      Vencendo: l.vencendo,
+      "Inspeção pendente": l.inspecao,
+      Colaboradores: l.colaboradores,
     }));
+    rows.push({
+      Unidade: "TOTAL", Responsável: "", Pagantes: tot.pagantes, Cortesia: tot.cortesia,
+      Vencidos: tot.vencidos, Vencendo: tot.vencendo, "Inspeção pendente": tot.inspecao,
+      Colaboradores: linhas.reduce((s, l) => s + l.colaboradores, 0),
+    });
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Documentos SST");
-    XLSX.writeFile(wb, "produtividade-documentos.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, `${MESES_LABEL[mes - 1]} ${ano}`);
+    XLSX.writeFile(wb, `produtividade-${ano}-${String(mes).padStart(2, "0")}.xlsx`);
   }
 
   return (
@@ -139,9 +142,20 @@ export default function ProdutividadeDashboard() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard de Produtividade</h1>
-          <p className="mt-0.5 text-sm text-gray-500">Visão geral das unidades, documentos SST e equipe</p>
+          <p className="mt-0.5 text-sm text-gray-500">Quantitativo de clientes e pendências por unidade</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-1.5 shadow-sm ring-1 ring-black/5">
+            <button type="button" onClick={prevMes} className="rounded p-1 hover:bg-gray-100">
+              <ChevronLeft className="size-4 text-gray-500" />
+            </button>
+            <p className="min-w-[130px] text-center text-sm font-bold text-gray-800">
+              {MESES_LABEL[mes - 1]} de {ano}
+            </p>
+            <button type="button" onClick={nextMes} className="rounded p-1 hover:bg-gray-100">
+              <ChevronRight className="size-4 text-gray-500" />
+            </button>
+          </div>
           <select
             value={unidadeFilter}
             onChange={(e) => setUnidadeFilter(e.target.value)}
@@ -170,85 +184,47 @@ export default function ProdutividadeDashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <KpiCard label="Clientes" value={clientesUnicos} sub="empresas com docs" colorClass="text-gray-900" />
-        <KpiCard label="Total Docs" value={total} sub="documentos SST" colorClass="text-gray-900" />
-        <KpiCard label="Em Dia" value={emDia} sub={total > 0 ? `${Math.round((emDia / total) * 100)}%` : "0%"} colorClass="text-green-600" />
-        <KpiCard label="Vencidos" value={vencidos} sub="requer ação imediata" colorClass="text-red-600" />
-        <KpiCard label="A Vencer" value={aVencer} sub="atenção nos próximos dias" colorClass="text-yellow-600" />
-        <KpiCard label="Pendentes" value={pendentes} sub="diversas situações" colorClass="text-orange-600" />
+        <KpiCard label="Clientes" value={totalClientes} sub={`${tot.pagantes} pagantes · ${tot.cortesia} cortesia`} colorClass="text-gray-900" />
+        <KpiCard label="Pagantes" value={tot.pagantes} sub="clientes pagantes" colorClass="text-gray-900" />
+        <KpiCard label="Cortesia" value={tot.cortesia} sub="clientes cortesia" colorClass="text-gray-500" />
+        <KpiCard label="Vencidos" value={tot.vencidos} sub="requer ação imediata" colorClass="text-red-600" />
+        <KpiCard label="Vencendo" value={tot.vencendo} sub="atenção nos próximos dias" colorClass="text-yellow-600" />
+        <KpiCard label="Insp. Pendente" value={tot.inspecao} sub="inspeções a realizar" colorClass="text-orange-600" />
       </div>
 
-      {/* Alertas */}
-      {(vencidos > 0 || vencendo30.length > 0) && (
-        <div className="space-y-3">
-          {vencidos > 0 && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="size-5 text-red-600" />
-                <span className="font-semibold text-red-800">
-                  {vencidos} documento{vencidos !== 1 ? "s" : ""} vencido{vencidos !== 1 ? "s" : ""}
-                </span>
-                <span className="text-sm text-red-600">— requer renovação imediata</span>
-              </div>
-            </div>
-          )}
-          {vencendo30.length > 0 && (
-            <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <AlertTriangle className="size-4 text-yellow-600" />
-                <span className="font-semibold text-yellow-800">
-                  {vencendo30.length} documento{vencendo30.length !== 1 ? "s" : ""} vencendo nos próximos 30 dias
-                </span>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {vencendo30.slice(0, 6).map((d) => (
-                  <div key={d.id} className="rounded-lg bg-white px-3 py-2 text-xs shadow-sm ring-1 ring-yellow-200">
-                    <p className="font-semibold text-gray-800 truncate">{d.nome_empresa ?? d.id_empresa}</p>
-                    <p className="text-gray-500">{d.tipo_documento} · {d.data_vencimento}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {vencendo60.length > 0 && (
-            <p className="text-sm text-gray-500">
-              + <span className="font-semibold">{vencendo60.length}</span> documento{vencendo60.length !== 1 ? "s" : ""} vencendo entre 30 e 60 dias.
-            </p>
-          )}
+      {/* Alerta de vencidos */}
+      {tot.vencidos > 0 && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="size-5 text-red-600" />
+            <span className="font-semibold text-red-800">{tot.vencidos} documento(s) vencido(s)</span>
+            <span className="text-sm text-red-600">— requer renovação imediata</span>
+          </div>
         </div>
       )}
 
       {/* Charts */}
-      {!isLoading && total > 0 && (
+      {!isLoading && temDados && (
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Pie */}
-          <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-            <h2 className="mb-3 text-sm font-semibold text-gray-700">Distribuição por Status</h2>
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="45%"
-                  outerRadius={85}
-                  dataKey="value"
-                  label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
-                  labelLine={false}
-                >
-                  {pieData.map((entry) => (
-                    <Cell key={entry.status} fill={STATUS_PIE_COLOR[entry.status] ?? "#ccc"} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v) => [`${v} docs`, ""]} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          {pieData.length > 0 && (
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+              <h2 className="mb-3 text-sm font-semibold text-gray-700">Composição das Pendências</h2>
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="45%" outerRadius={85} dataKey="value"
+                    label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
+                    {pieData.map((e) => <Cell key={e.name} fill={e.color} />)}
+                  </Pie>
+                  <Tooltip formatter={(v) => [`${v}`, ""]} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
-          {/* Bar por unidade */}
           {barData.length > 0 && (
             <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-              <h2 className="mb-3 text-sm font-semibold text-gray-700">Documentos por Unidade</h2>
+              <h2 className="mb-3 text-sm font-semibold text-gray-700">Pendências por Unidade</h2>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={barData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
@@ -256,10 +232,9 @@ export default function ProdutividadeDashboard() {
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="Em Dia"    stackId="a" fill="#22c55e" />
-                  <Bar dataKey="A Vencer"  stackId="a" fill="#eab308" />
-                  <Bar dataKey="Pendentes" stackId="a" fill="#f97316" />
-                  <Bar dataKey="Vencidos"  stackId="a" fill="#ef4444" />
+                  <Bar dataKey="Vencidos" stackId="a" fill="#ef4444" />
+                  <Bar dataKey="Vencendo" stackId="a" fill="#eab308" />
+                  <Bar dataKey="Insp. pendente" stackId="a" fill="#f97316" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -268,7 +243,7 @@ export default function ProdutividadeDashboard() {
       )}
 
       {/* Ranking */}
-      {ranking.length > 0 && (
+      {temDados && (
         <div className="rounded-xl bg-white shadow-sm ring-1 ring-black/5">
           <div className="border-b border-gray-100 px-5 py-3">
             <h2 className="text-sm font-semibold text-gray-700">Ranking de Unidades — Pendências</h2>
@@ -280,27 +255,29 @@ export default function ProdutividadeDashboard() {
                   <th className="px-5 py-3 text-left">#</th>
                   <th className="px-5 py-3 text-left">Unidade</th>
                   <th className="px-5 py-3 text-left">Responsável</th>
-                  <th className="px-5 py-3 text-right">Total Docs</th>
-                  <th className="px-5 py-3 text-right">Colaboradores</th>
+                  <th className="px-5 py-3 text-right">Pagantes</th>
+                  <th className="px-5 py-3 text-right">Vencidos</th>
+                  <th className="px-5 py-3 text-right">Vencendo</th>
+                  <th className="px-5 py-3 text-right">Insp. pend.</th>
+                  <th className="px-5 py-3 text-right">Equipe</th>
                   <th className="px-5 py-3 text-right">Pendências</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {ranking.map((u, idx) => (
-                  <tr key={u.id} className="hover:bg-gray-50/50">
-                    <td className="px-5 py-3 text-gray-400 font-mono text-xs">#{idx + 1}</td>
-                    <td className="px-5 py-3 font-medium text-gray-800">{u.nome}</td>
-                    <td className="px-5 py-3 text-gray-500 text-xs">{u.responsavel ?? "—"}</td>
-                    <td className="px-5 py-3 text-right text-gray-600">{u.totalDocs}</td>
-                    <td className="px-5 py-3 text-right text-gray-600">{u.colaboradores}</td>
+                {ranking.map((l, idx) => (
+                  <tr key={l.unidade.id} className="hover:bg-gray-50/50">
+                    <td className="px-5 py-3 font-mono text-xs text-gray-400">#{idx + 1}</td>
+                    <td className="px-5 py-3 font-medium text-gray-800">{l.unidade.nome}</td>
+                    <td className="px-5 py-3 text-xs text-gray-500">{l.unidade.responsavel ?? "—"}</td>
+                    <td className="px-5 py-3 text-right text-gray-600">{l.pagantes}</td>
+                    <td className="px-5 py-3 text-right text-red-600">{l.vencidos}</td>
+                    <td className="px-5 py-3 text-right text-yellow-600">{l.vencendo}</td>
+                    <td className="px-5 py-3 text-right text-orange-600">{l.inspecao}</td>
+                    <td className="px-5 py-3 text-right text-gray-600">{l.colaboradores}</td>
                     <td className="px-5 py-3 text-right">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          u.pendentes > 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {u.pendentes}
-                      </span>
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        l.pend > 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+                      }`}>{l.pend}</span>
                     </td>
                   </tr>
                 ))}
@@ -311,14 +288,15 @@ export default function ProdutividadeDashboard() {
       )}
 
       {/* Empty state */}
-      {!isLoading && total === 0 && unidades.length === 0 && (
+      {!isLoading && !temDados && (
         <div className="rounded-xl bg-white p-16 text-center shadow-sm ring-1 ring-black/5">
           <BarChart2 className="mx-auto size-14 text-gray-200" />
-          <h3 className="mt-4 text-lg font-semibold text-gray-600">Nenhum dado cadastrado ainda</h3>
-          <p className="mt-2 text-sm text-gray-400 max-w-sm mx-auto">
-            Comece em <strong>Unidades e Equipe</strong> para cadastrar as 6 unidades da Chabra e os
-            colaboradores, depois acesse <strong>Documentos SST</strong> para registrar os documentos
-            por cliente.
+          <h3 className="mt-4 text-lg font-semibold text-gray-600">
+            Sem dados para {MESES_LABEL[mes - 1]} de {ano}
+          </h3>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-gray-400">
+            Lance o quantitativo do mês em <strong>Controle Mensal</strong> (manual ou importando da
+            planilha) para o dashboard refletir clientes e pendências por unidade.
           </p>
         </div>
       )}
