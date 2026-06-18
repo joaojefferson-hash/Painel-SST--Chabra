@@ -22,9 +22,11 @@ const MESES_LABEL = [
 function CelulaInput({
   value,
   onChange,
+  disabled,
 }: {
   value: number;
   onChange: (v: number) => void;
+  disabled?: boolean;
 }) {
   return (
     <input
@@ -32,8 +34,9 @@ function CelulaInput({
       min={0}
       value={value || ""}
       placeholder="0"
+      disabled={disabled}
       onChange={(e) => onChange(Number(e.target.value) || 0)}
-      className="w-16 rounded border border-gray-200 px-2 py-1 text-center text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+      className="w-16 rounded border border-gray-200 px-2 py-1 text-center text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
     />
   );
 }
@@ -146,16 +149,16 @@ function RegistroUnidade({
                 <td className="px-4 py-2.5 font-medium text-gray-800">{c.nome}</td>
                 <td className="px-4 py-2.5 text-xs text-gray-500">{TIPO_COLABORADOR_LABEL[c.tipo]}</td>
                 <td className="px-4 py-2.5 text-center">
-                  <CelulaInput value={getValue(c.id, "docs_gerados")} onChange={(v) => setValue(c.id, "docs_gerados", v)} />
+                  <CelulaInput value={getValue(c.id, "docs_gerados")} onChange={(v) => setValue(c.id, "docs_gerados", v)} disabled={!canEdit} />
                 </td>
                 <td className="px-4 py-2.5 text-center">
-                  <CelulaInput value={getValue(c.id, "visitas_realizadas")} onChange={(v) => setValue(c.id, "visitas_realizadas", v)} />
+                  <CelulaInput value={getValue(c.id, "visitas_realizadas")} onChange={(v) => setValue(c.id, "visitas_realizadas", v)} disabled={!canEdit} />
                 </td>
                 <td className="px-4 py-2.5 text-center">
-                  <CelulaInput value={getValue(c.id, "levantamentos_enviados")} onChange={(v) => setValue(c.id, "levantamentos_enviados", v)} />
+                  <CelulaInput value={getValue(c.id, "levantamentos_enviados")} onChange={(v) => setValue(c.id, "levantamentos_enviados", v)} disabled={!canEdit} />
                 </td>
                 <td className="px-4 py-2.5 text-center">
-                  <CelulaInput value={getValue(c.id, "docs_ssg")} onChange={(v) => setValue(c.id, "docs_ssg", v)} />
+                  <CelulaInput value={getValue(c.id, "docs_ssg")} onChange={(v) => setValue(c.id, "docs_ssg", v)} disabled={!canEdit} />
                 </td>
               </tr>
             ))}

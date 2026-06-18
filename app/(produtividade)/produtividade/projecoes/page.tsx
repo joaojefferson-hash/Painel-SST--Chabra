@@ -31,10 +31,10 @@ function num(v: string | number, fallback = 0) {
 }
 
 function Field({
-  label, sub, value, onChange, small,
+  label, sub, value, onChange, small, disabled,
 }: {
   label: string; sub?: string; value: string;
-  onChange: (v: string) => void; small?: boolean;
+  onChange: (v: string) => void; small?: boolean; disabled?: boolean;
 }) {
   return (
     <div>
@@ -43,7 +43,8 @@ function Field({
       <input
         type="number" min={0} value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`rounded-lg border border-gray-200 px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${small ? "w-28" : "w-full"}`}
+        disabled={disabled}
+        className={`rounded-lg border border-gray-200 px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 ${small ? "w-28" : "w-full"}`}
       />
     </div>
   );
@@ -355,7 +356,7 @@ export default function ProjecoesPage() {
         <div>
           <p className="mb-3 text-xs font-semibold text-gray-600">Janela de trabalho</p>
           <div>
-            <Field label="Dias úteis disponíveis" value={diasUteis} onChange={setDiasUteis} small />
+            <Field label="Dias úteis disponíveis" value={diasUteis} onChange={setDiasUteis} small disabled={!canEdit} />
             <p className="mt-1.5 text-xs text-gray-400">
               ≈ <strong className="text-gray-600">{semanas} semanas</strong> / <strong className="text-gray-600">{Math.round(dias / 22)} meses</strong> — calculado com 5 dias úteis/semana e 22 dias úteis/mês
             </p>
@@ -386,8 +387,8 @@ export default function ProjecoesPage() {
             Pré-preenchida pela capacidade média cadastrada por colaborador ÷ 22 dias úteis — ajuste se quiser
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="Docs por ADM por dia"         sub="Documentos finalizados em 1 dia útil"    value={docsPorAdm} onChange={setDocsPorAdm} />
-            <Field label="Inspeções por técnico por dia" sub="Inspeções realizadas em 1 dia útil"     value={inspPorTec} onChange={setInspPorTec} />
+            <Field label="Docs por ADM por dia"         sub="Documentos finalizados em 1 dia útil"    value={docsPorAdm} onChange={setDocsPorAdm} disabled={!canEdit} />
+            <Field label="Inspeções por técnico por dia" sub="Inspeções realizadas em 1 dia útil"     value={inspPorTec} onChange={setInspPorTec} disabled={!canEdit} />
           </div>
         </div>
       </div>
@@ -456,19 +457,22 @@ export default function ProjecoesPage() {
                     <td className="px-5 py-3 text-center">
                       <input type="number" min={0} value={d.totalClientes}
                         onChange={(e) => setDado(u.id, "totalClientes", e.target.value)}
-                        className="w-24 rounded border border-gray-200 px-2 py-1.5 text-center text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        disabled={!canEdit}
+                        className="w-24 rounded border border-gray-200 px-2 py-1.5 text-center text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                       />
                     </td>
                     <td className="px-5 py-3 text-center">
                       <input type="number" min={0} value={d.pendInspecao}
                         onChange={(e) => setDado(u.id, "pendInspecao", e.target.value)}
-                        className="w-24 rounded border border-orange-200 bg-orange-50/50 px-2 py-1.5 text-center text-sm font-mono text-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        disabled={!canEdit}
+                        className="w-24 rounded border border-orange-200 bg-orange-50/50 px-2 py-1.5 text-center text-sm font-mono text-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                       />
                     </td>
                     <td className="px-5 py-3 text-center">
                       <input type="number" min={0} value={d.pendDocs}
                         onChange={(e) => setDado(u.id, "pendDocs", e.target.value)}
-                        className="w-24 rounded border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-center text-sm font-mono text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        disabled={!canEdit}
+                        className="w-24 rounded border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-center text-sm font-mono text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                       />
                     </td>
                     <td className="px-5 py-3 text-center">
