@@ -417,12 +417,15 @@ function InicioContent() {
                 {visibleCats.map((cat) => {
                   const catCards = cardsDisponiveis.filter((c) => c.categoria === cat.id);
                   const cfg = CATEGORY_CONFIG[cat.id];
+                  // Descrição reflete os módulos que o usuário REALMENTE acessa
+                  // (evita citar inventário/patrimônio p/ quem só tem Produtividade).
+                  const descricao = catCards.map((c) => c.title).join(" · ") || cfg.descricao;
                   return (
                     <CategoryCard
                       key={cat.id}
                       label={cat.label}
                       icon={cfg.icon}
-                      descricao={cfg.descricao}
+                      descricao={descricao}
                       accent={cfg.accent}
                       totalModulos={catCards.length}
                       pendentes={catCards.reduce(

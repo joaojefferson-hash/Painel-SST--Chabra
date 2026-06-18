@@ -15,6 +15,7 @@ import {
   type ProdDocumentoSST,
   type StatusDocumentoSST,
 } from "@/lib/hooks/useProdutividade";
+import { useCanEdit } from "@/lib/hooks/useUsuario";
 
 const TODOS_STATUS: StatusDocumentoSST[] = [
   "em_dia", "a_vencer", "vencido",
@@ -179,6 +180,7 @@ export default function DocumentosPage() {
   const [showNew,      setShowNew]      = useState(false);
   const [editDoc,      setEditDoc]      = useState<ProdDocumentoSST | null>(null);
 
+  const canEdit = useCanEdit();
   const { data: unidades = [] } = useProdUnidades();
   const { data: documentos = [], isLoading } = useProdDocumentos({
     idUnidade:     filtroUnid    || undefined,
@@ -228,9 +230,11 @@ export default function DocumentosPage() {
           <button type="button" onClick={exportExcel} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
             <Download className="size-4" /> Excel
           </button>
-          <button type="button" onClick={() => setShowNew(true)} className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">
-            <Plus className="size-4" /> Novo Documento
-          </button>
+          {canEdit && (
+            <button type="button" onClick={() => setShowNew(true)} className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">
+              <Plus className="size-4" /> Novo Documento
+            </button>
+          )}
         </div>
       </div>
 
@@ -320,20 +324,22 @@ export default function DocumentosPage() {
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500">{doc.responsavel_nome ?? "—"}</td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button type="button" onClick={() => setEditDoc(doc)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><Pencil className="size-3.5" /></button>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (!confirm("Excluir este documento?")) return;
-                              try { await deleteDoc.mutateAsync(doc.id); toast.success("Excluído"); }
-                              catch { toast.error("Erro ao excluir"); }
-                            }}
-                            className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </div>
+                        {canEdit && (
+                          <div className="flex items-center justify-end gap-1">
+                            <button type="button" onClick={() => setEditDoc(doc)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><Pencil className="size-3.5" /></button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!confirm("Excluir este documento?")) return;
+                                try { await deleteDoc.mutateAsync(doc.id); toast.success("Excluído"); }
+                                catch { toast.error("Erro ao excluir"); }
+                              }}
+                              className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

@@ -16,6 +16,7 @@ import {
   useProdSnapshots,
   useSalvarProjecao,
 } from "@/lib/hooks/useProdutividade";
+import { useCanEdit } from "@/lib/hooks/useUsuario";
 
 const MESES_LABEL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -62,6 +63,7 @@ type Tipo = "geral" | "por_unidade";
 // ── Página ─────────────────────────────────────────────────────────────────
 
 export default function ProjecoesPage() {
+  const canEdit                       = useCanEdit();
   const { data: unidades = [] }       = useProdUnidades();
   const { data: colaboradores = [] }  = useProdColaboradores();
   const salvarMutation                = useSalvarProjecao();
@@ -797,7 +799,8 @@ Técs: max(0, ${calc.tecsNec} − ${calc.tecsEfet}) = ${calc.tecsAdd}`}
         )}
       </div>
 
-      {/* ── Salvar Projeção ──────────────────────────────────────────────────── */}
+      {/* ── Salvar Projeção (apenas quem pode editar) ────────────────────────── */}
+      {canEdit && (
       <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5 space-y-4">
         <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">Salvar Projeção</h2>
 
@@ -851,6 +854,7 @@ Técs: max(0, ${calc.tecsNec} − ${calc.tecsEfet}) = ${calc.tecsAdd}`}
           </button>
         </div>
       </div>
+      )}
 
     </div>
   );

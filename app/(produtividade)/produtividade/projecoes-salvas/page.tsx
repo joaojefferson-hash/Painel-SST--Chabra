@@ -11,6 +11,7 @@ import {
   useDeleteProjecao,
   type ProdProjecaoSalva,
 } from "@/lib/hooks/useProdutividade";
+import { useCanDelete } from "@/lib/hooks/useUsuario";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,7 @@ function Badge({ children, color }: { children: React.ReactNode; color: string }
 function ProjecaoCard({ p }: { p: ProdProjecaoSalva }) {
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const canDelete = useCanDelete();
   const deleteMutation = useDeleteProjecao();
 
   const semanas = Math.round(p.dias_uteis / 5);
@@ -79,7 +81,7 @@ function ProjecaoCard({ p }: { p: ProdProjecaoSalva }) {
           >
             {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
           </button>
-          {confirmDelete ? (
+          {canDelete && (confirmDelete ? (
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -106,7 +108,7 @@ function ProjecaoCard({ p }: { p: ProdProjecaoSalva }) {
             >
               <Trash2 className="size-4" />
             </button>
-          )}
+          ))}
         </div>
       </div>
 

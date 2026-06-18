@@ -25,6 +25,7 @@ import {
   type ProdColaborador,
   type TipoColaborador,
 } from "@/lib/hooks/useProdutividade";
+import { useCanEdit } from "@/lib/hooks/useUsuario";
 
 // ── Modais ────────────────────────────────────────────────────────────────────
 
@@ -190,6 +191,7 @@ function UnidadeCard({ unidade }: { unidade: ProdUnidade }) {
   const [newColab, setNewColab]         = useState(false);
   const [editColab, setEditColab]       = useState<ProdColaborador | null>(null);
 
+  const canEdit = useCanEdit();
   const compartilha = !!unidade.id_unidade_equipe;
   const teamUnitId = unidade.id_unidade_equipe ?? unidade.id;
   const { data: colaboradores = [], isLoading } = useProdColaboradores(teamUnitId);
@@ -223,18 +225,22 @@ function UnidadeCard({ unidade }: { unidade: ProdUnidade }) {
             )}
           </div>
           <div className="flex items-center gap-1">
-            <button type="button" onClick={() => setEditU(true)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><Pencil className="size-3.5" /></button>
-            <button
-              type="button"
-              onClick={async () => {
-                if (!confirm("Excluir esta unidade e todos os seus colaboradores?")) return;
-                try { await deleteU.mutateAsync(unidade.id); toast.success("Unidade excluída"); }
-                catch { toast.error("Erro ao excluir"); }
-              }}
-              className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-            >
-              <Trash2 className="size-3.5" />
-            </button>
+            {canEdit && (
+              <>
+                <button type="button" onClick={() => setEditU(true)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><Pencil className="size-3.5" /></button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!confirm("Excluir esta unidade e todos os seus colaboradores?")) return;
+                    try { await deleteU.mutateAsync(unidade.id); toast.success("Unidade excluída"); }
+                    catch { toast.error("Erro ao excluir"); }
+                  }}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </>
+            )}
             <button type="button" onClick={() => setExpanded((v) => !v)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100">
               {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
             </button>
@@ -268,7 +274,7 @@ function UnidadeCard({ unidade }: { unidade: ProdUnidade }) {
                 <Users className="mr-1 inline size-3" /> Colaboradores
                 {compartilha && <span className="ml-1 normal-case text-amber-600">(equipe de {donaNome})</span>}
               </p>
-              {!compartilha && (
+              {!compartilha && canEdit && (
                 <button
                   type="button"
                   onClick={() => setNewColab(true)}
@@ -302,7 +308,7 @@ function UnidadeCard({ unidade }: { unidade: ProdUnidade }) {
                     {c.capacidade_docs_mes > 0 && <p>{c.capacidade_docs_mes} docs/mês</p>}
                     {c.capacidade_visitas_mes > 0 && <p>{c.capacidade_visitas_mes} vis./mês</p>}
                   </div>
-                  {!compartilha && (
+                  {!compartilha && canEdit && (
                     <div className="flex gap-1">
                       <button type="button" onClick={() => setEditColab(c)} className="rounded p-1 text-gray-400 hover:bg-white hover:text-gray-600"><Pencil className="size-3" /></button>
                       <button
@@ -336,6 +342,7 @@ function UnidadeCard({ unidade }: { unidade: ProdUnidade }) {
 
 export default function UnidadesPage() {
   const [showNew, setShowNew] = useState(false);
+  const canEdit = useCanEdit();
   const { data: unidades = [], isLoading } = useProdUnidades();
 
   return (
@@ -347,13 +354,15 @@ export default function UnidadesPage() {
             Cadastre as 6 unidades da Chabra e os colaboradores de cada uma
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800"
-        >
-          <Plus className="size-4" /> Nova Unidade
-        </button>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setShowNew(true)}
+            className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800"
+          >
+            <Plus className="size-4" /> Nova Unidade
+          </button>
+        )}
       </div>
 
       {isLoading && (

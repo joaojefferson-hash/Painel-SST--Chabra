@@ -10,6 +10,7 @@ import {
   type ProdUnidade,
   type ProdSnapshotMensal,
 } from "@/lib/hooks/useProdutividade";
+import { useCanEdit } from "@/lib/hooks/useUsuario";
 
 const MESES_LABEL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -41,15 +42,16 @@ function norm(s: string): string {
   return s.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
 }
 
-function CelulaInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function CelulaInput({ value, onChange, disabled }: { value: number; onChange: (v: number) => void; disabled?: boolean }) {
   return (
     <input
       type="number"
       min={0}
       value={value || ""}
       placeholder="0"
+      disabled={disabled}
       onChange={(e) => onChange(Number(e.target.value) || 0)}
-      className="w-20 rounded border border-gray-200 px-2 py-1 text-center text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+      className="w-20 rounded border border-gray-200 px-2 py-1 text-center text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
     />
   );
 }
@@ -62,6 +64,7 @@ export default function ControleMensalPage() {
   const [saving, setSaving] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
+  const canEdit = useCanEdit();
   const { data: unidades = [], isLoading } = useProdUnidades();
   const { data: snapshots = [] } = useProdSnapshots(mes, ano);
   const saveSnapshot = useSaveSnapshot();
@@ -170,13 +173,15 @@ export default function ControleMensalPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setImportOpen(true)}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-          >
-            <ClipboardPaste className="size-4" /> Importar do Excel
-          </button>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              <ClipboardPaste className="size-4" /> Importar do Excel
+            </button>
+          )}
           <div className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 shadow-sm ring-1 ring-black/5">
             <button type="button" onClick={prevMes} className="rounded p-1 hover:bg-gray-100">
               <ChevronLeft className="size-4 text-gray-500" />
@@ -228,7 +233,7 @@ export default function ControleMensalPage() {
                       </td>
                       {CAMPOS.map((campo) => (
                         <td key={campo.key} className="px-4 py-2.5 text-center">
-                          <CelulaInput value={c[campo.key]} onChange={(v) => setCampo(u.id, campo.key, v)} />
+                          <CelulaInput value={c[campo.key]} onChange={(v) => setCampo(u.id, campo.key, v)} disabled={!canEdit} />
                         </td>
                       ))}
                     </tr>
@@ -246,17 +251,19 @@ export default function ControleMensalPage() {
               </tbody>
             </table>
           </div>
-          <div className="flex justify-end border-t border-gray-100 px-4 py-3">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving || !temAlteracao}
-              className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-40"
-            >
-              {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-              Salvar controle mensal
-            </button>
-          </div>
+          {canEdit && (
+            <div className="flex justify-end border-t border-gray-100 px-4 py-3">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving || !temAlteracao}
+                className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-40"
+              >
+                {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                Salvar controle mensal
+              </button>
+            </div>
+          )}
         </div>
       )}
 

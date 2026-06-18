@@ -12,6 +12,7 @@ import {
   type ProdColaborador,
   type ProdRegistroMensal,
 } from "@/lib/hooks/useProdutividade";
+import { useCanEdit } from "@/lib/hooks/useUsuario";
 
 const MESES_LABEL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -46,6 +47,7 @@ function RegistroUnidade({
   mes: number;
   ano: number;
 }) {
+  const canEdit = useCanEdit();
   const { data: colaboradores = [], isLoading: loadC } = useProdColaboradores(idUnidade);
   const { data: registros = [], isLoading: loadR }     = useProdRegistros(idUnidade);
   const saveRegistro = useSaveRegistro();
@@ -168,17 +170,19 @@ function RegistroUnidade({
           </tbody>
         </table>
       </div>
-      <div className="flex justify-end border-t border-gray-100 px-4 py-3">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving || !temAlteracao}
-          className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-40"
-        >
-          {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-          Salvar registros
-        </button>
-      </div>
+      {canEdit && (
+        <div className="flex justify-end border-t border-gray-100 px-4 py-3">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !temAlteracao}
+            className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-40"
+          >
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+            Salvar registros
+          </button>
+        </div>
+      )}
     </div>
   );
 }
