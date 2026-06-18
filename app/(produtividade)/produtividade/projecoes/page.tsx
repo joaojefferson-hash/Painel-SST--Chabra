@@ -137,6 +137,29 @@ export default function ProjecoesPage() {
     return unidades;
   }, [tipo, idUnidadeSel, unidades]);
 
+  // Equipe e capacidades CADASTRADAS (Unidades e Equipe) das unidades visíveis.
+  // Geral = soma de todas as unidades; Por Unidade = só a unidade selecionada.
+  const equipeVisivel = useMemo(() => {
+    const ids = new Set(unidadesVisiveis.map((u) => u.id));
+    let admsCount = 0, tecsCount = 0, capDocsMes = 0, capInspMes = 0;
+    for (const c of colaboradores) {
+      if (!c.ativo || !ids.has(c.id_unidade)) continue;
+      if (c.tipo === "documentos") { admsCount += 1; capDocsMes += c.capacidade_docs_mes || 0; }
+      if (c.tipo === "tecnico_campo") { tecsCount += 1; capInspMes += c.capacidade_visitas_mes || 0; }
+    }
+    return { admsCount, tecsCount, capDocsMes, capInspMes };
+  }, [colaboradores, unidadesVisiveis]);
+
+  // Sincroniza Equipe atual e Produtividade diária a partir do cadastro.
+  // Produtividade = capacidade média por colaborador ÷ 22 dias úteis (editável depois).
+  useEffect(() => {
+    const { admsCount, tecsCount, capDocsMes, capInspMes } = equipeVisivel;
+    setAdmsAtuais(String(admsCount));
+    setTecsAtuais(String(tecsCount));
+    if (admsCount > 0 && capDocsMes > 0) setDocsPorAdm(String(Math.round((capDocsMes / admsCount / 22) * 10) / 10));
+    if (tecsCount > 0 && capInspMes > 0) setInspPorTec(String(Math.round((capInspMes / tecsCount / 22) * 10) / 10));
+  }, [equipeVisivel]);
+
   // ── Totais ────────────────────────────────────────────────────────────────
   const totais = useMemo(() => {
     const ids = unidadesVisiveis.length > 0
@@ -161,17 +184,10 @@ export default function ProjecoesPage() {
     const dpa  = num(docsPorAdm, 5);
     const ipa  = num(inspPorTec, 3);
 
-    // Soma colaboradores cadastrados nas unidades visíveis
-    const idsVisiveis = unidadesVisiveis.length > 0
-      ? unidadesVisiveis.map((u) => u.id)
-      : Object.keys(colabsPorUnidade);
-    const totalAdmsReg = idsVisiveis.reduce((s, id) => s + (colabsPorUnidade[id]?.adms ?? 0), 0);
-    const totalTecsReg = idsVisiveis.reduce((s, id) => s + (colabsPorUnidade[id]?.tecs ?? 0), 0);
-
-    // Usa cadastrados quando existem; caso contrário, usa input manual
-    const usesReg    = totalAdmsReg > 0 || totalTecsReg > 0;
-    const admsEfet   = usesReg ? totalAdmsReg : num(admsAtuais);
-    const tecsEfet   = usesReg ? totalTecsReg : num(tecsAtuais);
+    // Equipe efetiva = colaboradores cadastrados nas unidades visíveis (somados).
+    const usesReg    = equipeVisivel.admsCount > 0 || equipeVisivel.tecsCount > 0;
+    const admsEfet   = usesReg ? equipeVisivel.admsCount : num(admsAtuais);
+    const tecsEfet   = usesReg ? equipeVisivel.tecsCount : num(tecsAtuais);
 
     const capDocs = admsEfet * dpa * dias;
     const capInsp = tecsEfet * ipa * dias;
@@ -209,7 +225,7 @@ export default function ProjecoesPage() {
       okInsp: tecsAdd === 0,
       admsEfet, tecsEfet, usesReg,
     };
-  }, [totais, diasUteis, admsAtuais, tecsAtuais, docsPorAdm, inspPorTec, colabsPorUnidade, unidadesVisiveis]);
+  }, [totais, diasUteis, admsAtuais, tecsAtuais, docsPorAdm, inspPorTec, equipeVisivel]);
 
   const dias    = num(diasUteis, 60);
   const semanas = Math.round(dias / 5);
@@ -318,15 +334,28 @@ export default function ProjecoesPage() {
         </div>
 
         <div>
-          <p className="mb-3 text-xs font-semibold text-gray-600">Equipe atual</p>
+          <p className="mb-1 text-xs font-semibold text-gray-600">Equipe atual</p>
+          <p className="mb-3 text-[11px] text-gray-400">
+            Somada do cadastro em <strong>Unidades e Equipe</strong>
+            {tipo === "por_unidade" ? " (apenas a unidade selecionada)" : " (todas as unidades)"}
+          </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="ADMs (geradores de docs)"   sub="Fazem documentos SST"          value={admsAtuais} onChange={setAdmsAtuais} />
-            <Field label="Técnicos de campo"           sub="Realizam inspeções"             value={tecsAtuais} onChange={setTecsAtuais} />
+            <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+              <p className="text-xs font-semibold text-gray-700">ADMs (geradores de docs)</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{equipeVisivel.admsCount}</p>
+            </div>
+            <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+              <p className="text-xs font-semibold text-gray-700">Técnicos de campo</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{equipeVisivel.tecsCount}</p>
+            </div>
           </div>
         </div>
 
         <div>
-          <p className="mb-3 text-xs font-semibold text-gray-600">Produtividade diária</p>
+          <p className="mb-1 text-xs font-semibold text-gray-600">Produtividade diária</p>
+          <p className="mb-3 text-[11px] text-gray-400">
+            Pré-preenchida pela capacidade média cadastrada por colaborador ÷ 22 dias úteis — ajuste se quiser
+          </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Docs por ADM por dia"         sub="Documentos finalizados em 1 dia útil"    value={docsPorAdm} onChange={setDocsPorAdm} />
             <Field label="Inspeções por técnico por dia" sub="Inspeções realizadas em 1 dia útil"     value={inspPorTec} onChange={setInspPorTec} />
