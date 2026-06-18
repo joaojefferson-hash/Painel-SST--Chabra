@@ -494,7 +494,7 @@ export default function DashboardPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/70">
-                    {["Empresa", "Status", "Data", ""].map((h) => (
+                    {["Empresa", "Técnico", "Resp. Documento", "Status", "Data", ""].map((h) => (
                       <th
                         key={h}
                         className={cn(
@@ -518,6 +518,14 @@ export default function DashboardPage() {
                     >
                       <td className="px-4 py-3 font-medium text-gray-900">
                         {insp.empresa_nome}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {insp.responsavel?.trim() || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {insp.elaboracao_responsavel?.trim() || (
+                          <span className="text-gray-300">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={insp.status} />
