@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeft, LogOut, Shield, Menu, X, Home, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, LogOut, Shield, Menu, X, Home, Building2, Download, Loader2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -192,8 +192,13 @@ export default function SidebarShell({
   const pathname = usePathname();
   const router = useRouter();
   const logout = useUserStore((s) => s.logout);
+  const user = useUserStore((s) => s.user);
   const { data: configs } = useConfiguracoes();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Atalho global p/ Empresas — disponível em todos os módulos (menos no próprio
+  // cadastro de empresas e para Cliente, que usa o portal).
+  const mostrarEmpresas = user?.perfil !== "Cliente" && !pathname.startsWith("/empresas");
 
   async function handleLogout() {
     // Sinaliza ao login para não fazer auto-login nesta navegação
@@ -274,6 +279,16 @@ export default function SidebarShell({
           <Home className="size-[15px] text-white/30" />
           <span>Início</span>
         </Link>
+        {mostrarEmpresas && (
+          <Link
+            href="/empresas"
+            onClick={() => setMobileOpen(false)}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-[7px] text-sm font-medium text-white/50 transition-all duration-150 hover:bg-white/[0.09] hover:text-white/85"
+          >
+            <Building2 className="size-[15px] text-white/30" />
+            <span>Empresas</span>
+          </Link>
+        )}
         <SidebarUpdateButton />
         <button
           type="button"
