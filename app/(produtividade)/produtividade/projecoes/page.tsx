@@ -129,13 +129,24 @@ export default function ProjecoesPage() {
     setDados((prev) => ({ ...prev, [id]: { ...(prev[id] ?? VAZIO), [campo]: val } }));
   }
 
-  // Unidades visíveis conforme o tipo
+  // Unidades visíveis conforme o tipo. Em "por unidade", expande para o GRUPO que
+  // compartilha equipe (mesma "dona de equipe") — ex.: Piabetá puxa Guapimirim
+  // junto, pois a equipe é a mesma e a demanda é somada.
   const unidadesVisiveis = useMemo(() => {
     if (tipo === "por_unidade" && idUnidadeSel) {
-      return unidades.filter((u) => u.id === idUnidadeSel);
+      const sel = unidades.find((u) => u.id === idUnidadeSel);
+      if (!sel) return [];
+      const donaId = sel.id_unidade_equipe ?? sel.id;
+      return unidades.filter((u) => (u.id_unidade_equipe ?? u.id) === donaId);
     }
     return unidades;
   }, [tipo, idUnidadeSel, unidades]);
+
+  // Rótulo do grupo (quando há equipe compartilhada).
+  const grupoLabel = useMemo(
+    () => unidadesVisiveis.map((u) => u.nome).join(" + "),
+    [unidadesVisiveis],
+  );
 
   // Equipe e capacidades CADASTRADAS (Unidades e Equipe) das unidades visíveis.
   // Geral = soma de todas as unidades; Por Unidade = só a unidade selecionada.
@@ -312,7 +323,9 @@ export default function ProjecoesPage() {
             </select>
             {idUnidadeSel && (
               <p className="mt-1.5 text-xs text-teal-600 font-medium">
-                Cálculos filtrados apenas para: {unidades.find((u) => u.id === idUnidadeSel)?.nome}
+                {unidadesVisiveis.length > 1
+                  ? `Equipe compartilhada — projeção combinada: ${grupoLabel}`
+                  : `Cálculos filtrados apenas para: ${unidades.find((u) => u.id === idUnidadeSel)?.nome}`}
               </p>
             )}
           </div>
@@ -373,7 +386,7 @@ export default function ProjecoesPage() {
             </p>
             {tipo === "por_unidade" && idUnidadeSel && (
               <p className="mt-0.5 text-xs text-teal-600 font-medium">
-                Exibindo apenas: {unidades.find((u) => u.id === idUnidadeSel)?.nome}
+                {unidadesVisiveis.length > 1 ? `Grupo (equipe compartilhada): ${grupoLabel}` : `Exibindo apenas: ${unidades.find((u) => u.id === idUnidadeSel)?.nome}`}
               </p>
             )}
           </div>

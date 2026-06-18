@@ -85,6 +85,9 @@ export interface ProdUnidade {
   cidade: string | null;
   responsavel: string | null;
   ativo: boolean;
+  /** Se preenchido, esta unidade COMPARTILHA a equipe da unidade referenciada
+   *  (não tem equipe própria). Projeção: equipe contada uma vez, demanda somada. */
+  id_unidade_equipe: string | null;
   criado_em: string;
 }
 

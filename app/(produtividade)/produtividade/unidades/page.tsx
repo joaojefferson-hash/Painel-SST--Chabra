@@ -38,12 +38,22 @@ function ModalUnidade({
   const [nome, setNome]             = useState(initial?.nome ?? "");
   const [cidade, setCidade]         = useState(initial?.cidade ?? "");
   const [responsavel, setResponsavel] = useState(initial?.responsavel ?? "");
+  const [equipeDe, setEquipeDe]     = useState(initial?.id_unidade_equipe ?? "");
   const save = useSaveUnidade();
+  const { data: unidades = [] } = useProdUnidades();
+  // Só pode compartilhar de unidades que têm equipe própria (não são, elas mesmas, compartilhadas).
+  const opcoesEquipe = unidades.filter((u) => u.id !== initial?.id && !u.id_unidade_equipe);
 
   async function handleSave() {
     if (!nome.trim()) { toast.error("Informe o nome da unidade"); return; }
     try {
-      await save.mutateAsync({ id: initial?.id, nome: nome.trim(), cidade: cidade.trim() || null, responsavel: responsavel.trim() || null });
+      await save.mutateAsync({
+        id: initial?.id,
+        nome: nome.trim(),
+        cidade: cidade.trim() || null,
+        responsavel: responsavel.trim() || null,
+        id_unidade_equipe: equipeDe || null,
+      });
       toast.success(initial?.id ? "Unidade atualizada" : "Unidade criada");
       onClose();
     } catch {
@@ -70,6 +80,18 @@ function ModalUnidade({
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-gray-600">Responsável</label>
             <input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Nome do responsável" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-gray-600">Equipe</label>
+            <select value={equipeDe} onChange={(e) => setEquipeDe(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="">Equipe própria</option>
+              {opcoesEquipe.map((u) => (
+                <option key={u.id} value={u.id}>Compartilha a equipe de {u.nome}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-gray-400">
+              Use &quot;compartilha&quot; quando esta unidade é atendida pela mesma equipe de outra (ex.: Piabetá usa a equipe de Guapimirim). A projeção soma a demanda das duas e conta a equipe uma vez.
+            </p>
           </div>
         </div>
         <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
@@ -168,7 +190,11 @@ function UnidadeCard({ unidade }: { unidade: ProdUnidade }) {
   const [newColab, setNewColab]         = useState(false);
   const [editColab, setEditColab]       = useState<ProdColaborador | null>(null);
 
-  const { data: colaboradores = [], isLoading } = useProdColaboradores(unidade.id);
+  const compartilha = !!unidade.id_unidade_equipe;
+  const teamUnitId = unidade.id_unidade_equipe ?? unidade.id;
+  const { data: colaboradores = [], isLoading } = useProdColaboradores(teamUnitId);
+  const { data: todasUnidades = [] } = useProdUnidades();
+  const donaNome = compartilha ? todasUnidades.find((u) => u.id === unidade.id_unidade_equipe)?.nome ?? "outra unidade" : null;
   const deleteU = useDeleteUnidade();
   const deleteC = useDeleteColaborador();
 
@@ -190,6 +216,11 @@ function UnidadeCard({ unidade }: { unidade: ProdUnidade }) {
               {unidade.cidade ? `${unidade.cidade} · ` : ""}
               {unidade.responsavel ? `Resp.: ${unidade.responsavel}` : "Sem responsável"}
             </p>
+            {compartilha && (
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                <Users className="size-3" /> Equipe compartilhada de {donaNome}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <button type="button" onClick={() => setEditU(true)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><Pencil className="size-3.5" /></button>
@@ -235,15 +266,24 @@ function UnidadeCard({ unidade }: { unidade: ProdUnidade }) {
             <div className="mb-3 flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                 <Users className="mr-1 inline size-3" /> Colaboradores
+                {compartilha && <span className="ml-1 normal-case text-amber-600">(equipe de {donaNome})</span>}
               </p>
-              <button
-                type="button"
-                onClick={() => setNewColab(true)}
-                className="flex items-center gap-1 rounded-lg bg-teal-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
-              >
-                <Plus className="size-3" /> Adicionar
-              </button>
+              {!compartilha && (
+                <button
+                  type="button"
+                  onClick={() => setNewColab(true)}
+                  className="flex items-center gap-1 rounded-lg bg-teal-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
+                >
+                  <Plus className="size-3" /> Adicionar
+                </button>
+              )}
             </div>
+
+            {compartilha && (
+              <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
+                Esta unidade usa a equipe de <strong>{donaNome}</strong>. A equipe é gerenciada lá; aqui é só leitura.
+              </p>
+            )}
 
             {isLoading && <p className="text-xs text-gray-400">Carregando…</p>}
 
@@ -262,20 +302,22 @@ function UnidadeCard({ unidade }: { unidade: ProdUnidade }) {
                     {c.capacidade_docs_mes > 0 && <p>{c.capacidade_docs_mes} docs/mês</p>}
                     {c.capacidade_visitas_mes > 0 && <p>{c.capacidade_visitas_mes} vis./mês</p>}
                   </div>
-                  <div className="flex gap-1">
-                    <button type="button" onClick={() => setEditColab(c)} className="rounded p-1 text-gray-400 hover:bg-white hover:text-gray-600"><Pencil className="size-3" /></button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!confirm(`Excluir ${c.nome}?`)) return;
-                        try { await deleteC.mutateAsync(c.id); toast.success("Excluído"); }
-                        catch { toast.error("Erro ao excluir"); }
-                      }}
-                      className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
-                    >
-                      <Trash2 className="size-3" />
-                    </button>
-                  </div>
+                  {!compartilha && (
+                    <div className="flex gap-1">
+                      <button type="button" onClick={() => setEditColab(c)} className="rounded p-1 text-gray-400 hover:bg-white hover:text-gray-600"><Pencil className="size-3" /></button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!confirm(`Excluir ${c.nome}?`)) return;
+                          try { await deleteC.mutateAsync(c.id); toast.success("Excluído"); }
+                          catch { toast.error("Erro ao excluir"); }
+                        }}
+                        className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                      >
+                        <Trash2 className="size-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
