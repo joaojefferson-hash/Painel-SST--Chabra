@@ -20,6 +20,17 @@ const DEFAULT_MODULOS: ModuloEmpresa[] = [
   "analise_quimicos",
 ];
 
+/** Aplica a máscara 00.000.000/0000-00 conforme o usuário digita/cola (só dígitos, máx. 14). */
+function formatarCnpj(v: string): string {
+  const d = v.replace(/\D/g, "").slice(0, 14);
+  let out = d.slice(0, 2);
+  if (d.length > 2) out += "." + d.slice(2, 5);
+  if (d.length > 5) out += "." + d.slice(5, 8);
+  if (d.length > 8) out += "/" + d.slice(8, 12);
+  if (d.length > 12) out += "-" + d.slice(12, 14);
+  return out;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -71,7 +82,7 @@ export default function EmpresaForm({
       setForm({
         nome_empresa: empresa?.nome_empresa ?? "",
         razao_social: empresa?.razao_social ?? "",
-        cnpj: empresa?.cnpj ?? "",
+        cnpj: empresa?.cnpj ? formatarCnpj(empresa.cnpj) : "",
         cpf: empresa?.cpf ?? "",
         cei: empresa?.cei ?? "",
         caepf: empresa?.caepf ?? "",
@@ -271,13 +282,15 @@ export default function EmpresaForm({
               <input
                 type="text"
                 value={form.cnpj}
-                onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
+                onChange={(e) => setForm({ ...form, cnpj: formatarCnpj(e.target.value) })}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     buscarCnpj();
                   }
                 }}
+                inputMode="numeric"
+                maxLength={18}
                 placeholder="00.000.000/0000-00"
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
               />
