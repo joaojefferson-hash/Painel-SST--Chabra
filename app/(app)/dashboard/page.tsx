@@ -104,6 +104,38 @@ async function fetchInspecoesPorMes(): Promise<MesData[]> {
   return months;
 }
 
+async function fetchDocumentosPorMes(): Promise<MesData[]> {
+  const supabase = createSupabaseBrowserClient();
+  const now = new Date();
+  const sixAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+  const { data } = await supabase
+    .from("inspecoes")
+    .select("elaboracao_concluida_em")
+    .eq("elaboracao_status", "CONCLUIDO")
+    .gte("elaboracao_concluida_em", sixAgo.toISOString());
+
+  const months: MesData[] = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    return {
+      mes: d.toLocaleDateString("pt-BR", { month: "short" })
+        .replace(".", "")
+        .replace(/^\w/, (c) => c.toUpperCase()),
+      total: 0,
+    };
+  });
+
+  (data ?? []).forEach(({ elaboracao_concluida_em }) => {
+    if (!elaboracao_concluida_em) return;
+    const d = new Date(elaboracao_concluida_em);
+    const diff = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+    const idx = 5 - diff;
+    if (idx >= 0 && idx < 6) months[idx].total++;
+  });
+
+  return months;
+}
+
 async function fetchInspecoesRecentes(): Promise<InspecaoComEmpresa[]> {
   const supabase = createSupabaseBrowserClient();
   const { data: insp, error } = await supabase
@@ -142,6 +174,62 @@ const KPI_CONFIG = [
   { key: "rascunho"       as const, label: "Rascunhos",        icon: FileText,      color: "#64748b", from: "#f8fafc" },
 ] as const;
 
+// ─── Gráfico mensal reutilizável (Técnicos / ADM) ──────────────────────────────
+
+function GraficoMes({
+  titulo, data, loading, link, linkLabel, linkTitle, singular, plural,
+}: {
+  titulo: string;
+  data: MesData[] | undefined;
+  loading: boolean;
+  link: string;
+  linkLabel: string;
+  linkTitle: string;
+  singular: string;
+  plural: string;
+}) {
+  return (
+    <div className="glass reveal-up rounded-2xl p-5">
+      <div className="mb-4 flex items-start justify-between gap-2">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-800">{titulo}</h2>
+          <p className="mt-0.5 text-xs text-gray-400">Últimos 6 meses</p>
+        </div>
+        <Link
+          href={link}
+          className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-verde-light px-2.5 py-1.5 text-xs font-semibold text-verde-primary transition-colors hover:bg-verde-primary hover:text-white"
+          title={linkTitle}
+        >
+          <TrendingUp className="size-3.5" />
+          {linkLabel}
+          <ArrowRight className="size-3" />
+        </Link>
+      </div>
+      {loading ? (
+        <div className="h-52 animate-pulse rounded-xl bg-gray-100" />
+      ) : (
+        <ResponsiveContainer width="100%" height={210}>
+          <BarChart data={data} barSize={24} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+            <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} width={28} />
+            <Tooltip
+              cursor={{ fill: "#f0fdf4" }}
+              contentStyle={{ borderRadius: 10, border: "1px solid #e5e7eb", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", fontSize: 12, padding: "6px 12px" }}
+              formatter={(v) => [`${v} ${Number(v) !== 1 ? plural : singular}`, ""]}
+              labelStyle={{ fontWeight: 600, color: "#111827", marginBottom: 2 }}
+            />
+            <Bar dataKey="total" radius={[6, 6, 0, 0]}>
+              {(data ?? []).map((_, idx, arr) => (
+                <Cell key={idx} fill={idx === arr.length - 1 ? "#006B54" : "#006B5460"} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -171,6 +259,11 @@ export default function DashboardPage() {
   const { data: porMes, isLoading: loadingMes } = useQuery({
     queryKey: ["dashboard-por-mes"],
     queryFn: fetchInspecoesPorMes,
+  });
+
+  const { data: porMesAdm, isLoading: loadingMesAdm } = useQuery({
+    queryKey: ["dashboard-por-mes-adm"],
+    queryFn: fetchDocumentosPorMes,
   });
 
   const { data: recentes, isLoading: loadingRecentes } = useQuery({
@@ -230,79 +323,29 @@ export default function DashboardPage() {
       {/* ── Gráficos ──────────────────────────────────────────────────── */}
       <section className="grid gap-4 lg:grid-cols-3">
 
-        {/* BarChart — inspeções por mês */}
-        <div className="glass reveal-up lg:col-span-2 rounded-2xl p-5">
-          <div className="mb-4 flex items-start justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-800">Inspeções Concluídas por Mês</h2>
-              <p className="mt-0.5 text-xs text-gray-400">Últimos 6 meses</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href="/dashboard/inspecoes-concluidas"
-                className="inline-flex items-center gap-1 rounded-lg bg-verde-light px-2.5 py-1.5 text-xs font-semibold text-verde-primary transition-colors hover:bg-verde-primary hover:text-white"
-                title="Abrir dashboard de inspeções concluídas (por mês e por técnico)"
-              >
-                <TrendingUp className="size-3.5" />
-                Ver por técnico
-                <ArrowRight className="size-3" />
-              </Link>
-              <Link
-                href="/dashboard/documentos-emitidos"
-                className="inline-flex items-center gap-1 rounded-lg bg-verde-light px-2.5 py-1.5 text-xs font-semibold text-verde-primary transition-colors hover:bg-verde-primary hover:text-white"
-                title="Produção de documentos por ADM (elaborados no SGG e enviados), por mês"
-              >
-                <TrendingUp className="size-3.5" />
-                Documentos (ADM)
-                <ArrowRight className="size-3" />
-              </Link>
-            </div>
-          </div>
-          {loadingMes ? (
-            <div className="h-52 animate-pulse rounded-xl bg-gray-100" />
-          ) : (
-            <ResponsiveContainer width="100%" height={210}>
-              <BarChart data={porMes} barSize={32} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
-                <XAxis
-                  dataKey="mes"
-                  tick={{ fontSize: 11, fill: "#9ca3af" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "#9ca3af" }}
-                  axisLine={false}
-                  tickLine={false}
-                  allowDecimals={false}
-                  width={28}
-                />
-                <Tooltip
-                  cursor={{ fill: "#f0fdf4" }}
-                  contentStyle={{
-                    borderRadius: 10,
-                    border: "1px solid #e5e7eb",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                    fontSize: 12,
-                    padding: "6px 12px",
-                  }}
-                  formatter={(v) => [
-                    `${v} inspeç${Number(v) !== 1 ? "ões" : "ão"}`,
-                    "",
-                  ]}
-                  labelStyle={{ fontWeight: 600, color: "#111827", marginBottom: 2 }}
-                />
-                <Bar dataKey="total" radius={[6, 6, 0, 0]}>
-                  {(porMes ?? []).map((_, idx, arr) => (
-                    <Cell
-                      key={idx}
-                      fill={idx === arr.length - 1 ? "#006B54" : "#006B5460"}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+        {/* BarChart — inspeções concluídas por mês (Técnicos) */}
+        <GraficoMes
+          titulo="Inspeções por Mês (Técnicos)"
+          data={porMes}
+          loading={loadingMes}
+          link="/dashboard/inspecoes-concluidas"
+          linkLabel="Ver por técnico"
+          linkTitle="Abrir dashboard de inspeções concluídas (por mês e por técnico)"
+          singular="inspeção"
+          plural="inspeções"
+        />
+
+        {/* BarChart — documentos concluídos por mês (ADM) */}
+        <GraficoMes
+          titulo="Documentos por Mês (ADM)"
+          data={porMesAdm}
+          loading={loadingMesAdm}
+          link="/dashboard/documentos-emitidos"
+          linkLabel="Ver por ADM"
+          linkTitle="Produção de documentos por ADM (elaborados no SGG e enviados), por mês"
+          singular="documento"
+          plural="documentos"
+        />
 
         {/* PieChart — distribuição por status */}
         <div className="glass reveal-up delay-1 rounded-2xl p-5">
