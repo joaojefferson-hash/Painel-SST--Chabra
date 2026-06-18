@@ -1,18 +1,46 @@
 "use client";
 
-import { use } from "react";
+import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, ClipboardList, Building2, ChartBar } from "lucide-react";
+import {
+  ArrowLeft, Pencil, ClipboardList, Building2, ChartBar,
+  FileText, Download, BadgeCheck, MapPin, ShieldAlert,
+} from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import { useInspecoesByEmpresa } from "@/lib/hooks/useInspecao";
+import { usePdfsPorEmpresa } from "@/lib/hooks/usePdfsGerados";
+import { useUnidades } from "@/lib/hooks/useUnidades";
 import EmpresaForm from "@/components/empresas/EmpresaForm";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import StatusBadge from "@/components/inspecoes/StatusBadge";
-import { fmtData } from "@/lib/utils";
+import { fmtData, cn } from "@/lib/utils";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
+
+const MODULO_LABEL: Record<string, string> = {
+  inspecoes: "Inspeção SST",
+  conformidade: "Conformidade",
+  nao_conformidade: "Não Conformidade",
+  analise_quimicos: "Análise de Químicos",
+  apreciacao: "Apreciação NR-12",
+  apreciacao_maquinas: "Apreciação NR-12",
+  aet: "AET — Ergonomia",
+  aep: "AEP — Ergonomia",
+  psicossocial: "DRPS — Psicossocial",
+  questionarios_psicossociais: "Questionários",
+  inventario_maquinas: "Inventário",
+};
+const moduloLabel = (m: string) => MODULO_LABEL[m] ?? m;
+
+type Aba = "geral" | "dados" | "documentos" | "inspecoes";
+
+const ABAS: { id: Aba; label: string }[] = [
+  { id: "geral", label: "Visão geral" },
+  { id: "dados", label: "Dados cadastrais" },
+  { id: "documentos", label: "Documentos & Laudos" },
+  { id: "inspecoes", label: "Inspeções" },
+];
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -23,135 +51,292 @@ export default function EmpresaDetalhePage({ params }: Props) {
   const router = useRouter();
   const canEdit = useCanEdit();
   const [editOpen, setEditOpen] = useState(false);
+  const [aba, setAba] = useState<Aba>("geral");
+  const [filtroMod, setFiltroMod] = useState<string>("");
 
   const { data: empresa, isLoading } = useEmpresa(id);
   const { data: inspecoes = [] } = useInspecoesByEmpresa(id);
+  const { data: pdfs = [], isLoading: loadingPdfs } = usePdfsPorEmpresa(id);
+  const { data: unidades = [] } = useUnidades();
 
-  if (isLoading) {
-    return <LoadingSkeleton rows={6} />;
-  }
+  const unidadeNome = useMemo(
+    () => unidades.find((u) => u.id_unidade === empresa?.id_unidade)?.nome ?? null,
+    [unidades, empresa?.id_unidade],
+  );
+
+  // KPIs
+  const inspAndamento = inspecoes.filter((i) => i.status === "EM_ANDAMENTO").length;
+  const inspConcluidas = inspecoes.filter((i) => i.status === "CONCLUIDA").length;
+  const docsAssinados = pdfs.filter((p) => p.assinado).length;
+
+  // Documentos por módulo (para KPI e filtro)
+  const porModulo = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of pdfs) m.set(p.modulo, (m.get(p.modulo) ?? 0) + 1);
+    return Array.from(m.entries()).map(([modulo, total]) => ({ modulo, total })).sort((a, b) => b.total - a.total);
+  }, [pdfs]);
+
+  const pdfsFiltrados = filtroMod ? pdfs.filter((p) => p.modulo === filtroMod) : pdfs;
+
+  if (isLoading) return <LoadingSkeleton rows={6} />;
   if (!empresa) {
     return (
       <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
         Empresa não encontrada.{" "}
-        <Link href="/empresas" className="font-medium hover:underline">
-          Voltar
-        </Link>
+        <Link href="/empresas" className="font-medium hover:underline">Voltar</Link>
       </div>
     );
   }
 
+  const localTxt = [empresa.municipio, empresa.uf].filter(Boolean).join(" / ");
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <button
         type="button"
-        onClick={() => router.back()}
+        onClick={() => router.push("/empresas")}
         className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft className="size-4" /> Voltar
       </button>
 
+      {/* Cabeçalho rico */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-verde-light text-verde-primary">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-verde-light text-verde-primary">
               <Building2 className="size-6" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {empresa.nome_empresa}
-              </h1>
-              {empresa.razao_social && (
-                <p className="text-sm text-gray-600">{empresa.razao_social}</p>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-col items-start gap-2 md:items-end">
-            <div className="flex gap-1.5">
-              <Link
-                href={`/empresas/${empresa.id_empresa}/relatorio`}
-                className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                title="Relatório consolidado"
-              >
-                <ChartBar className="size-3.5" /> Consolidado
-              </Link>
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => setEditOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <Pencil className="size-3.5" /> Editar
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <EmpresaInfoPanel empresa={empresa} className="mt-5 border-t border-gray-100 pt-5" />
-
-        {empresa.observacao && (
-          <div className="mt-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
-            {empresa.observacao}
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-          <h2 className="text-sm font-semibold text-gray-900">
-            Inspeções ({inspecoes.length})
-          </h2>
-          <Link
-            href={`/inspecoes/nova?empresa=${empresa.id_empresa}`}
-            className="rounded-md bg-verde-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-verde-accent"
-          >
-            + Nova
-          </Link>
-        </div>
-        {inspecoes.length === 0 ? (
-          <div className="flex flex-col items-center p-8 text-center text-sm text-gray-500">
-            <ClipboardList className="size-8 text-gray-400" />
-            <p className="mt-2">Nenhuma inspeção registrada para esta empresa.</p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-gray-100">
-            {inspecoes.map((i) => (
-              <li
-                key={i.id_inspecao}
-                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
-              >
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    Rev. {i.revisao} ·{" "}
-                    <span className="font-mono text-xs text-gray-500">
-                      {i.id_inspecao}
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold text-gray-900">{empresa.nome_empresa}</h1>
+              {empresa.razao_social && <p className="text-sm text-gray-600">{empresa.razao_social}</p>}
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                {unidadeNome && (
+                  <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" /> {unidadeNome}</span>
+                )}
+                {localTxt && <span>{localTxt}</span>}
+                {empresa.grau_risco != null && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
+                    <ShieldAlert className="size-3" /> Grau de risco {empresa.grau_risco}
+                  </span>
+                )}
+              </div>
+              {empresa.modulos_habilitados?.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {empresa.modulos_habilitados.map((m) => (
+                    <span key={m} className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+                      {moduloLabel(m)}
                     </span>
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {fmtData(i.data_inspecao)} · {i.responsavel ?? "—"}
-                  </p>
+                  ))}
                 </div>
-                <div className="flex items-center gap-3">
-                  <StatusBadge status={i.status} />
-                  <Link
-                    href={`/inspecoes/${i.id_inspecao}`}
-                    className="text-xs font-medium text-verde-primary hover:underline"
-                  >
-                    Abrir →
-                  </Link>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+              )}
+            </div>
+          </div>
+          <div className="flex gap-1.5">
+            <Link
+              href={`/empresas/${empresa.id_empresa}/relatorio`}
+              className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              title="Relatório consolidado"
+            >
+              <ChartBar className="size-3.5" /> Consolidado
+            </Link>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <Pencil className="size-3.5" /> Editar
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      <EmpresaForm
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        empresa={empresa}
-      />
+      {/* Abas */}
+      <div className="flex flex-wrap gap-1 border-b border-gray-200">
+        {ABAS.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            onClick={() => setAba(a.id)}
+            className={cn(
+              "relative px-4 py-2 text-sm font-medium transition-colors",
+              aba === a.id ? "text-verde-primary" : "text-gray-500 hover:text-gray-800",
+            )}
+          >
+            {a.label}
+            {aba === a.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-verde-primary" />}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Visão geral ── */}
+      {aba === "geral" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Kpi label="Inspeções" valor={inspecoes.length} sub={`${inspAndamento} em andamento`} />
+            <Kpi label="Concluídas" valor={inspConcluidas} sub="inspeções" />
+            <Kpi label="Documentos emitidos" valor={pdfs.length} sub={`${docsAssinados} assinado${docsAssinados !== 1 ? "s" : ""}`} />
+            <Kpi label="Módulos com docs" valor={porModulo.length} sub="tipos diferentes" />
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-3 text-sm font-semibold text-gray-800">Documentos por módulo</h3>
+            {porModulo.length === 0 ? (
+              <p className="text-sm text-gray-400">Nenhum documento gerado para esta empresa ainda.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {porModulo.map((m) => (
+                  <button
+                    key={m.modulo}
+                    type="button"
+                    onClick={() => { setFiltroMod(m.modulo); setAba("documentos"); }}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs hover:bg-gray-50"
+                  >
+                    <span className="font-medium text-gray-700">{moduloLabel(m.modulo)}</span>
+                    <span className="rounded-full bg-verde-light px-1.5 py-0.5 font-semibold text-verde-primary">{m.total}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Dados cadastrais ── */}
+      {aba === "dados" && (
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <EmpresaInfoPanel empresa={empresa} />
+          {empresa.observacao && (
+            <div className="mt-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400">Observação</p>
+              {empresa.observacao}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Documentos & Laudos (unificado via pdfs_gerados) ── */}
+      {aba === "documentos" && (
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
+            <h2 className="text-sm font-semibold text-gray-900">Documentos & Laudos ({pdfsFiltrados.length})</h2>
+            <select
+              value={filtroMod}
+              onChange={(e) => setFiltroMod(e.target.value)}
+              className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+            >
+              <option value="">Todos os módulos</option>
+              {porModulo.map((m) => (
+                <option key={m.modulo} value={m.modulo}>{moduloLabel(m.modulo)} ({m.total})</option>
+              ))}
+            </select>
+          </div>
+          {loadingPdfs ? (
+            <div className="p-5"><LoadingSkeleton rows={5} /></div>
+          ) : pdfsFiltrados.length === 0 ? (
+            <div className="flex flex-col items-center p-8 text-center text-sm text-gray-500">
+              <FileText className="size-8 text-gray-400" />
+              <p className="mt-2">Nenhum documento gerado{filtroMod ? " neste módulo" : ""} para esta empresa.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {pdfsFiltrados.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-900">
+                      {p.tipo_documento || moduloLabel(p.modulo)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-600">{moduloLabel(p.modulo)}</span>
+                      {" · "}{fmtData(p.data_geracao)}
+                      {p.responsavel_tecnico ? ` · ${p.responsavel_tecnico}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    {p.assinado && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                        <BadgeCheck className="size-3" /> Assinado
+                      </span>
+                    )}
+                    {(p.pdf_assinado_url || p.pdf_url) ? (
+                      <a
+                        href={(p.pdf_assinado_url || p.pdf_url)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-verde-primary hover:underline"
+                      >
+                        <Download className="size-3.5" /> Abrir
+                      </a>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* ── Inspeções ── */}
+      {aba === "inspecoes" && (
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+            <h2 className="text-sm font-semibold text-gray-900">Inspeções ({inspecoes.length})</h2>
+            <Link
+              href={`/inspecoes/nova?empresa=${empresa.id_empresa}`}
+              className="rounded-md bg-verde-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-verde-accent"
+            >
+              + Nova
+            </Link>
+          </div>
+          {inspecoes.length === 0 ? (
+            <div className="flex flex-col items-center p-8 text-center text-sm text-gray-500">
+              <ClipboardList className="size-8 text-gray-400" />
+              <p className="mt-2">Nenhuma inspeção registrada para esta empresa.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {inspecoes.map((i) => (
+                <li key={i.id_inspecao} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      Rev. {i.revisao} ·{" "}
+                      <span className="font-mono text-xs text-gray-500">{i.id_inspecao}</span>
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {fmtData(i.data_inspecao)} · {i.responsavel ?? "—"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <StatusBadge status={i.status} />
+                    <Link
+                      href={`/inspecoes/${i.id_inspecao}`}
+                      className="text-xs font-medium text-verde-primary hover:underline"
+                    >
+                      Abrir →
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <EmpresaForm open={editOpen} onClose={() => setEditOpen(false)} empresa={empresa} />
+    </div>
+  );
+}
+
+function Kpi({ label, valor, sub }: { label: string; valor: number; sub?: string }) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-gray-900">{valor}</p>
+      {sub && <p className="text-[11px] text-gray-400">{sub}</p>}
     </div>
   );
 }

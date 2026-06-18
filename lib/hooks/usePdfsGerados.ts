@@ -99,6 +99,35 @@ export function usePdfsGerados(filtros?: { modulo?: string; limit?: number }) {
   });
 }
 
+/** Documentos (PDFs) gerados de uma empresa específica — log unificado entre módulos. */
+export function usePdfsPorEmpresa(empresaId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["pdfs-gerados-empresa", empresaId],
+    enabled: !!empresaId,
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("pdfs_gerados")
+        .select("*")
+        .eq("empresa_id", empresaId!)
+        .order("data_geracao", { ascending: false });
+      if (error) throw error;
+      const rows = (data ?? []) as unknown as PdfGerado[];
+      // URLs assinadas (1h) p/ PDFs no bucket privado; antigos ficam com a URL pública.
+      return Promise.all(
+        rows.map(async (row) => {
+          if (!row.pdf_storage_path || row.pdf_storage_path.startsWith("pdfs-gerados/")) return row;
+          const { data: signed } = await supabase.storage
+            .from("pdfs-gerados")
+            .createSignedUrl(row.pdf_storage_path, 3600);
+          return { ...row, pdf_url: signed?.signedUrl ?? row.pdf_url };
+        }),
+      );
+    },
+  });
+}
+
 // ─── PDF Assinado ─────────────────────────────────────────────────────────────
 
 export interface PdfAssinado {
