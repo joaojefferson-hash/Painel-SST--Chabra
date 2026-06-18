@@ -8,6 +8,7 @@ import {
   ClipboardList,
   FileText,
   LayoutDashboard,
+  Target,
   TrendingUp,
 } from "lucide-react";
 import SidebarShell, { type NavSection } from "@/components/layout/SidebarShell";
@@ -30,6 +31,7 @@ export default function ProdutividadeLayout({ children }: { children: ReactNode 
         { href: "/produtividade/projecoes",        label: "Projeções",        icon: TrendingUp, variant: "report" },
         { href: "/produtividade/projecoes-salvas", label: "Projeções Salvas", icon: BookMarked },
         { href: "/produtividade/registros",        label: "Registros Mensais", icon: ClipboardList },
+        { href: "/produtividade/acompanhamento",   label: "Projetado × Realizado", icon: Target, variant: "report" },
       ],
     },
   ], []);
