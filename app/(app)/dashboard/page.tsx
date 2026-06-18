@@ -136,6 +136,28 @@ async function fetchDocumentosPorMes(): Promise<MesData[]> {
   return months;
 }
 
+async function fetchDocumentosPorSituacao(): Promise<{ name: string; value: number }[]> {
+  const supabase = createSupabaseBrowserClient();
+  const { data } = await supabase
+    .from("inspecoes")
+    .select("status, elaboracao_status")
+    .neq("status", "DELETADA");
+
+  let pendentes = 0, assumidos = 0, concluidos = 0;
+  for (const row of (data ?? []) as { status: string; elaboracao_status: string | null }[]) {
+    if (row.elaboracao_status === "CONCLUIDO") concluidos++;
+    else if (row.elaboracao_status === "EM_ELABORACAO") assumidos++;
+    else if (row.status === "CONCLUIDA") pendentes++; // inspeção concluída aguardando documento
+  }
+
+  // Ordem fixa (cor é posicional): Pendentes · Assumidos · Concluídos
+  return [
+    { name: "Pendentes",  value: pendentes },
+    { name: "Assumidos",  value: assumidos },
+    { name: "Concluídos", value: concluidos },
+  ];
+}
+
 async function fetchInspecoesRecentes(): Promise<InspecaoComEmpresa[]> {
   const supabase = createSupabaseBrowserClient();
   const { data: insp, error } = await supabase
@@ -165,6 +187,8 @@ async function fetchInspecoesRecentes(): Promise<InspecaoComEmpresa[]> {
 // ─── Constantes visuais ───────────────────────────────────────────────────────
 
 const PIE_COLORS = ["#d97706", "#006B54", "#94a3b8"];
+// Documentos por situação: Pendentes (cinza) · Assumidos (âmbar) · Concluídos (verde)
+const DOC_COLORS = ["#94a3b8", "#d97706", "#006B54"];
 
 const KPI_CONFIG = [
   { key: "empresasAtivas" as const, label: "Empresas Ativas",  icon: Building2,    color: "#006B54", from: "#ecfdf5" },
@@ -230,6 +254,73 @@ function GraficoMes({
   );
 }
 
+// ─── Donut reutilizável (Por Status / Documentos por Situação) ─────────────────
+
+function GraficoDonut({
+  titulo, sub, data, colors, loading,
+}: {
+  titulo: string;
+  sub: string;
+  data: { name: string; value: number }[];
+  colors: string[];
+  loading: boolean;
+}) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  return (
+    <div className="glass reveal-up delay-1 rounded-2xl p-5">
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-800">{titulo}</h2>
+          <p className="mt-0.5 text-xs text-gray-400">{sub}</p>
+        </div>
+        <div className="flex size-8 items-center justify-center rounded-lg bg-verde-light">
+          <Target className="size-4 text-verde-primary" />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="h-52 animate-pulse rounded-xl bg-gray-100" />
+      ) : total === 0 ? (
+        <div className="flex h-52 items-center justify-center text-sm text-gray-400">
+          Nenhum dado disponível
+        </div>
+      ) : (
+        <div className="flex flex-col items-center">
+          <ResponsiveContainer width="100%" height={170}>
+            <PieChart>
+              <Pie data={data.filter((d) => d.value > 0)} cx="50%" cy="50%" innerRadius={48} outerRadius={72} paddingAngle={3} dataKey="value" nameKey="name" strokeWidth={0}>
+                {data.filter((d) => d.value > 0).map((item) => (
+                  <Cell key={item.name} fill={colors[data.findIndex((x) => x.name === item.name) % colors.length]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 12, padding: "6px 12px" }} />
+            </PieChart>
+          </ResponsiveContainer>
+
+          {/* Legenda manual */}
+          <div className="mt-1 w-full space-y-2">
+            {data.map((item, idx) => {
+              const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
+              return (
+                <div key={item.name} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: colors[idx % colors.length] }} />
+                    <span className="text-gray-600">{item.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-gray-800">{item.value}</span>
+                    <span className="text-gray-400">{pct}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -264,6 +355,11 @@ export default function DashboardPage() {
   const { data: porMesAdm, isLoading: loadingMesAdm } = useQuery({
     queryKey: ["dashboard-por-mes-adm"],
     queryFn: fetchDocumentosPorMes,
+  });
+
+  const { data: docSituacao = [], isLoading: loadingDocSit } = useQuery({
+    queryKey: ["dashboard-doc-situacao"],
+    queryFn: fetchDocumentosPorSituacao,
   });
 
   const { data: recentes, isLoading: loadingRecentes } = useQuery({
@@ -323,101 +419,46 @@ export default function DashboardPage() {
       {/* ── Gráficos ──────────────────────────────────────────────────── */}
       <section className="grid gap-4 lg:grid-cols-3">
 
-        {/* BarChart — inspeções concluídas por mês (Técnicos) */}
-        <GraficoMes
-          titulo="Inspeções por Mês (Técnicos)"
-          data={porMes}
-          loading={loadingMes}
-          link="/dashboard/inspecoes-concluidas"
-          linkLabel="Ver por técnico"
-          linkTitle="Abrir dashboard de inspeções concluídas (por mês e por técnico)"
-          singular="inspeção"
-          plural="inspeções"
-        />
+        {/* Coluna esquerda: barras mensais empilhadas (Técnicos em cima, ADM embaixo) */}
+        <div className="space-y-4 lg:col-span-2">
+          <GraficoMes
+            titulo="Inspeções por Mês (Técnicos)"
+            data={porMes}
+            loading={loadingMes}
+            link="/dashboard/inspecoes-concluidas"
+            linkLabel="Ver por técnico"
+            linkTitle="Abrir dashboard de inspeções concluídas (por mês e por técnico)"
+            singular="inspeção"
+            plural="inspeções"
+          />
+          <GraficoMes
+            titulo="Documentos por Mês (ADM)"
+            data={porMesAdm}
+            loading={loadingMesAdm}
+            link="/dashboard/documentos-emitidos"
+            linkLabel="Ver por ADM"
+            linkTitle="Produção de documentos por ADM (elaborados no SGG e enviados), por mês"
+            singular="documento"
+            plural="documentos"
+          />
+        </div>
 
-        {/* BarChart — documentos concluídos por mês (ADM) */}
-        <GraficoMes
-          titulo="Documentos por Mês (ADM)"
-          data={porMesAdm}
-          loading={loadingMesAdm}
-          link="/dashboard/documentos-emitidos"
-          linkLabel="Ver por ADM"
-          linkTitle="Produção de documentos por ADM (elaborados no SGG e enviados), por mês"
-          singular="documento"
-          plural="documentos"
-        />
-
-        {/* PieChart — distribuição por status */}
-        <div className="glass reveal-up delay-1 rounded-2xl p-5">
-          <div className="mb-4 flex items-start justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-800">Por Status</h2>
-              <p className="mt-0.5 text-xs text-gray-400">Distribuição total</p>
-            </div>
-            <div className="flex size-8 items-center justify-center rounded-lg bg-verde-light">
-              <Target className="size-4 text-verde-primary" />
-            </div>
-          </div>
-
-          {loadingStats ? (
-            <div className="h-52 animate-pulse rounded-xl bg-gray-100" />
-          ) : pieData.length === 0 ? (
-            <div className="flex h-52 items-center justify-center text-sm text-gray-400">
-              Nenhum dado disponível
-            </div>
-          ) : (
-            <div className="flex flex-col items-center">
-              <ResponsiveContainer width="100%" height={170}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={48}
-                    outerRadius={72}
-                    paddingAngle={3}
-                    dataKey="value"
-                    strokeWidth={0}
-                  >
-                    {pieData.map((_, idx) => (
-                      <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: 10,
-                      border: "1px solid #e5e7eb",
-                      fontSize: 12,
-                      padding: "6px 12px",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-
-              {/* Legenda manual */}
-              <div className="mt-1 w-full space-y-2">
-                {pieData.map((item, idx) => {
-                  const total = pieData.reduce((s, d) => s + d.value, 0);
-                  const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
-                  return (
-                    <div key={item.name} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="size-2.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }}
-                        />
-                        <span className="text-gray-600">{item.name}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-gray-800">{item.value}</span>
-                        <span className="text-gray-400">{pct}%</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+        {/* Coluna direita: donuts empilhados (status das inspeções + situação dos documentos) */}
+        <div className="space-y-4">
+          <GraficoDonut
+            titulo="Por Status"
+            sub="Inspeções — distribuição total"
+            data={pieData}
+            colors={PIE_COLORS}
+            loading={loadingStats}
+          />
+          <GraficoDonut
+            titulo="Documentos por Situação"
+            sub="Pendentes · Assumidos · Concluídos"
+            data={docSituacao}
+            colors={DOC_COLORS}
+            loading={loadingDocSit}
+          />
         </div>
       </section>
 
