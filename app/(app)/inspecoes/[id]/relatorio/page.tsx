@@ -25,7 +25,7 @@ import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import { useInspecao, useSalvarElaboracao } from "@/lib/hooks/useInspecao";
-import { useCurrentUser, useCanEdit } from "@/lib/hooks/useUsuario";
+import { useCurrentUser } from "@/lib/hooks/useUsuario";
 import { FileSignature } from "lucide-react";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
@@ -207,7 +207,9 @@ export default function RelatorioChabraPage({ params }: Props) {
   const { pdfAssinado, recarregar } = usePdfAssinado("inspecoes_relatorio", id);
   const [baixando, setBaixando] = useState(false);
   const user = useCurrentUser();
-  const canEdit = useCanEdit();
+  // A elaboração do documento (SGG) é feita por usuários internos — inclusive
+  // Visualizadores (que leem a inspeção e montam o documento). Só Cliente não.
+  const podeElaborar = !!user && user.perfil !== "Cliente";
   const salvarElab = useSalvarElaboracao(id);
 
   async function handleBaixarPdf() {
@@ -370,7 +372,7 @@ export default function RelatorioChabraPage({ params }: Props) {
               </p>
             </div>
           </div>
-          {canEdit && (
+          {podeElaborar && (
             <div className="flex flex-wrap gap-2">
               {(inspecao.elaboracao_status ?? "PENDENTE") === "PENDENTE" && (
                 <button

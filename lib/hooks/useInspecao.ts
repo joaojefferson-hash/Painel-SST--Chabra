@@ -124,11 +124,15 @@ export function useSalvarElaboracao(idInspecao: string) {
       elaboracao_concluida_em?: string | null;
     }) => {
       const supabase = createSupabaseBrowserClient();
+      // RPC SECURITY DEFINER: altera só os 3 campos de elaboração e libera
+      // Visualizadores (que não têm pode_editar). Evita abrir o UPDATE da inspeção.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from("inspecoes")
-        .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq("id_inspecao", idInspecao);
+      const { error } = await (supabase as any).rpc("set_elaboracao_documento", {
+        p_id_inspecao: idInspecao,
+        p_status: patch.elaboracao_status,
+        p_responsavel: patch.elaboracao_responsavel ?? null,
+        p_concluida_em: patch.elaboracao_concluida_em ?? null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
