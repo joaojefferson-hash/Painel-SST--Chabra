@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Plus, ChartBar, Search } from "lucide-react";
 import { Suspense } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import EmpresaSelect from "@/components/empresas/EmpresaSelect";
 import InspecaoRow from "@/components/inspecoes/InspecaoRow";
@@ -337,6 +337,29 @@ function ModalEditarResponsavel({ insp, onClose }: { insp: Inspecao; onClose: ()
   const qc = useQueryClient();
   const [nome, setNome] = useState(insp.responsavel ?? "");
 
+  // Técnicos/Admins ativos cadastrados como usuários (modal só abre para Admin → pode ler usuarios).
+  const { data: tecnicos = [] } = useQuery({
+    queryKey: ["usuarios-tecnicos"],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("usuarios")
+        .select("nome, perfil, ativo_sistema")
+        .in("perfil", ["Admin", "Tecnico"])
+        .order("nome");
+      if (error) throw error;
+      return ((data ?? []) as Array<{ nome: string; ativo_sistema: boolean | null }>)
+        .filter((u) => u.ativo_sistema !== false && (u.nome ?? "").trim())
+        .map((u) => u.nome.trim());
+    },
+  });
+
+  // Lista de opções: técnicos cadastrados + o valor atual (se for nome legado fora da lista).
+  const opcoes = Array.from(
+    new Set([...(insp.responsavel?.trim() ? [insp.responsavel.trim()] : []), ...tecnicos]),
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+
   const save = useMutation({
     mutationFn: async (responsavel: string) => {
       const supabase = createSupabaseBrowserClient();
@@ -369,14 +392,20 @@ function ModalEditarResponsavel({ insp, onClose }: { insp: Inspecao; onClose: ()
         </div>
         <div className="px-5 py-4">
           <label className="mb-1.5 block text-xs font-semibold text-gray-600">Técnico responsável</label>
-          <input
+          <select
             value={nome}
             autoFocus
             onChange={(e) => setNome(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && nome.trim()) save.mutate(nome.trim()); }}
-            placeholder="Nome do técnico"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-verde-primary/40"
-          />
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-verde-primary/40"
+          >
+            <option value="">Selecione o técnico…</option>
+            {opcoes.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-[11px] text-gray-400">
+            Lista de usuários cadastrados como Técnico/Admin (ativos).
+          </p>
         </div>
         <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
           <button type="button" onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50">
