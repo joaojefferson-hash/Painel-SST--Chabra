@@ -1,19 +1,22 @@
 "use client";
 
 import { useSignedUrl } from "@/lib/hooks/useSignedUrl";
+import { extrairPathStorage } from "@/lib/storage/signed-url";
 
 /**
- * <img> que resolve mídia do Storage por path/URL legada → URL assinada.
- * Use em telas AUTENTICADAS (não em templates de PDF — o Puppeteer não autentica;
- * o PDF recebe URL assinada do servidor). Enquanto o bucket é público funciona
- * igual; quando privatizar, continua exibindo para o usuário logado.
+ * <img> que resolve mídia do Storage para telas AUTENTICADAS:
+ * - valor do bucket (path ou URL pública/assinada) → URL assinada (com fallback
+ *   para o valor atual enquanto carrega; o bucket ainda é público);
+ * - blob:/data:/URL de outra origem → renderiza direto (preview de upload, etc.).
+ * NÃO usar em templates de PDF (Puppeteer não autentica; o servidor injeta a URL
+ * assinada nas rotas de PDF — fase F2b).
  */
 export default function StorageImg({
   stored,
   bucket = "fotos",
   alt = "",
   className,
-  fallback,
+  fallback = null,
 }: {
   stored: string | null | undefined;
   bucket?: string;
@@ -21,12 +24,13 @@ export default function StorageImg({
   className?: string;
   fallback?: React.ReactNode;
 }) {
-  const { data: url, isLoading, isError } = useSignedUrl(stored, bucket);
+  const path = extrairPathStorage(stored, bucket);
+  const { data: assinada } = useSignedUrl(stored, bucket); // desabilitado se não houver path
 
-  if (!stored || isError) return <>{fallback ?? null}</>;
-  if (isLoading || !url) {
-    return <div className={`animate-pulse rounded bg-gray-100 ${className ?? ""}`} aria-hidden />;
-  }
+  if (!stored) return <>{fallback}</>;
+
+  // path do bucket → assinada (fallback p/ o stored enquanto carrega); senão, direto.
+  const src = path ? (assinada ?? stored) : stored;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={url} alt={alt} className={className} referrerPolicy="no-referrer" />;
+  return <img src={src} alt={alt} className={className} referrerPolicy="no-referrer" />;
 }

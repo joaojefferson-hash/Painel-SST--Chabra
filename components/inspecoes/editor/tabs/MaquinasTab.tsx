@@ -24,6 +24,7 @@ import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useImportarMaquinasInspecao } from "@/lib/hooks/useInventarioMaquinas";
 import RevisaoIAModal, { type CampoRevisaoIA } from "@/components/ui/RevisaoIAModal";
+import StorageImg from "@/components/ui/StorageImg";
 import { cn } from "@/lib/utils";
 import type { InspecaoMaquina, Setor } from "@/lib/supabase/types";
 
@@ -705,15 +706,18 @@ export default function MaquinasTab({
             {m.foto_urls.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {m.foto_urls.map((url, i) => (
-                  <img
+                  <span
                     key={i}
-                    src={url}
-                    alt={`foto ${i + 1}`}
-                    className="h-14 w-14 cursor-pointer rounded border border-gray-200 object-cover hover:opacity-80"
                     onClick={() => window.open(url, "_blank")}
                     title="Clique para ampliar"
-                    referrerPolicy="no-referrer"
-                  />
+                    className="cursor-pointer"
+                  >
+                    <StorageImg
+                      stored={m.foto_storage_paths?.[i] || url}
+                      alt={`foto ${i + 1}`}
+                      className="h-14 w-14 rounded border border-gray-200 object-cover hover:opacity-80"
+                    />
+                  </span>
                 ))}
               </div>
             )}
@@ -1057,8 +1061,8 @@ export default function MaquinasTab({
               <div className="flex flex-wrap gap-2">
                 {fotosPreview.map((url, i) => (
                   <div key={i} className="relative">
-                    <img
-                      src={url}
+                    <StorageImg
+                      stored={url}
                       alt={`foto ${i + 1}`}
                       className="h-20 w-20 rounded-lg border border-gray-200 object-cover"
                     />

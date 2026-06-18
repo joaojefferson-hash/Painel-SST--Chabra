@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 /* Sparkles é usado em dois lugares (badge LIVRE + botão analisar foto IA). */
 import toast from "react-hot-toast";
+import StorageImg from "@/components/ui/StorageImg";
 import {
   useAtualizarItemApreciacao,
   useUploadFotoItemApreciacao,
@@ -499,12 +500,10 @@ export default function ItemApreciacaoCard({
             {item.foto_urls.map((url, idx) => (
               <div key={idx} className="space-y-0.5">
                 <div className="relative aspect-square overflow-hidden rounded-md border border-gray-200 bg-gray-50">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
+                  <StorageImg
+                    stored={item.foto_storage_paths?.[idx] || url}
                     alt={item.foto_legendas?.[idx] || `Evidência ${idx + 1}`}
                     className="size-full object-cover"
-                    referrerPolicy="no-referrer"
                   />
                   {!disabled && (
                     <button

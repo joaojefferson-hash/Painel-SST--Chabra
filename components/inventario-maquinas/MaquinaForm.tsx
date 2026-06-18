@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Save, Upload, X, ImageOff, Loader2, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
+import StorageImg from "@/components/ui/StorageImg";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
 import {
   uploadFotoMaquina,
@@ -252,8 +253,7 @@ export default function MaquinaForm({
         <div className="flex items-start gap-3">
           <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
             {form.foto_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={form.foto_url} alt="Foto" className="size-full object-cover" referrerPolicy="no-referrer" />
+              <StorageImg stored={form.foto_url} alt="Foto" className="size-full object-cover" />
             ) : (
               <ImageOff className="size-7 text-gray-300" />
             )}
