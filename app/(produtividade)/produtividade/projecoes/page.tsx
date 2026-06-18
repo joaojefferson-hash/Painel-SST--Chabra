@@ -1,20 +1,26 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import {
-  AlertTriangle, CheckCircle2, ChevronDown, ChevronUp,
+  AlertTriangle, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   FileText, Globe, Info, MapPin, Save, Users, Wrench,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   useProdUnidades,
   useProdColaboradores,
+  useProdSnapshots,
   useSalvarProjecao,
 } from "@/lib/hooks/useProdutividade";
+
+const MESES_LABEL = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -83,8 +89,32 @@ export default function ProjecoesPage() {
   const [docsPorAdm,  setDocsPorAdm]  = useState("5");
   const [inspPorTec,  setInspPorTec]  = useState("3");
 
-  // Dados por unidade
+  // Mês de referência (dados vêm do Controle Mensal / snapshot)
+  const hoje = new Date();
+  const [mes, setMes] = useState(hoje.getMonth() + 1);
+  const [ano, setAno] = useState(hoje.getFullYear());
+  const { data: snapshots = [] } = useProdSnapshots(mes, ano);
+
+  // Dados por unidade (semeados do snapshot do mês; editáveis para simulação)
   const [dados, setDados] = useState<Record<string, DadosUnidade>>({});
+
+  // Semeia/atualiza os dados por unidade a partir do snapshot do mês selecionado.
+  // Carga de documentos = vencidos + vencendo; pend. inspeção = inspeção pendente;
+  // total de clientes = pagantes + cortesia.
+  useEffect(() => {
+    const next: Record<string, DadosUnidade> = {};
+    for (const s of snapshots) {
+      next[s.id_unidade] = {
+        totalClientes: String(s.clientes_pagantes + s.clientes_cortesia),
+        pendInspecao:  String(s.inspecao_pendente),
+        pendDocs:      String(s.vencidos + s.vencendo),
+      };
+    }
+    setDados(next);
+  }, [snapshots, mes, ano]);
+
+  function prevMes() { if (mes === 1) { setMes(12); setAno((a) => a - 1); } else setMes((m) => m - 1); }
+  function nextMes() { if (mes === 12) { setMes(1); setAno((a) => a + 1); } else setMes((m) => m + 1); }
 
   // Identificação para salvar
   const [titulo,      setTitulo]      = useState("");
@@ -306,13 +336,29 @@ export default function ProjecoesPage() {
 
       {/* ── Step 2: Dados por unidade ────────────────────────────────────────── */}
       <div className="rounded-2xl bg-white shadow-sm ring-1 ring-black/5 overflow-hidden">
-        <div className="border-b border-gray-100 px-6 py-4">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">2. Clientes por Unidade</h2>
-          {tipo === "por_unidade" && idUnidadeSel && (
-            <p className="mt-0.5 text-xs text-teal-600 font-medium">
-              Exibindo apenas: {unidades.find((u) => u.id === idUnidadeSel)?.nome}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">2. Clientes por Unidade</h2>
+            <p className="mt-0.5 text-xs text-gray-400">
+              Carregado do <strong>Controle Mensal</strong> de {MESES_LABEL[mes - 1]}/{ano} — edite para simular cenários
             </p>
-          )}
+            {tipo === "por_unidade" && idUnidadeSel && (
+              <p className="mt-0.5 text-xs text-teal-600 font-medium">
+                Exibindo apenas: {unidades.find((u) => u.id === idUnidadeSel)?.nome}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-1.5 ring-1 ring-black/5">
+            <button type="button" onClick={prevMes} className="rounded p-1 hover:bg-gray-200">
+              <ChevronLeft className="size-4 text-gray-500" />
+            </button>
+            <p className="min-w-[120px] text-center text-xs font-bold text-gray-700">
+              {MESES_LABEL[mes - 1]} de {ano}
+            </p>
+            <button type="button" onClick={nextMes} className="rounded p-1 hover:bg-gray-200">
+              <ChevronRight className="size-4 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
