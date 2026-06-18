@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import { useInspecoesByEmpresa } from "@/lib/hooks/useInspecao";
 import { usePdfsPorEmpresa } from "@/lib/hooks/usePdfsGerados";
+import { useRegistrosEmpresa } from "@/lib/hooks/useRegistrosEmpresa";
 import { useUnidades } from "@/lib/hooks/useUnidades";
 import EmpresaForm from "@/components/empresas/EmpresaForm";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
@@ -33,11 +34,12 @@ const MODULO_LABEL: Record<string, string> = {
 };
 const moduloLabel = (m: string) => MODULO_LABEL[m] ?? m;
 
-type Aba = "geral" | "dados" | "documentos" | "inspecoes";
+type Aba = "geral" | "dados" | "registros" | "documentos" | "inspecoes";
 
 const ABAS: { id: Aba; label: string }[] = [
   { id: "geral", label: "Visão geral" },
   { id: "dados", label: "Dados cadastrais" },
+  { id: "registros", label: "Registros por módulo" },
   { id: "documentos", label: "Documentos & Laudos" },
   { id: "inspecoes", label: "Inspeções" },
 ];
@@ -57,7 +59,11 @@ export default function EmpresaDetalhePage({ params }: Props) {
   const { data: empresa, isLoading } = useEmpresa(id);
   const { data: inspecoes = [] } = useInspecoesByEmpresa(id);
   const { data: pdfs = [], isLoading: loadingPdfs } = usePdfsPorEmpresa(id);
+  const { data: grupos = [], isLoading: loadingRegistros } = useRegistrosEmpresa(id);
   const { data: unidades = [] } = useUnidades();
+
+  const totalRegistros = useMemo(() => grupos.reduce((s, g) => s + g.registros.length, 0), [grupos]);
+  const gruposComRegistros = grupos.filter((g) => g.registros.length > 0);
 
   const unidadeNome = useMemo(
     () => unidades.find((u) => u.id_unidade === empresa?.id_unidade)?.nome ?? null,
@@ -176,31 +182,74 @@ export default function EmpresaDetalhePage({ params }: Props) {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Kpi label="Inspeções" valor={inspecoes.length} sub={`${inspAndamento} em andamento`} />
-            <Kpi label="Concluídas" valor={inspConcluidas} sub="inspeções" />
+            <Kpi label="Registros (módulos)" valor={totalRegistros} sub={`${gruposComRegistros.length} módulo${gruposComRegistros.length !== 1 ? "s" : ""}`} />
             <Kpi label="Documentos emitidos" valor={pdfs.length} sub={`${docsAssinados} assinado${docsAssinados !== 1 ? "s" : ""}`} />
-            <Kpi label="Módulos com docs" valor={porModulo.length} sub="tipos diferentes" />
+            <Kpi label="Inspeções concluídas" valor={inspConcluidas} sub={`de ${inspecoes.length}`} />
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-semibold text-gray-800">Documentos por módulo</h3>
-            {porModulo.length === 0 ? (
-              <p className="text-sm text-gray-400">Nenhum documento gerado para esta empresa ainda.</p>
+            <h3 className="mb-3 text-sm font-semibold text-gray-800">Registros por módulo</h3>
+            {loadingRegistros ? (
+              <p className="text-sm text-gray-400">Carregando…</p>
+            ) : gruposComRegistros.length === 0 ? (
+              <p className="text-sm text-gray-400">Nenhum registro de módulos para esta empresa ainda.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {porModulo.map((m) => (
+                {gruposComRegistros.map((g) => (
                   <button
-                    key={m.modulo}
+                    key={g.modulo}
                     type="button"
-                    onClick={() => { setFiltroMod(m.modulo); setAba("documentos"); }}
+                    onClick={() => setAba("registros")}
                     className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs hover:bg-gray-50"
                   >
-                    <span className="font-medium text-gray-700">{moduloLabel(m.modulo)}</span>
-                    <span className="rounded-full bg-verde-light px-1.5 py-0.5 font-semibold text-verde-primary">{m.total}</span>
+                    <span className="font-medium text-gray-700">{g.label}</span>
+                    <span className="rounded-full bg-verde-light px-1.5 py-0.5 font-semibold text-verde-primary">{g.registros.length}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── Registros por módulo (nativos de cada módulo) ── */}
+      {aba === "registros" && (
+        <div className="space-y-4">
+          {loadingRegistros ? (
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"><LoadingSkeleton rows={4} /></div>
+          ) : gruposComRegistros.length === 0 ? (
+            <div className="flex flex-col items-center rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
+              <FileText className="size-8 text-gray-400" />
+              <p className="mt-2">Nenhum registro de módulos para esta empresa ainda.</p>
+            </div>
+          ) : (
+            gruposComRegistros.map((g) => (
+              <div key={g.modulo} className="rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                  <h3 className="text-sm font-semibold text-gray-900">{g.label}</h3>
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">{g.registros.length}</span>
+                </div>
+                <ul className="divide-y divide-gray-100">
+                  {g.registros.slice(0, 50).map((r) => (
+                    <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-gray-50">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-gray-800">
+                          {r.titulo?.trim() || <span className="font-mono text-xs text-gray-500">{r.id}</span>}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {r.data ? fmtData(r.data) : "—"}
+                          {r.status ? ` · ${r.status}` : ""}
+                        </p>
+                      </div>
+                      <Link href={g.rota(r.id)} className="shrink-0 text-xs font-medium text-verde-primary hover:underline">
+                        Abrir →
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          )}
         </div>
       )}
 
