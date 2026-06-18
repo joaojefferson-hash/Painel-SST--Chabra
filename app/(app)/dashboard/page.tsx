@@ -201,7 +201,7 @@ const KPI_CONFIG = [
 // ─── Gráfico mensal reutilizável (Técnicos / ADM) ──────────────────────────────
 
 function GraficoMes({
-  titulo, data, loading, link, linkLabel, linkTitle, singular, plural,
+  titulo, data, loading, link, linkLabel, linkTitle, singular, plural, className,
 }: {
   titulo: string;
   data: MesData[] | undefined;
@@ -211,9 +211,10 @@ function GraficoMes({
   linkTitle: string;
   singular: string;
   plural: string;
+  className?: string;
 }) {
   return (
-    <div className="glass reveal-up rounded-2xl p-5">
+    <div className={`glass reveal-up flex flex-col rounded-2xl p-5 ${className ?? ""}`}>
       <div className="mb-4 flex items-start justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold text-gray-800">{titulo}</h2>
@@ -230,9 +231,10 @@ function GraficoMes({
         </Link>
       </div>
       {loading ? (
-        <div className="h-40 animate-pulse rounded-xl bg-gray-100" />
+        <div className="min-h-40 flex-1 animate-pulse rounded-xl bg-gray-100" />
       ) : (
-        <ResponsiveContainer width="100%" height={160}>
+        <div className="min-h-40 flex-1">
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} barSize={24} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
             <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} width={28} />
@@ -249,6 +251,7 @@ function GraficoMes({
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        </div>
       )}
     </div>
   );
@@ -417,49 +420,49 @@ export default function DashboardPage() {
       </section>
 
       {/* ── Gráficos ──────────────────────────────────────────────────── */}
-      <section className="grid items-start gap-4 lg:grid-cols-3">
+      {/* Grade por linhas: cada linha = barra (col-span-2) + donut (col-span-1).
+          items-stretch alinha os dois cards da linha na mesma altura. */}
+      <section className="grid items-stretch gap-4 lg:auto-rows-fr lg:grid-cols-3">
 
-        {/* Coluna esquerda: barras mensais empilhadas (Técnicos em cima, ADM embaixo) */}
-        <div className="space-y-4 lg:col-span-2">
-          <GraficoMes
-            titulo="Inspeções por Mês (Técnicos)"
-            data={porMes}
-            loading={loadingMes}
-            link="/dashboard/inspecoes-concluidas"
-            linkLabel="Ver por técnico"
-            linkTitle="Abrir dashboard de inspeções concluídas (por mês e por técnico)"
-            singular="inspeção"
-            plural="inspeções"
-          />
-          <GraficoMes
-            titulo="Documentos por Mês (ADM)"
-            data={porMesAdm}
-            loading={loadingMesAdm}
-            link="/dashboard/documentos-emitidos"
-            linkLabel="Ver por ADM"
-            linkTitle="Produção de documentos por ADM (elaborados no SGG e enviados), por mês"
-            singular="documento"
-            plural="documentos"
-          />
-        </div>
+        {/* Linha 1: Inspeções (Técnicos) + Por Status */}
+        <GraficoMes
+          className="lg:col-span-2"
+          titulo="Inspeções por Mês (Técnicos)"
+          data={porMes}
+          loading={loadingMes}
+          link="/dashboard/inspecoes-concluidas"
+          linkLabel="Ver por técnico"
+          linkTitle="Abrir dashboard de inspeções concluídas (por mês e por técnico)"
+          singular="inspeção"
+          plural="inspeções"
+        />
+        <GraficoDonut
+          titulo="Por Status"
+          sub="Inspeções — distribuição total"
+          data={pieData}
+          colors={PIE_COLORS}
+          loading={loadingStats}
+        />
 
-        {/* Coluna direita: donuts empilhados (status das inspeções + situação dos documentos) */}
-        <div className="space-y-4">
-          <GraficoDonut
-            titulo="Por Status"
-            sub="Inspeções — distribuição total"
-            data={pieData}
-            colors={PIE_COLORS}
-            loading={loadingStats}
-          />
-          <GraficoDonut
-            titulo="Documentos por Situação"
-            sub="Pendentes · Assumidos · Concluídos"
-            data={docSituacao}
-            colors={DOC_COLORS}
-            loading={loadingDocSit}
-          />
-        </div>
+        {/* Linha 2: Documentos (ADM) + Documentos por Situação */}
+        <GraficoMes
+          className="lg:col-span-2"
+          titulo="Documentos por Mês (ADM)"
+          data={porMesAdm}
+          loading={loadingMesAdm}
+          link="/dashboard/documentos-emitidos"
+          linkLabel="Ver por ADM"
+          linkTitle="Produção de documentos por ADM (elaborados no SGG e enviados), por mês"
+          singular="documento"
+          plural="documentos"
+        />
+        <GraficoDonut
+          titulo="Documentos por Situação"
+          sub="Pendentes · Assumidos · Concluídos"
+          data={docSituacao}
+          colors={DOC_COLORS}
+          loading={loadingDocSit}
+        />
       </section>
 
       {/* ── Atividade recente ─────────────────────────────────────────── */}
