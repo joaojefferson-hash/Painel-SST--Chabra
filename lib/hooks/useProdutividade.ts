@@ -128,6 +128,21 @@ export interface ProdRegistroMensal {
   criado_em: string;
 }
 
+/** Snapshot mensal AGREGADO por unidade (quantitativo da planilha "qlp empresa"). */
+export interface ProdSnapshotMensal {
+  id: string;
+  id_unidade: string;
+  mes: number;
+  ano: number;
+  clientes_pagantes: number;
+  clientes_cortesia: number;
+  vencidos: number;
+  vencendo: number;
+  inspecao_pendente: number;
+  criado_em: string;
+  atualizado_em: string;
+}
+
 // ── Queries ──────────────────────────────────────────────────────────────────
 
 export function useProdUnidades() {
@@ -329,6 +344,47 @@ export function useSaveRegistro() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["prod", "registros"] }),
+  });
+}
+
+// ── Snapshot mensal (quantitativo agregado por unidade) ───────────────────────
+
+/** Busca os snapshots de um período (mês/ano). Sem args, traz todos. */
+export function useProdSnapshots(mes?: number, ano?: number) {
+  return useQuery({
+    queryKey: ["prod", "snapshots", mes ?? "all", ano ?? "all"],
+    staleTime: 2 * 60_000,
+    queryFn: async (): Promise<ProdSnapshotMensal[]> => {
+      const sb = createSupabaseBrowserClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q = (sb as any).from("prod_snapshot_mensal").select("*");
+      if (mes != null) q = q.eq("mes", mes);
+      if (ano != null) q = q.eq("ano", ano);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Upsert de um snapshot (1 linha por unidade/mês/ano). */
+export function useSaveSnapshot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      payload: Omit<ProdSnapshotMensal, "id" | "criado_em" | "atualizado_em"> & { id?: string },
+    ) => {
+      const sb = createSupabaseBrowserClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (sb as any)
+        .from("prod_snapshot_mensal")
+        .upsert(
+          { ...payload, atualizado_em: new Date().toISOString() },
+          { onConflict: "id_unidade,mes,ano" },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["prod", "snapshots"] }),
   });
 }
 
