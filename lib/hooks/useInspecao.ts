@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type {
   Cargo,
@@ -106,6 +106,34 @@ export function useInspecao(id: string | null | undefined) {
         extintores: (extintoresRes.data ?? []) as unknown as Extintor[],
         maquinas: (maquinasRes.data ?? []) as unknown as InspecaoMaquina[],
       };
+    },
+  });
+}
+
+/**
+ * Atualiza a elaboração do documento (etapa do ADM) numa inspeção.
+ * "assumir" → EM_ELABORACAO com o nome do ADM; "concluir" → CONCLUIDO + data;
+ * "limpar" → volta a PENDENTE.
+ */
+export function useSalvarElaboracao(idInspecao: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (patch: {
+      elaboracao_status: "PENDENTE" | "EM_ELABORACAO" | "CONCLUIDO";
+      elaboracao_responsavel?: string | null;
+      elaboracao_concluida_em?: string | null;
+    }) => {
+      const supabase = createSupabaseBrowserClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("inspecoes")
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .eq("id_inspecao", idInspecao);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inspecao", idInspecao] });
+      qc.invalidateQueries({ queryKey: ["dashboard-documentos-adm"] });
     },
   });
 }

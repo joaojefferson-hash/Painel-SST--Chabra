@@ -237,15 +237,26 @@ export default function DashboardPage() {
               <h2 className="text-sm font-semibold text-gray-800">Inspeções Concluídas por Mês</h2>
               <p className="mt-0.5 text-xs text-gray-400">Últimos 6 meses</p>
             </div>
-            <Link
-              href="/dashboard/inspecoes-concluidas"
-              className="inline-flex items-center gap-1 rounded-lg bg-verde-light px-2.5 py-1.5 text-xs font-semibold text-verde-primary transition-colors hover:bg-verde-primary hover:text-white"
-              title="Abrir dashboard de inspeções concluídas (por mês e por técnico)"
-            >
-              <TrendingUp className="size-3.5" />
-              Ver por técnico
-              <ArrowRight className="size-3" />
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/dashboard/inspecoes-concluidas"
+                className="inline-flex items-center gap-1 rounded-lg bg-verde-light px-2.5 py-1.5 text-xs font-semibold text-verde-primary transition-colors hover:bg-verde-primary hover:text-white"
+                title="Abrir dashboard de inspeções concluídas (por mês e por técnico)"
+              >
+                <TrendingUp className="size-3.5" />
+                Ver por técnico
+                <ArrowRight className="size-3" />
+              </Link>
+              <Link
+                href="/dashboard/documentos-emitidos"
+                className="inline-flex items-center gap-1 rounded-lg bg-verde-light px-2.5 py-1.5 text-xs font-semibold text-verde-primary transition-colors hover:bg-verde-primary hover:text-white"
+                title="Produção de documentos por ADM (elaborados no SGG e enviados), por mês"
+              >
+                <TrendingUp className="size-3.5" />
+                Documentos (ADM)
+                <ArrowRight className="size-3" />
+              </Link>
+            </div>
           </div>
           {loadingMes ? (
             <div className="h-52 animate-pulse rounded-xl bg-gray-100" />

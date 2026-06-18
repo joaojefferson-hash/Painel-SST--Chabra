@@ -24,7 +24,9 @@ import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
-import { useInspecao } from "@/lib/hooks/useInspecao";
+import { useInspecao, useSalvarElaboracao } from "@/lib/hooks/useInspecao";
+import { useCurrentUser, useCanEdit } from "@/lib/hooks/useUsuario";
+import { FileSignature } from "lucide-react";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
@@ -204,6 +206,9 @@ export default function RelatorioChabraPage({ params }: Props) {
 
   const { pdfAssinado, recarregar } = usePdfAssinado("inspecoes_relatorio", id);
   const [baixando, setBaixando] = useState(false);
+  const user = useCurrentUser();
+  const canEdit = useCanEdit();
+  const salvarElab = useSalvarElaboracao(id);
 
   async function handleBaixarPdf() {
     if (!pdfAssinado) return;
@@ -346,6 +351,75 @@ export default function RelatorioChabraPage({ params }: Props) {
               responsavelTecnico: inspecao.responsavel ?? undefined,
             }}
           />
+        </div>
+      </div>
+
+      {/* Documento (SGG) — elaboração pelo ADM (não imprime) */}
+      <div className="no-print rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <FileSignature className="size-4 shrink-0 text-verde-primary" />
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Documento (SGG)</p>
+              <p className="text-xs text-gray-500">
+                {inspecao.elaboracao_status === "CONCLUIDO"
+                  ? `Concluído por ${inspecao.elaboracao_responsavel ?? "—"}${inspecao.elaboracao_concluida_em ? " · " + new Date(inspecao.elaboracao_concluida_em).toLocaleString("pt-BR") : ""}`
+                  : inspecao.elaboracao_status === "EM_ELABORACAO"
+                    ? `Em elaboração por ${inspecao.elaboracao_responsavel ?? "—"}`
+                    : "Pendente — ninguém assumiu a elaboração"}
+              </p>
+            </div>
+          </div>
+          {canEdit && (
+            <div className="flex flex-wrap gap-2">
+              {(inspecao.elaboracao_status ?? "PENDENTE") === "PENDENTE" && (
+                <button
+                  type="button"
+                  disabled={salvarElab.isPending || !user?.nome}
+                  onClick={() => salvarElab.mutate(
+                    { elaboracao_status: "EM_ELABORACAO", elaboracao_responsavel: user?.nome ?? null },
+                    { onSuccess: () => toast.success("Você assumiu a elaboração do documento") },
+                  )}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-verde-accent disabled:opacity-50"
+                >
+                  Assumir elaboração (eu)
+                </button>
+              )}
+              {inspecao.elaboracao_status === "EM_ELABORACAO" && (inspecao.elaboracao_responsavel === user?.nome || user?.perfil === "Admin") && (
+                <>
+                  <button
+                    type="button"
+                    disabled={salvarElab.isPending}
+                    onClick={() => salvarElab.mutate(
+                      { elaboracao_status: "CONCLUIDO", elaboracao_concluida_em: new Date().toISOString() },
+                      { onSuccess: () => toast.success("Documento concluído — enviado ao cliente") },
+                    )}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    <BadgeCheck className="size-4" /> Concluir (emitido e enviado)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={salvarElab.isPending}
+                    onClick={() => salvarElab.mutate({ elaboracao_status: "PENDENTE", elaboracao_responsavel: null })}
+                    className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    Liberar
+                  </button>
+                </>
+              )}
+              {inspecao.elaboracao_status === "CONCLUIDO" && user?.perfil === "Admin" && (
+                <button
+                  type="button"
+                  disabled={salvarElab.isPending}
+                  onClick={() => salvarElab.mutate({ elaboracao_status: "EM_ELABORACAO", elaboracao_concluida_em: null })}
+                  className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                >
+                  Reabrir
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

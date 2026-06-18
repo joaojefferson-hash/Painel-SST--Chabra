@@ -229,6 +229,10 @@ export interface Inspecao {
   tipo_criacao: TipoCriacao | null;
   id_inspecao_base: string | null;
   usuario: string | null;
+  /** Elaboração do documento no SGG pelo ADM (rastreio de produção). */
+  elaboracao_responsavel: string | null;
+  elaboracao_status: "PENDENTE" | "EM_ELABORACAO" | "CONCLUIDO" | null;
+  elaboracao_concluida_em: string | null;
   created_at: string;
   updated_at: string | null;
   empresas?: { nome_empresa: string } | null;
