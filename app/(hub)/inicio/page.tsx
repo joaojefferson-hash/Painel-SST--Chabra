@@ -409,6 +409,7 @@ function InicioContent() {
                 className={cn(
                   "grid w-full gap-5",
                   "grid-cols-1",
+                  totalCards === 1 && "max-w-sm",
                   totalCards === 2 && "sm:grid-cols-2 max-w-3xl",
                   totalCards === 3 && "sm:grid-cols-2 lg:grid-cols-3 max-w-5xl",
                   totalCards >= 4 && "sm:grid-cols-2 lg:grid-cols-4 max-w-7xl",
