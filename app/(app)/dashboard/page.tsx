@@ -230,9 +230,9 @@ function GraficoMes({
         </Link>
       </div>
       {loading ? (
-        <div className="h-52 animate-pulse rounded-xl bg-gray-100" />
+        <div className="h-40 animate-pulse rounded-xl bg-gray-100" />
       ) : (
-        <ResponsiveContainer width="100%" height={210}>
+        <ResponsiveContainer width="100%" height={160}>
           <BarChart data={data} barSize={24} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
             <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} width={28} />
@@ -417,7 +417,7 @@ export default function DashboardPage() {
       </section>
 
       {/* ── Gráficos ──────────────────────────────────────────────────── */}
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid items-start gap-4 lg:grid-cols-3">
 
         {/* Coluna esquerda: barras mensais empilhadas (Técnicos em cima, ADM embaixo) */}
         <div className="space-y-4 lg:col-span-2">
