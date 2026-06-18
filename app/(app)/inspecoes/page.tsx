@@ -18,7 +18,7 @@ import {
   type OrdemInspecao,
 } from "@/lib/hooks/useInspecao";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
-import { useCanCreate, useCanDelete } from "@/lib/hooks/useUsuario";
+import { useCanCreate, useCanDelete, useIsAdmin } from "@/lib/hooks/useUsuario";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { registrarSoftNaLixeira } from "@/lib/hooks/useLixeira";
 import { cn } from "@/lib/utils";
@@ -53,8 +53,10 @@ function InspecoesInner() {
   const pathname = usePathname();
   const canCreate = useCanCreate();
   const canDelete = useCanDelete();
+  const isAdmin = useIsAdmin();
   const qc = useQueryClient();
   const [confirmDel, setConfirmDel] = useState<Inspecao | null>(null);
+  const [editResp, setEditResp] = useState<Inspecao | null>(null);
 
   const delInsp = useMutation({
     mutationFn: async (insp: Inspecao) => {
@@ -254,6 +256,7 @@ function InspecoesInner() {
                     key={i.id_inspecao}
                     insp={i}
                     onDelete={canDelete ? setConfirmDel : undefined}
+                    onEditResponsavel={isAdmin ? setEditResp : undefined}
                     showEmpresa={!empresaId}
                   />
                 ))}
@@ -285,6 +288,74 @@ function InspecoesInner() {
         onConfirm={() => confirmDel && delInsp.mutate(confirmDel)}
         onCancel={() => setConfirmDel(null)}
       />
+
+      {editResp && (
+        <ModalEditarResponsavel insp={editResp} onClose={() => setEditResp(null)} />
+      )}
+    </div>
+  );
+}
+
+/** Edição do responsável (técnico) de uma inspeção — apenas Admin. */
+function ModalEditarResponsavel({ insp, onClose }: { insp: Inspecao; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [nome, setNome] = useState(insp.responsavel ?? "");
+
+  const save = useMutation({
+    mutationFn: async (responsavel: string) => {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase
+        .from("inspecoes")
+        .update({ responsavel, updated_at: new Date().toISOString() } as never)
+        .eq("id_inspecao", insp.id_inspecao);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inspecoes-lista"] });
+      qc.invalidateQueries({ queryKey: ["inspecoes-tecnico"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-por-mes"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-concluidas-detalhe"] });
+      qc.invalidateQueries({ queryKey: ["inspecao", insp.id_inspecao] });
+      toast.success("Responsável atualizado");
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+        <div className="border-b border-gray-100 px-5 py-4">
+          <h2 className="font-semibold text-gray-900">Editar responsável</h2>
+          <p className="mt-0.5 text-xs text-gray-400">
+            Inspeção {insp.id_inspecao} · rev. {insp.revisao}
+          </p>
+        </div>
+        <div className="px-5 py-4">
+          <label className="mb-1.5 block text-xs font-semibold text-gray-600">Técnico responsável</label>
+          <input
+            value={nome}
+            autoFocus
+            onChange={(e) => setNome(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && nome.trim()) save.mutate(nome.trim()); }}
+            placeholder="Nome do técnico"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-verde-primary/40"
+          />
+        </div>
+        <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
+          <button type="button" onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => save.mutate(nome.trim())}
+            disabled={save.isPending || !nome.trim()}
+            className="rounded-lg bg-verde-primary px-4 py-2 text-sm font-semibold text-white hover:bg-verde-accent disabled:opacity-50"
+          >
+            {save.isPending ? "Salvando..." : "Salvar"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
