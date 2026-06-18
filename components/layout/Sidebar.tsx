@@ -2,7 +2,6 @@
 
 import {
   LayoutDashboard,
-  Building2,
   ClipboardList,
   PlusCircle,
   BarChart3,
@@ -17,7 +16,6 @@ import SidebarShell, { type NavItem, type NavSection } from "./SidebarShell";
 
 const PRINCIPAL: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, variant: "dashboard" },
-  { href: "/empresas", label: "Empresas", icon: Building2 },
   { href: "/inspecoes", label: "Inspeções", icon: ClipboardList },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3, variant: "report" },
 ];
