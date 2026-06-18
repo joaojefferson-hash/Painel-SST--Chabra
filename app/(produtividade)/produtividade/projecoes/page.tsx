@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import {
   useProdUnidades,
   useProdColaboradores,
+  useProdAlocacoes,
   useProdSnapshots,
   useSalvarProjecao,
 } from "@/lib/hooks/useProdutividade";
@@ -66,6 +67,7 @@ export default function ProjecoesPage() {
   const canEdit                       = useCanEdit();
   const { data: unidades = [] }       = useProdUnidades();
   const { data: colaboradores = [] }  = useProdColaboradores();
+  const { data: alocacoes = [] }      = useProdAlocacoes();
   const salvarMutation                = useSalvarProjecao();
 
   // Lookup: unidadeId → { adms, tecs } com base nos colaboradores cadastrados
@@ -150,25 +152,37 @@ export default function ProjecoesPage() {
     [unidadesVisiveis],
   );
 
-  // Equipe e capacidades CADASTRADAS (Unidades e Equipe) das unidades visíveis.
-  // Geral = soma de todas as unidades; Por Unidade = só a unidade selecionada.
+  // Equipe e capacidades CADASTRADAS, rateadas por unidade. Para cada colaborador,
+  // a fração nas unidades visíveis = soma dos % de dedicação lá (sem rateio = 100%
+  // na unidade dele). Headcount e capacidade entram pela fração → no Geral a pessoa
+  // conta uma vez; por unidade entra a parcela certa.
   const equipeVisivel = useMemo(() => {
     const ids = new Set(unidadesVisiveis.map((u) => u.id));
+    const porColab = new Map<string, { id_unidade: string; percentual: number }[]>();
+    for (const a of alocacoes) {
+      if (!porColab.has(a.id_colaborador)) porColab.set(a.id_colaborador, []);
+      porColab.get(a.id_colaborador)!.push({ id_unidade: a.id_unidade, percentual: a.percentual });
+    }
     let admsCount = 0, tecsCount = 0, capDocsMes = 0, capInspMes = 0;
     for (const c of colaboradores) {
-      if (!c.ativo || !ids.has(c.id_unidade)) continue;
-      if (c.tipo === "documentos") { admsCount += 1; capDocsMes += c.capacidade_docs_mes || 0; }
-      if (c.tipo === "tecnico_campo") { tecsCount += 1; capInspMes += c.capacidade_visitas_mes || 0; }
+      if (!c.ativo) continue;
+      const rateio = porColab.get(c.id);
+      const fracao = rateio && rateio.length > 0
+        ? rateio.filter((r) => ids.has(r.id_unidade)).reduce((s, r) => s + r.percentual / 100, 0)
+        : (ids.has(c.id_unidade) ? 1 : 0);
+      if (fracao <= 0) continue;
+      if (c.tipo === "documentos") { admsCount += fracao; capDocsMes += (c.capacidade_docs_mes || 0) * fracao; }
+      if (c.tipo === "tecnico_campo") { tecsCount += fracao; capInspMes += (c.capacidade_visitas_mes || 0) * fracao; }
     }
     return { admsCount, tecsCount, capDocsMes, capInspMes };
-  }, [colaboradores, unidadesVisiveis]);
+  }, [colaboradores, alocacoes, unidadesVisiveis]);
 
   // Sincroniza Equipe atual e Produtividade diária a partir do cadastro.
   // Produtividade = capacidade média por colaborador ÷ 22 dias úteis (editável depois).
   useEffect(() => {
     const { admsCount, tecsCount, capDocsMes, capInspMes } = equipeVisivel;
-    setAdmsAtuais(String(admsCount));
-    setTecsAtuais(String(tecsCount));
+    setAdmsAtuais(String(Math.round(admsCount * 10) / 10));
+    setTecsAtuais(String(Math.round(tecsCount * 10) / 10));
     if (admsCount > 0 && capDocsMes > 0) setDocsPorAdm(String(Math.round((capDocsMes / admsCount / 22) * 10) / 10));
     if (tecsCount > 0 && capInspMes > 0) setInspPorTec(String(Math.round((capInspMes / tecsCount / 22) * 10) / 10));
   }, [equipeVisivel]);
@@ -357,11 +371,11 @@ export default function ProjecoesPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
               <p className="text-xs font-semibold text-gray-700">ADMs (geradores de docs)</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900">{equipeVisivel.admsCount}</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{Math.round(equipeVisivel.admsCount * 10) / 10}</p>
             </div>
             <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
               <p className="text-xs font-semibold text-gray-700">Técnicos de campo</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900">{equipeVisivel.tecsCount}</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{Math.round(equipeVisivel.tecsCount * 10) / 10}</p>
             </div>
           </div>
         </div>

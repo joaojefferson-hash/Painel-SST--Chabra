@@ -131,6 +131,15 @@ export interface ProdRegistroMensal {
   criado_em: string;
 }
 
+/** Rateio de um colaborador entre unidades (% de dedicação). */
+export interface ProdColaboradorUnidade {
+  id: string;
+  id_colaborador: string;
+  id_unidade: string;
+  percentual: number;
+  criado_em: string;
+}
+
 /** Snapshot mensal AGREGADO por unidade (quantitativo da planilha "qlp empresa"). */
 export interface ProdSnapshotMensal {
   id: string;
@@ -298,6 +307,43 @@ export function useDeleteColaborador() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["prod", "colaboradores"] }),
+  });
+}
+
+/** Todas as alocações (rateio colaborador↔unidade). Sem linha = 100% na unidade do colaborador. */
+export function useProdAlocacoes() {
+  return useQuery({
+    queryKey: ["prod", "alocacoes"],
+    staleTime: 2 * 60_000,
+    queryFn: async (): Promise<ProdColaboradorUnidade[]> => {
+      const sb = createSupabaseBrowserClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (sb as any).from("prod_colaborador_unidade").select("*");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Substitui as alocações de um colaborador. Lista vazia => 100% na unidade dele (sem linhas). */
+export function useSaveAlocacoes() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { id_colaborador: string; alocacoes: { id_unidade: string; percentual: number }[] }) => {
+      const sb = createSupabaseBrowserClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const any = sb as any;
+      const del = await any.from("prod_colaborador_unidade").delete().eq("id_colaborador", payload.id_colaborador);
+      if (del.error) throw del.error;
+      const linhas = payload.alocacoes.filter((a) => a.id_unidade && a.percentual > 0);
+      if (linhas.length > 0) {
+        const ins = await any.from("prod_colaborador_unidade").insert(
+          linhas.map((a) => ({ id_colaborador: payload.id_colaborador, id_unidade: a.id_unidade, percentual: a.percentual })),
+        );
+        if (ins.error) throw ins.error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["prod", "alocacoes"] }),
   });
 }
 

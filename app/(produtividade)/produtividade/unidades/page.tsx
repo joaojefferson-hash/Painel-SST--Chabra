@@ -16,9 +16,11 @@ import toast from "react-hot-toast";
 import {
   useProdUnidades,
   useProdColaboradores,
+  useProdAlocacoes,
   useSaveUnidade,
   useDeleteUnidade,
   useSaveColaborador,
+  useSaveAlocacoes,
   useDeleteColaborador,
   TIPO_COLABORADOR_LABEL,
   type ProdUnidade,
@@ -121,18 +123,40 @@ function ModalColaborador({
   const [capDocs, setCapDocs]         = useState(String(initial?.capacidade_docs_mes ?? 0));
   const [capVisitas, setCapVisitas]   = useState(String(initial?.capacidade_visitas_mes ?? 0));
   const save = useSaveColaborador();
+  const saveAlocacoes = useSaveAlocacoes();
+  const { data: unidades = [] } = useProdUnidades();
+  const { data: alocacoes = [] } = useProdAlocacoes();
+
+  // Rateio entre unidades (% de dedicação). Só editável ao EDITAR um colaborador.
+  const rateioInicial = initial?.id
+    ? alocacoes.filter((a) => a.id_colaborador === initial.id).map((a) => ({ id_unidade: a.id_unidade, percentual: a.percentual }))
+    : [];
+  const [rateio, setRateio] = useState<{ id_unidade: string; percentual: number }[]>(
+    rateioInicial.length > 0 ? rateioInicial : [{ id_unidade: idUnidade, percentual: 100 }],
+  );
+  const somaPct = rateio.reduce((s, r) => s + (r.percentual || 0), 0);
+  const rateioMultiplo = rateio.length > 1;
 
   async function handleSave() {
     if (!nome.trim()) { toast.error("Informe o nome"); return; }
+    if (rateioMultiplo && somaPct !== 100) { toast.error("Os percentuais do rateio devem somar 100%"); return; }
     try {
       await save.mutateAsync({
         id: initial?.id,
-        id_unidade: idUnidade,
+        // unidade "casa" = a 1ª do rateio (ou a unidade atual)
+        id_unidade: rateio[0]?.id_unidade || idUnidade,
         nome: nome.trim(),
         tipo,
         capacidade_docs_mes: Number(capDocs) || 0,
         capacidade_visitas_mes: Number(capVisitas) || 0,
       });
+      // Salva o rateio só ao editar (precisa do id). Rateio único = sem linhas (100% na unidade).
+      if (initial?.id) {
+        await saveAlocacoes.mutateAsync({
+          id_colaborador: initial.id,
+          alocacoes: rateioMultiplo ? rateio : [],
+        });
+      }
       toast.success(initial?.id ? "Colaborador atualizado" : "Colaborador adicionado");
       onClose();
     } catch {
@@ -170,6 +194,50 @@ function ModalColaborador({
               <input type="number" min={0} value={capVisitas} onChange={(e) => setCapVisitas(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
           </div>
+
+          {/* Rateio entre unidades (só ao editar — precisa do colaborador salvo) */}
+          {initial?.id && (
+            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+              <div className="mb-1 flex items-center justify-between">
+                <label className="text-xs font-semibold text-gray-600">Atua em mais de uma unidade? (rateio)</label>
+                <span className={`text-[11px] font-semibold ${rateioMultiplo && somaPct !== 100 ? "text-red-600" : "text-gray-400"}`}>
+                  Soma: {somaPct}%
+                </span>
+              </div>
+              <p className="mb-2 text-[11px] text-gray-400">
+                A capacidade ({Number(capDocs) || 0} docs / {Number(capVisitas) || 0} vis. por mês) é rateada pelo %. No Geral conta uma vez.
+              </p>
+              <div className="space-y-2">
+                {rateio.map((r, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <select
+                      value={r.id_unidade}
+                      onChange={(e) => setRateio((prev) => prev.map((x, j) => (j === i ? { ...x, id_unidade: e.target.value } : x)))}
+                      className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      {unidades.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                    </select>
+                    <input
+                      type="number" min={0} max={100} value={r.percentual}
+                      onChange={(e) => setRateio((prev) => prev.map((x, j) => (j === i ? { ...x, percentual: Number(e.target.value) || 0 } : x)))}
+                      className="w-16 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                    <span className="text-xs text-gray-400">%</span>
+                    {rateio.length > 1 && (
+                      <button type="button" onClick={() => setRateio((prev) => prev.filter((_, j) => j !== i))} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="size-3.5" /></button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setRateio((prev) => [...prev, { id_unidade: unidades.find((u) => !prev.some((p) => p.id_unidade === u.id))?.id ?? "", percentual: 0 }])}
+                className="mt-2 flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800"
+              >
+                <Plus className="size-3" /> Adicionar unidade
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
           <button type="button" onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50">Cancelar</button>
@@ -196,6 +264,8 @@ function UnidadeCard({ unidade }: { unidade: ProdUnidade }) {
   const teamUnitId = unidade.id_unidade_equipe ?? unidade.id;
   const { data: colaboradores = [], isLoading } = useProdColaboradores(teamUnitId);
   const { data: todasUnidades = [] } = useProdUnidades();
+  const { data: alocacoes = [] } = useProdAlocacoes();
+  const rateioPorColab = (id: string) => alocacoes.filter((a) => a.id_colaborador === id);
   const donaNome = compartilha ? todasUnidades.find((u) => u.id === unidade.id_unidade_equipe)?.nome ?? "outra unidade" : null;
   const deleteU = useDeleteUnidade();
   const deleteC = useDeleteColaborador();
@@ -303,6 +373,11 @@ function UnidadeCard({ unidade }: { unidade: ProdUnidade }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800">{c.nome}</p>
                     <p className="text-xs text-gray-400">{TIPO_COLABORADOR_LABEL[c.tipo]}</p>
+                    {rateioPorColab(c.id).length > 0 && (
+                      <p className="mt-0.5 text-[10px] font-medium text-amber-600">
+                        Rateado: {rateioPorColab(c.id).map((a) => `${todasUnidades.find((u) => u.id === a.id_unidade)?.nome ?? "?"} ${a.percentual}%`).join(" · ")}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right text-xs text-gray-400">
                     {c.capacidade_docs_mes > 0 && <p>{c.capacidade_docs_mes} docs/mês</p>}
