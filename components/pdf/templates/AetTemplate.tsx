@@ -17,9 +17,37 @@ import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import { substituirVariaveis, substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 
+interface AetRiscoLike {
+  id: string;
+  tipo?: string | null;
+  risco?: string | null;
+  intensidade_concentracao?: string | null;
+  tecnica_metodologia?: string | null;
+  epi_ca?: string | null;
+  epi_eficaz?: string | null;
+  classificacao_risco?: string | null;
+}
+interface AetCargoLike { nome?: string | null; descricao?: string | null }
+export interface AetSetorLike {
+  id: string;
+  nome_setor?: string | null;
+  maquinas_equipamentos?: string | null;
+  descricao_atividade?: string | null;
+  cargos?: AetCargoLike[];
+  riscos?: AetRiscoLike[];
+}
+
+const CLASS_COLOR_HEX: Record<string, { bg: string; cor: string }> = {
+  "Trivial": { bg: "#dcfce7", cor: "#166534" },
+  "De Atenção": { bg: "#fef9c3", cor: "#854d0e" },
+  "Moderado": { bg: "#ffedd5", cor: "#9a3412" },
+  "Alto": { bg: "#fee2e2", cor: "#991b1b" },
+  "Crítico": { bg: "#fecaca", cor: "#7f1d1d" },
+};
+
 export interface AetTemplateProps {
   relatorio: {
-    setores: Array<{ id: string }>;
+    setores: AetSetorLike[];
     consideracoes_finais: string | null;
   };
   empresa: Partial<Empresa> | null;
@@ -60,14 +88,76 @@ const STYLE_BLOCK = `
 .aet-fixo { page-break-before: always; }
 .aet-fixo--continua { page-break-before: auto; }
 .aet-conc p { font-size: 12pt; line-height: 1.6; text-align: justify; color: #1f2937; margin: 0 0 12pt; white-space: pre-line; }
-/* Blocos de setor (placeholder; porte real nos passos 3-4) */
-.aet-setor-bloco { page-break-before: always; }
-.aet-setor-bloco:first-of-type { page-break-before: auto; }
+/* Blocos de setor */
+.aet-setor-bloco { border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; margin-bottom: 14pt; page-break-inside: auto; }
+.aet-setor-head { background: #374151; padding: 7px 12px; }
+.aet-setor-head .t { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #fff; margin: 0; }
+.aet-setor-head .s { font-size: 10px; color: #d1d5db; margin: 2px 0 0; }
+.aet-setor-tab { width: 100%; border-collapse: collapse; font-size: 11px; }
+.aet-setor-tab td, .aet-setor-tab th { border: 1px solid #e5e7eb; padding: 4px 8px; vertical-align: top; color: #374151; }
+.aet-setor-info td.k { width: 160px; background: #f9fafb; font-weight: 600; color: #4b5563; }
+.aet-riscos th { background: #f3f4f6; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #4b5563; text-align: left; }
+.aet-riscos tr:nth-child(even) { background: #f9fafb; }
 .aet-placeholder { border: 1px dashed #cbd5e1; background: #f8fafc; color: #64748b; padding: 16px; border-radius: 8px; font-size: 11px; }
 `;
 
 function SectionTitulo({ titulo }: { titulo: string }) {
   return <h2 className="aet-sec-titulo">{titulo}</h2>;
+}
+
+/** Tabela de riscos por setor (portado do laudo, com estilo inline/CSS). */
+function SetorRiscosBlock({ setor, idx }: { setor: AetSetorLike; idx: number }) {
+  const cargos = setor.cargos ?? [];
+  const riscos = setor.riscos ?? [];
+  const COLS = ["Tipo", "Agente / Risco", "Intensidade / Conc.", "Técnica / Metodologia", "EPI (CA)", "EPI Eficaz", "Classificação"];
+  return (
+    <div className="aet-setor-bloco">
+      <div className="aet-setor-head">
+        <p className="t">Setor {idx + 1}: {setor.nome_setor || "—"}</p>
+        {cargos.length > 0 && (
+          <p className="s">{cargos.map((c) => c.nome).filter(Boolean).join(" · ")}</p>
+        )}
+      </div>
+      <table className="aet-setor-tab aet-setor-info">
+        <tbody>
+          {setor.maquinas_equipamentos && (
+            <tr><td className="k">Máquinas e Equipamentos</td><td>{setor.maquinas_equipamentos.split("\n").filter(Boolean).join(" · ")}</td></tr>
+          )}
+          {setor.descricao_atividade && (
+            <tr><td className="k">Descrição da Atividade</td><td>{setor.descricao_atividade}</td></tr>
+          )}
+          {cargos.filter((c) => c.descricao).map((cargo, i) => (
+            <tr key={i}><td className="k">{cargo.nome}</td><td>{cargo.descricao}</td></tr>
+          ))}
+        </tbody>
+      </table>
+      {riscos.length > 0 ? (
+        <table className="aet-setor-tab aet-riscos">
+          <thead><tr>{COLS.map((h) => <th key={h}>{h}</th>)}</tr></thead>
+          <tbody>
+            {riscos.map((r) => {
+              const cls = CLASS_COLOR_HEX[r.classificacao_risco ?? ""] ?? { bg: "#f3f4f6", cor: "#374151" };
+              return (
+                <tr key={r.id}>
+                  <td>{r.tipo}</td>
+                  <td>{r.risco}</td>
+                  <td>{r.intensidade_concentracao}</td>
+                  <td>{r.tecnica_metodologia}</td>
+                  <td>{r.epi_ca}</td>
+                  <td>{r.epi_eficaz}</td>
+                  <td className="aet-class" style={{ background: cls.bg, color: cls.cor }}>{r.classificacao_risco}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      ) : (
+        <p style={{ padding: "8px 12px", fontSize: 11, fontStyle: "italic", color: "#9ca3af", margin: 0 }}>
+          Nenhum agente / risco identificado neste setor.
+        </p>
+      )}
+    </div>
+  );
 }
 
 export default function AetTemplate({
@@ -162,7 +252,31 @@ export default function AetTemplate({
     );
   }
 
-  // Placeholder dos blocos de setor (porte real nos passos 3-4).
+  // Seção por setor: tabela de riscos (passo 3, real) + análise OWAS/checklist
+  // (passo 4, ainda placeholder). comAnalise controla o sub-bloco de análise.
+  function secaoSetores(slug: string, rotulo: string, intro: string | null, comAnalise: boolean) {
+    return (
+      <>
+        <SectionTitulo titulo={numLabel(numPorSlug[slug], tituloPorSlug[slug] ?? rotulo)} />
+        {intro && (
+          <p style={{ marginBottom: 12, fontSize: 11, color: "#374151", borderLeft: "2px solid #cbd5e1", paddingLeft: 12 }}>
+            {intro}
+          </p>
+        )}
+        {rel.setores.map((s, i) => (
+          <div key={s.id} style={{ marginBottom: 16 }}>
+            <SetorRiscosBlock setor={s} idx={i} />
+            {comAnalise && (
+              <div className="aet-placeholder" style={{ marginTop: 8 }}>
+                [Análise ergonômica do setor (OWAS + checklist + 13 fatores) — passo 4.]
+              </div>
+            )}
+          </div>
+        ))}
+      </>
+    );
+  }
+
   function placeholderSetor(slug: string, rotulo: string, intro: string | null) {
     return (
       <>
@@ -172,9 +286,7 @@ export default function AetTemplate({
             {intro}
           </p>
         )}
-        <div className="aet-placeholder">
-          [Conteúdo por setor — em construção (passos 3-4): tabela de riscos, OWAS, checklist e 13 fatores.]
-        </div>
+        <div className="aet-placeholder">[Fatores Psicossociais (QPS) — passo 4.]</div>
       </>
     );
   }
@@ -207,10 +319,10 @@ export default function AetTemplate({
         conteudoFixo = <SecaoSumario titulos={sumarioTitulos} />;
         break;
       case "aet_agentes_ambientais":
-        conteudoFixo = temSetores ? placeholderSetor("aet_agentes_ambientais", "Agentes Ambientais para as Áreas Operacionais", intro) : null;
+        conteudoFixo = temSetores ? secaoSetores("aet_agentes_ambientais", "Agentes Ambientais para as Áreas Operacionais", intro, false) : null;
         break;
       case "aet_analise_ergonomica":
-        conteudoFixo = temSetores ? placeholderSetor("aet_analise_ergonomica", "Análises Ergonômicas do Trabalho", intro) : null;
+        conteudoFixo = temSetores ? secaoSetores("aet_analise_ergonomica", "Análises Ergonômicas do Trabalho", intro, true) : null;
         break;
       case "aet_psicossocial":
         conteudoFixo = placeholderSetor("aet_psicossocial", "Fatores Psicossociais", intro);
