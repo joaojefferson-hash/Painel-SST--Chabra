@@ -3,7 +3,8 @@
 import { use, useState } from "react";
 import { Loader2, Save, Trash2, Plus, Workflow, AlertTriangle } from "lucide-react";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
-import { useDrpsRelatorio } from "@/lib/hooks/useDrps";
+import { useDrpsRelatorio, useDrpsRespondentes } from "@/lib/hooks/useDrps";
+import { listarSetores } from "@/lib/drps/calculos";
 import {
   useDrpsPlanoAcao,
   useSalvarLinhaPlanoAcao,
@@ -28,7 +29,11 @@ export default function PlanoAcaoPage({
 
   const { data: relatorio, isLoading: loadRel } = useDrpsRelatorio(idRelatorio);
   const { data: linhas = [], isLoading: loadLinhas } = useDrpsPlanoAcao(idRelatorio);
+  const { data: respondentes = [], isLoading: loadResp } = useDrpsRespondentes(idRelatorio);
   const salvar = useSalvarLinhaPlanoAcao();
+
+  // Setores avaliados neste DRPS (origem dos respondentes) p/ o select "Onde".
+  const setores = listarSetores(respondentes);
 
   function handleAdicionar() {
     if (!relatorio || !canEdit) return;
@@ -42,7 +47,7 @@ export default function PlanoAcaoPage({
     });
   }
 
-  if (loadRel || loadLinhas) {
+  if (loadRel || loadLinhas || loadResp) {
     return (
       <div className="flex items-center justify-center py-16 text-gray-500">
         <Loader2 className="size-5 animate-spin" />
@@ -88,6 +93,7 @@ export default function PlanoAcaoPage({
             linha={linha}
             idRelatorio={idRelatorio}
             idEmpresa={relatorio.id_empresa}
+            setores={setores}
             canEdit={canEdit}
           />
         ))}
@@ -113,12 +119,14 @@ function LinhaCard({
   linha,
   idRelatorio,
   idEmpresa,
+  setores,
   canEdit,
 }: {
   numero: number;
   linha: DrpsPlanoAcao5w2h;
   idRelatorio: string;
   idEmpresa: string | null;
+  setores: string[];
   canEdit: boolean;
 }) {
   const salvar = useSalvarLinhaPlanoAcao();
@@ -158,6 +166,13 @@ function LinhaCard({
 
   const statusInfo = STATUS_OPCOES.find((s) => s.valor === form.status) ?? STATUS_OPCOES[0];
 
+  // Opções do "Onde": Todos os setores + setores avaliados + valor atual (se legado/fora da lista).
+  const opcoesOnde = Array.from(
+    new Set(
+      ["Todos os setores", ...setores, ...(form.onde ? [form.onde] : [])].filter(Boolean),
+    ),
+  );
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -190,8 +205,18 @@ function LinhaCard({
             placeholder="Objetivo / motivo da ação"
           />
         </Campo>
-        <Campo label="Onde">
-          <input value={form.onde} onChange={(e) => set("onde", e.target.value)} readOnly={!canEdit} className={inputCls} placeholder="Setor / local" />
+        <Campo label="Onde (setor)">
+          <select
+            value={form.onde}
+            onChange={(e) => set("onde", e.target.value)}
+            disabled={!canEdit}
+            className={`${inputCls} disabled:bg-gray-50 disabled:text-gray-600`}
+          >
+            <option value="">Selecione o setor…</option>
+            {opcoesOnde.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </Campo>
         <Campo label="Quando (prazo)">
           <input value={form.prazo} onChange={(e) => set("prazo", e.target.value)} readOnly={!canEdit} className={inputCls} placeholder="Ex.: Jul/2026" />
