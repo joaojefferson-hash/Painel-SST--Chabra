@@ -127,10 +127,16 @@ export default function PsicossocialLaudoPage({
     setBaixando(true);
     try {
       const supabase = createSupabaseBrowserClient();
-      const { data: blob, error } = await supabase.storage
+      // URL assinada (token único a cada clique) + no-store: ignora o cache do
+      // CDN/navegador. O caminho é o mesmo a cada (re)assinatura, e o CDN servia
+      // a versão antiga do mesmo path — daí o PDF baixado vir defasado.
+      const { data: signed, error } = await supabase.storage
         .from("pdfs-assinados")
-        .download(pdfAssinado.pdf_path);
-      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
+        .createSignedUrl(pdfAssinado.pdf_path, 120);
+      if (error || !signed?.signedUrl) { toast.error("Não foi possível baixar o PDF."); return; }
+      const res = await fetch(`${signed.signedUrl}&t=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) { toast.error("Não foi possível baixar o PDF."); return; }
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = "relatorio-drps-assinado.pdf"; a.click();
