@@ -10,6 +10,7 @@ import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
+import { assinarMidiaPdf } from "@/lib/pdf/assinar-midia";
 
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
 
@@ -59,6 +60,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       foto_urls: Array.isArray(i.foto_urls) ? (i.foto_urls as string[]) : [],
       foto_legendas: Array.isArray(i.foto_legendas) ? (i.foto_legendas as string[]) : [],
     }));
+
+    // Fotos → URLs assinadas p/ o Puppeteer (fallback p/ original em falha).
+    await Promise.all(
+      itens.map(async (it) => {
+        it.foto_urls = await assinarMidiaPdf(supabase, it.foto_urls, "fotos");
+      }),
+    );
 
     // Mapa id_item → "codigo — titulo" para a coluna Origem do plano de ação.
     const itemLabel = new Map<string, string>();

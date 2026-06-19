@@ -1,4 +1,5 @@
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
+import { assinarUmaMidiaPdf } from "@/lib/pdf/assinar-midia";
 
 /**
  * Monta o signatário "técnico responsável" da Folha de Assinaturas de um laudo.
@@ -83,6 +84,11 @@ export async function montarSignatarioTecnico(
         }
       | null;
     const porImagem = assinado.tipo_assinatura === "imagem";
+    // Assinatura é imagem do bucket fotos → assina p/ o Puppeteer (fallback p/ original).
+    const assinaturaImagemUrl =
+      porImagem && signer?.assinatura_url
+        ? await assinarUmaMidiaPdf(supabase, signer.assinatura_url, "fotos")
+        : undefined;
     // Registro profissional do assinante (Reg. MTE para técnicos, CRP para
     // psicólogos). Usado principalmente na assinatura por imagem.
     const registroSigner = signer?.registro_mte
@@ -98,9 +104,8 @@ export async function montarSignatarioTecnico(
         cpf: signer?.cpf ?? null,
         funcaoNoDocumento: funcao,
         assinadoDigitalmente: true,
-        // Assinatura por imagem → carimba a imagem; senão, selo A1.
-        assinaturaImagemUrl:
-          porImagem && signer?.assinatura_url ? signer.assinatura_url : undefined,
+        // Assinatura por imagem → carimba a imagem (assinada); senão, selo A1.
+        assinaturaImagemUrl,
       },
       dataHoraAssinatura: fmtDataHora(assinado.assinado_em),
     };

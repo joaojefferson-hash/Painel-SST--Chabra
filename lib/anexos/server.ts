@@ -3,6 +3,7 @@
 
 import type { createSupabaseServerClient } from "@/lib/supabase/client";
 import { mesclarAnexos } from "@/lib/pdf/anexar";
+import { assinarUmaMidiaPdf } from "@/lib/pdf/assinar-midia";
 import type { Anexo, ModuloAnexo } from "./types";
 
 type ServerClient = ReturnType<typeof createSupabaseServerClient>;
@@ -26,16 +27,17 @@ export async function aplicarAnexosNoPdf(
     .order("ordem", { ascending: true });
 
   const anexos = (data ?? []) as unknown as Anexo[];
-  const merged = await mesclarAnexos(
-    laudoPdf,
-    anexos.map((a) => ({
+  // URL assinada (bucket privado-ready) p/ o fetch do mesclarAnexos; fallback p/ original.
+  const itens = await Promise.all(
+    anexos.map(async (a) => ({
       nome: a.nome,
       descricao: a.descricao,
-      url: a.url,
+      url: await assinarUmaMidiaPdf(supabase, a.url, "anexos"),
       mime: a.mime,
       tipo: a.tipo,
     })),
   );
+  const merged = await mesclarAnexos(laudoPdf, itens);
   // Normaliza para Uint8Array<ArrayBuffer> (aceito por NextResponse / BodyInit).
   return new Uint8Array(merged);
 }

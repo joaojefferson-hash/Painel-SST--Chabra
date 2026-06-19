@@ -7,6 +7,7 @@ import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
+import { assinarMidiaPdf } from "@/lib/pdf/assinar-midia";
 
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
 
@@ -49,6 +50,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       observacao: (i.observacao as string) ?? null,
       foto_urls: Array.isArray(i.foto_urls) ? (i.foto_urls as string[]) : [],
     }));
+
+    // Fotos → URLs assinadas p/ o Puppeteer (fallback p/ original em falha).
+    await Promise.all(
+      itens.map(async (it) => {
+        it.foto_urls = await assinarMidiaPdf(supabase, it.foto_urls, "fotos");
+      }),
+    );
 
     const { data: rawCaps } = await supabase
       .from("textos_padrao")
