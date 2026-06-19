@@ -36,16 +36,10 @@ const STYLE_BLOCK = `
 .textos-padrao-capitulo { margin-bottom: 18pt; page-break-inside: auto; }
 .textos-padrao-capitulo--nova-pagina { page-break-before: always; }
 .textos-padrao-capitulo--continua    { page-break-before: auto; margin-top: 16pt; }
-.textos-padrao-capitulo--capa {
-  position: relative; margin: -3cm -2cm -2cm -3cm; padding: 0;
-  height: 297mm; width: 210mm; overflow: hidden;
-}
-.textos-padrao-capitulo-bg-img {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; object-position: center; z-index: 0;
-}
-.textos-padrao-capitulo--capa .textos-padrao-capitulo-titulo { display: none; }
-.textos-padrao-capitulo--capa .textos-padrao-caixa-texto { position: absolute; z-index: 1; }
+/* Capa no estilo DRPS (img 100%, sem full-bleed → não corta caixas na borda) */
+.tp-capa { position: relative; width: 100%; margin-bottom: 16pt; page-break-after: always; }
+.tp-capa img.bg { width: 100%; height: auto; display: block; }
+.tp-capa .caixa { position: absolute; white-space: pre-wrap; line-height: 1.3; }
 .textos-padrao-capitulo-titulo {
   font-size: 14pt; font-weight: 700; color: #1e4d28;
   border-bottom: 2px solid #006B54; padding-bottom: 4px; margin-bottom: 12pt;
@@ -120,29 +114,20 @@ export default function AetTemplate({
     .filter((t) => t && t.trim());
 
   function renderEditavel(c: TextoPadraoCapitulo) {
-    const ehCapa = !!c.bg_imagem_url;
-    const orientacao = c.orientacao ?? "retrato";
-    const novaPagina = ehCapa || (c.quebra_pagina ?? "nova") === "nova";
-    const conteudo = substituirVariaveis(c.conteudo, valoresVars);
-    const titulo = numLabel(numPorId[c.id_capitulo], substituirVariaveisTexto(c.titulo, valoresVars));
-    const classes = [
-      "textos-padrao-capitulo",
-      orientacao === "paisagem" ? "textos-padrao-capitulo--paisagem" : "textos-padrao-capitulo--retrato",
-      novaPagina ? "textos-padrao-capitulo--nova-pagina" : "textos-padrao-capitulo--continua",
-      ehCapa ? "textos-padrao-capitulo--capa" : "",
-    ].filter(Boolean).join(" ");
-    return (
-      <article key={c.id_capitulo} className={classes}>
-        {ehCapa && c.bg_imagem_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.bg_imagem_url} alt="" className="textos-padrao-capitulo-bg-img" />
-        )}
-        {!ehCapa && <h2 className="textos-padrao-capitulo-titulo">{titulo}</h2>}
-        {ehCapa && c.caixas_texto && c.caixas_texto.length > 0 ? (
-          c.caixas_texto.map((cx) => (
+    const ehCapa = !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+
+    // Capa: estilo DRPS (img 100% + caixas posicionadas), evita o corte da borda.
+    if (ehCapa) {
+      return (
+        <div key={c.id_capitulo} className="tp-capa">
+          {c.bg_imagem_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="bg" src={c.bg_imagem_url} alt="" />
+          )}
+          {(c.caixas_texto ?? []).map((cx) => (
             <div
               key={cx.id}
-              className="textos-padrao-caixa-texto"
+              className="caixa"
               style={{
                 left: `${cx.x}%`,
                 top: `${cx.y}%`,
@@ -151,16 +136,28 @@ export default function AetTemplate({
                 fontWeight: cx.bold ? 700 : 400,
                 color: cx.color ?? "#ffffff",
                 textAlign: (cx.align ?? "left") as React.CSSProperties["textAlign"],
-                whiteSpace: "pre-wrap",
-                lineHeight: 1.3,
               }}
             >
               {substituirVariaveisTexto(cx.conteudo, valoresVars)}
             </div>
-          ))
-        ) : !ehCapa ? (
-          <div className="textos-padrao-capitulo-conteudo" dangerouslySetInnerHTML={{ __html: conteudo }} />
-        ) : null}
+          ))}
+        </div>
+      );
+    }
+
+    const orientacao = c.orientacao ?? "retrato";
+    const novaPagina = (c.quebra_pagina ?? "nova") === "nova";
+    const conteudo = substituirVariaveis(c.conteudo, valoresVars);
+    const titulo = numLabel(numPorId[c.id_capitulo], substituirVariaveisTexto(c.titulo, valoresVars));
+    const classes = [
+      "textos-padrao-capitulo",
+      orientacao === "paisagem" ? "textos-padrao-capitulo--paisagem" : "textos-padrao-capitulo--retrato",
+      novaPagina ? "textos-padrao-capitulo--nova-pagina" : "textos-padrao-capitulo--continua",
+    ].join(" ");
+    return (
+      <article key={c.id_capitulo} className={classes}>
+        <h2 className="textos-padrao-capitulo-titulo">{titulo}</h2>
+        <div className="textos-padrao-capitulo-conteudo" dangerouslySetInnerHTML={{ __html: conteudo }} />
       </article>
     );
   }
