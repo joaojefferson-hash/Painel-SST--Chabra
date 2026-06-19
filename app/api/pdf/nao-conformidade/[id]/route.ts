@@ -9,6 +9,7 @@ import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variav
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
 
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
+import { assinarMidiaPdf } from "@/lib/pdf/assinar-midia";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -51,6 +52,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       status_tratativa: (i.status_tratativa as string) ?? "ABERTA",
       foto_urls: Array.isArray(i.foto_urls) ? (i.foto_urls as string[]) : [],
     }));
+
+    // Fotos: troca por URLs assinadas p/ o Puppeteer (fallback p/ original em falha).
+    await Promise.all(
+      itens.map(async (it) => {
+        it.foto_urls = await assinarMidiaPdf(supabase, it.foto_urls, "fotos");
+      }),
+    );
 
     const { data: rawCaps } = await supabase
       .from("textos_padrao")
