@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import StorageImg from "@/components/ui/StorageImg";
+import StorageBg from "@/components/ui/StorageBg";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
@@ -678,10 +679,10 @@ export default function AetLaudoPage({
 
         {/* CAPA */}
         {temCapa && capas.map((cap) => (
-          <div
+          <StorageBg
             key={cap.id_capitulo}
+            stored={cap.bg_imagem_url}
             className="aet-capitulo--capa"
-            style={{ backgroundImage: `url(${cap.bg_imagem_url})` }}
           >
             {(cap.caixas_texto ?? []).map((caixa: CaixaTexto) => (
               <div
@@ -701,7 +702,7 @@ export default function AetLaudoPage({
                 {substituirVariaveisTexto(caixa.conteudo, valoresCapitulos)}
               </div>
             ))}
-          </div>
+          </StorageBg>
         ))}
 
       </div>

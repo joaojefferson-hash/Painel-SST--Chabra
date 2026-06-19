@@ -5,6 +5,7 @@ import { BadgeCheck, Download, Loader2 } from "lucide-react";
 import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import StorageImg from "@/components/ui/StorageImg";
 import AnexosManager from "@/components/anexos/AnexosManager";
 import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
@@ -334,8 +335,7 @@ export default function PsicossocialLaudoPage({
     if (c.bg_imagem_url) {
       return (
         <div style={{ position: "relative", width: "100%", marginBottom: 16, breakAfter: "page" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={c.bg_imagem_url} alt="" style={{ width: "100%", height: "auto", display: "block" }} />
+          <StorageImg stored={c.bg_imagem_url} alt="" className="block h-auto w-full" />
           {(c.caixas_texto ?? []).map((cx) => (
             <div
               key={cx.id}
