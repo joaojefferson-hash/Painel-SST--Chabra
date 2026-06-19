@@ -166,12 +166,21 @@ function LinhaCard({
 
   const statusInfo = STATUS_OPCOES.find((s) => s.valor === form.status) ?? STATUS_OPCOES[0];
 
-  // Opções do "Onde": Todos os setores + setores avaliados + valor atual (se legado/fora da lista).
-  const opcoesOnde = Array.from(
-    new Set(
-      ["Todos os setores", ...setores, ...(form.onde ? [form.onde] : [])].filter(Boolean),
-    ),
+  // "Onde" guarda múltiplos setores separados por vírgula no mesmo campo texto.
+  const selecionadosOnde = new Set(
+    form.onde.split(",").map((s) => s.trim()).filter(Boolean),
   );
+  // Opções: Todos os setores + setores avaliados + já selecionados (preserva legado).
+  const opcoesOnde = Array.from(
+    new Set(["Todos os setores", ...setores, ...selecionadosOnde].filter(Boolean)),
+  );
+  function toggleOnde(s: string) {
+    if (!canEdit) return;
+    const next = new Set(selecionadosOnde);
+    if (next.has(s)) next.delete(s);
+    else next.add(s);
+    set("onde", Array.from(next).join(", "));
+  }
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -205,18 +214,32 @@ function LinhaCard({
             placeholder="Objetivo / motivo da ação"
           />
         </Campo>
-        <Campo label="Onde (setor)">
-          <select
-            value={form.onde}
-            onChange={(e) => set("onde", e.target.value)}
-            disabled={!canEdit}
-            className={`${inputCls} disabled:bg-gray-50 disabled:text-gray-600`}
-          >
-            <option value="">Selecione o setor…</option>
-            {opcoesOnde.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+        <Campo label="Onde (setores — pode escolher vários)" full>
+          {!canEdit ? (
+            <p className="text-sm text-gray-700">
+              {selecionadosOnde.size ? Array.from(selecionadosOnde).join(", ") : "—"}
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {opcoesOnde.map((s) => {
+                const ativo = selecionadosOnde.has(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => toggleOnde(s)}
+                    className={
+                      ativo
+                        ? "rounded-full border border-verde-primary bg-verde-primary/10 px-3 py-1 text-xs font-medium text-verde-primary"
+                        : "rounded-full border border-gray-300 bg-white px-3 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                    }
+                  >
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </Campo>
         <Campo label="Quando (prazo)">
           <input value={form.prazo} onChange={(e) => set("prazo", e.target.value)} readOnly={!canEdit} className={inputCls} placeholder="Ex.: Jul/2026" />
