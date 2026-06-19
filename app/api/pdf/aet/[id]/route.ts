@@ -7,7 +7,10 @@ import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { montarValoresAet } from "@/lib/textos-padrao/variaveis-aet";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
 import { assinarCapitulosBg, assinarUmaMidiaPdf } from "@/lib/pdf/assinar-midia";
-import type { AetOwasCfg } from "@/components/pdf/templates/AetTemplate";
+import type {
+  AetOwasCfg, AetFatorConfigLike, AetFatorPerguntaLike,
+  AetQpsRespostaLike, AetFatorPsiLike, AetQpsMetaLike,
+} from "@/components/pdf/templates/AetTemplate";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -75,6 +78,21 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       .from("aet_checklist_perguntas").select("slug, secao, label");
     const checklistPerguntas = ((rawChecklist ?? []) as { slug: string; secao: string | null; label: string }[]);
 
+    // 13 fatores + QPS (por relatório). Configs são globais; respostas/psi/meta por id.
+    const [{ data: rawFCfg }, { data: rawFPerg }, { data: rawQResp }, { data: rawFPsi }, { data: rawQMeta }] =
+      await Promise.all([
+        supabase.from("aet_13fatores_config").select("codigo, nome").order("codigo", { ascending: true }),
+        supabase.from("aet_13fatores_perguntas").select("codigo_fator, ordem, logica"),
+        supabase.from("aet_laudo_qps_respostas").select("id_setor, codigo_fator, pergunta_ordem, resposta").eq("id_relatorio", id),
+        supabase.from("aet_laudo_fatores_psi").select("codigo_fator, avaliado, zona, media, observacao, pergunta_critica").eq("id_relatorio", id),
+        supabase.from("aet_laudo_qps_meta").select("*").eq("id_relatorio", id).maybeSingle(),
+      ]);
+    const fatoresConfig = (rawFCfg ?? []) as unknown as AetFatorConfigLike[];
+    const fatoresPerguntas = (rawFPerg ?? []) as unknown as AetFatorPerguntaLike[];
+    const qpsRespostas = (rawQResp ?? []) as unknown as AetQpsRespostaLike[];
+    const fatoresPsi = (rawFPsi ?? []) as unknown as AetFatorPsiLike[];
+    const qpsMeta = (rawQMeta ?? null) as unknown as AetQpsMetaLike | null;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const valoresVars = montarValoresAet(rel as any);
 
@@ -118,6 +136,11 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         capitulos,
         owasConfig,
         checklistPerguntas,
+        fatoresConfig,
+        fatoresPerguntas,
+        qpsRespostas,
+        fatoresPsi,
+        qpsMeta,
         valoresVars,
         signatarios,
         folhaEmpresa,

@@ -117,6 +117,11 @@ export interface AetTemplateProps {
   capitulos: TextoPadraoCapitulo[];
   owasConfig: AetOwasCfg[];
   checklistPerguntas: AetChecklistPerguntaLike[];
+  fatoresConfig: AetFatorConfigLike[];
+  fatoresPerguntas: AetFatorPerguntaLike[];
+  qpsRespostas: AetQpsRespostaLike[];
+  fatoresPsi: AetFatorPsiLike[];
+  qpsMeta: AetQpsMetaLike | null;
   valoresVars: Record<string, string>;
   signatarios: Signatario[];
   folhaEmpresa: { razaoSocial: string; cnpj: string } | null;
@@ -150,6 +155,7 @@ const STYLE_BLOCK = `
 .textos-padrao-capitulo-conteudo th { background: #d4edda; color: #1e4d28; font-weight: 700; text-align: left; }
 /* Seções AET */
 .aet-sec-titulo { font-size: 14pt; font-weight: 700; color: #1e4d28; border-bottom: 2px solid #006B54; padding-bottom: 4px; margin: 0 0 12pt; }
+.aet-sub { font-size: 12pt; font-weight: 700; color: #1e4d28; margin: 14pt 0 6pt; }
 .aet-fixo { page-break-before: always; }
 .aet-fixo--continua { page-break-before: auto; }
 .aet-conc p { font-size: 12pt; line-height: 1.6; text-align: justify; color: #1f2937; margin: 0 0 12pt; white-space: pre-line; }
@@ -351,6 +357,103 @@ function BlocoChecklist({ setor, perguntas }: { setor: AetSetorLike; perguntas: 
   );
 }
 
+// ── 13 Fatores Psicossociais (QPS) ───────────────────────────────────────────
+type ZonaPsi = "verde" | "amarela" | "laranja" | "vermelha";
+export interface AetFatorConfigLike { codigo: string; nome: string }
+export interface AetFatorPerguntaLike { codigo_fator: string; ordem: number; logica?: string | null }
+export interface AetQpsRespostaLike { id_setor: string; codigo_fator: string; pergunta_ordem: number; resposta: number }
+export interface AetFatorPsiLike { codigo_fator: string; avaliado?: boolean; zona?: ZonaPsi | null; media?: number | null; observacao?: string | null; pergunta_critica?: string | null }
+export interface AetQpsMetaLike {
+  n_respondentes?: number | null; total_elegivel?: number | null;
+  periodo_inicio?: string | null; periodo_fim?: string | null;
+  modo_aplicacao?: string | null; tecnico_aplicador?: string | null; observacao_geral?: string | null;
+}
+
+const ZONA_BG: Record<string, string> = { verde: "#E8F5E9", amarela: "#FFF9C4", laranja: "#FFE0B2", vermelha: "#FFEBEE" };
+const ZONA_FG: Record<string, string> = { verde: "#1B5E20", amarela: "#F57F17", laranja: "#E65100", vermelha: "#C62828" };
+
+function zonaFromMedia(media: number | null): ZonaPsi | null {
+  if (media === null) return null;
+  if (media >= 4.0) return "verde";
+  if (media >= 3.0) return "amarela";
+  if (media >= 2.0) return "laranja";
+  return "vermelha";
+}
+function nivelPgrFromZona(zona: ZonaPsi | null | undefined): string {
+  if (zona === "vermelha") return "Crítico";
+  if (zona === "laranja") return "Alto";
+  if (zona === "amarela") return "Moderado";
+  if (zona === "verde") return "Trivial";
+  return "—";
+}
+function calcMediaSetor(perguntas: AetFatorPerguntaLike[], respostas: AetQpsRespostaLike[], idSetor: string, codigoFator: string): number | null {
+  const rSetor = respostas.filter((r) => r.id_setor === idSetor && r.codigo_fator === codigoFator);
+  if (rSetor.length === 0) return null;
+  const scores = rSetor.map((r) => {
+    const perg = perguntas.find((p) => p.codigo_fator === codigoFator && p.ordem === r.pergunta_ordem);
+    return perg?.logica === "direta" ? 6 - r.resposta : r.resposta;
+  });
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
+}
+function ZonaTag({ zona }: { zona: ZonaPsi | null | undefined }) {
+  if (!zona) return <>—</>;
+  return (
+    <span style={{ borderRadius: 4, padding: "1px 8px", fontSize: 10, fontWeight: 700, background: ZONA_BG[zona], color: ZONA_FG[zona] }}>
+      {zona.charAt(0).toUpperCase() + zona.slice(1)}
+    </span>
+  );
+}
+
+/** Tabela de 13 fatores psicossociais de UM setor (médias QPS + zona + nível PGR). */
+function BlocoFatoresSetor({
+  setor, fatoresConfig, fatoresPerguntas, qpsRespostas, fatoresPsi,
+}: {
+  setor: AetSetorLike;
+  fatoresConfig: AetFatorConfigLike[];
+  fatoresPerguntas: AetFatorPerguntaLike[];
+  qpsRespostas: AetQpsRespostaLike[];
+  fatoresPsi: AetFatorPsiLike[];
+}) {
+  const psiRows = fatoresConfig
+    .filter((f) => f.codigo !== "F13")
+    .map((f) => {
+      const media = calcMediaSetor(fatoresPerguntas, qpsRespostas, setor.id, f.codigo);
+      if (media === null) return null;
+      return { f, media, zona: zonaFromMedia(media) };
+    })
+    .filter((x): x is { f: AetFatorConfigLike; media: number; zona: ZonaPsi | null } => x !== null);
+  const f13 = fatoresPsi.find((fp) => fp.codigo_fator === "F13" && fp.avaliado && fp.zona);
+  if (psiRows.length === 0 && !f13) return null;
+  return (
+    <div className="aet-chk-wrap">
+      <p className="aet-owas-tit">Fatores Psicossociais — QPS</p>
+      <table className="aet-setor-tab aet-riscos">
+        <thead><tr>{["Cód.", "Fator", "Média", "Zona", "Nível PGR"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
+        <tbody>
+          {psiRows.map(({ f, media, zona }) => (
+            <tr key={f.codigo}>
+              <td style={{ fontWeight: 700 }}>{f.codigo}</td>
+              <td>{f.nome}</td>
+              <td style={{ textAlign: "center" }}>{media.toFixed(2)}</td>
+              <td><ZonaTag zona={zona} /></td>
+              <td>{nivelPgrFromZona(zona)}</td>
+            </tr>
+          ))}
+          {f13 && (
+            <tr>
+              <td style={{ fontWeight: 700 }}>F13</td>
+              <td>{fatoresConfig.find((fc) => fc.codigo === "F13")?.nome ?? "Proteção da segurança física"}</td>
+              <td style={{ textAlign: "center" }}>—</td>
+              <td><ZonaTag zona={f13.zona} /></td>
+              <td>{nivelPgrFromZona(f13.zona)}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /** Parecer técnico + recomendações (HTML do editor) de um setor. */
 function BlocoParecerRecom({ setor }: { setor: AetSetorLike }) {
   if (!setor.parecer_tecnico && !setor.recomendacoes) return null;
@@ -378,6 +481,11 @@ export default function AetTemplate({
   capitulos,
   owasConfig,
   checklistPerguntas,
+  fatoresConfig,
+  fatoresPerguntas,
+  qpsRespostas,
+  fatoresPsi,
+  qpsMeta,
   valoresVars,
   signatarios,
   folhaEmpresa,
@@ -403,7 +511,7 @@ export default function AetTemplate({
       case "identificacao_empresa": return true;
       case "aet_agentes_ambientais": return temSetores;
       case "aet_analise_ergonomica": return temSetores;
-      case "aet_psicossocial": return true; // frame: placeholder; passo 4: fatoresPsi.length>0
+      case "aet_psicossocial": return fatoresPsi.some((f) => f.avaliado);
       case "aet_consideracoes_finais": return !!consideracoes;
       case "aet_assinatura": return true;
       default: return false; // sumario
@@ -485,9 +593,13 @@ export default function AetTemplate({
                 <BlocoOwas setor={s} owasConfig={owasConfig} />
                 <BlocoChecklist setor={s} perguntas={checklistPerguntas} />
                 <BlocoParecerRecom setor={s} />
-                <div className="aet-placeholder" style={{ margin: "0 14px 14px" }}>
-                  [13 Fatores Psicossociais — passo 4c.]
-                </div>
+                <BlocoFatoresSetor
+                  setor={s}
+                  fatoresConfig={fatoresConfig}
+                  fatoresPerguntas={fatoresPerguntas}
+                  qpsRespostas={qpsRespostas}
+                  fatoresPsi={fatoresPsi}
+                />
               </div>
             )}
           </div>
@@ -496,16 +608,84 @@ export default function AetTemplate({
     );
   }
 
-  function placeholderSetor(slug: string, rotulo: string, intro: string | null) {
+  function secaoPsicossocial(intro: string | null) {
+    const avaliados = fatoresPsi.filter((f) => f.avaliado);
+    const comAnalise = avaliados.filter((f) => f.observacao || f.pergunta_critica);
+    const temDados = qpsMeta && (qpsMeta.n_respondentes != null || qpsMeta.periodo_inicio || qpsMeta.modo_aplicacao || qpsMeta.tecnico_aplicador);
+    const fmtData = (d?: string | null) => (d ? new Date(d + "T00:00:00").toLocaleDateString("pt-BR") : "—");
     return (
       <>
-        <SectionTitulo titulo={numLabel(numPorSlug[slug], tituloPorSlug[slug] ?? rotulo)} />
+        <SectionTitulo titulo={numLabel(numPorSlug["aet_psicossocial"], tituloPorSlug["aet_psicossocial"] ?? "Fatores Psicossociais (QPS)")} />
         {intro && (
-          <p style={{ marginBottom: 12, fontSize: 11, color: "#374151", borderLeft: "2px solid #cbd5e1", paddingLeft: 12 }}>
-            {intro}
-          </p>
+          <p style={{ marginBottom: 10, fontSize: 11, color: "#374151", borderLeft: "2px solid #cbd5e1", paddingLeft: 12 }}>{intro}</p>
         )}
-        <div className="aet-placeholder">[Fatores Psicossociais (QPS) — passo 4.]</div>
+        <p style={{ fontSize: 11, lineHeight: 1.55, color: "#374151", margin: "0 0 12px", textAlign: "justify" }}>
+          A avaliação dos fatores psicossociais foi realizada por meio do instrumento QPS Nordic (Questionário de
+          Fatores Psicossociais no Trabalho), que contempla 13 fatores classificados em zonas de risco: verde
+          (baixo), amarela (moderado), laranja (elevado) e vermelha (crítico).
+        </p>
+
+        {temDados && (
+          <>
+            <h3 className="aet-sub">Dados da Aplicação</h3>
+            <table className="aet-setor-tab aet-setor-info" style={{ marginBottom: 12 }}>
+              <tbody>
+                {qpsMeta!.n_respondentes != null && (
+                  <tr><td className="k">Respondentes</td><td>{qpsMeta!.n_respondentes}{qpsMeta!.total_elegivel ? ` de ${qpsMeta!.total_elegivel} elegíveis` : ""}</td></tr>
+                )}
+                {(qpsMeta!.periodo_inicio || qpsMeta!.periodo_fim) && (
+                  <tr><td className="k">Período</td><td>{fmtData(qpsMeta!.periodo_inicio)}{qpsMeta!.periodo_fim ? ` a ${fmtData(qpsMeta!.periodo_fim)}` : ""}</td></tr>
+                )}
+                {qpsMeta!.modo_aplicacao && <tr><td className="k">Modo de Aplicação</td><td>{qpsMeta!.modo_aplicacao}</td></tr>}
+                {qpsMeta!.tecnico_aplicador && <tr><td className="k">Técnico Aplicador</td><td>{qpsMeta!.tecnico_aplicador}</td></tr>}
+                {qpsMeta!.observacao_geral && <tr><td className="k">Observações</td><td>{qpsMeta!.observacao_geral}</td></tr>}
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {avaliados.length > 0 && (
+          <>
+            <h3 className="aet-sub">Resultado Geral por Fator</h3>
+            <table className="aet-setor-tab aet-riscos" style={{ marginBottom: 12 }}>
+              <thead><tr>{["Cód.", "Fator", "Média", "Zona de Risco", "Nível PGR"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
+              <tbody>
+                {avaliados.map((fp) => {
+                  const cfg = fatoresConfig.find((f) => f.codigo === fp.codigo_fator);
+                  return (
+                    <tr key={fp.codigo_fator}>
+                      <td style={{ fontWeight: 700 }}>{fp.codigo_fator}</td>
+                      <td>{cfg?.nome ?? fp.codigo_fator}</td>
+                      <td style={{ textAlign: "center" }}>{fp.codigo_fator === "F13" ? "—" : fp.media != null ? fp.media.toFixed(2) : "—"}</td>
+                      <td><ZonaTag zona={fp.zona} /></td>
+                      <td>{nivelPgrFromZona(fp.zona)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {comAnalise.length > 0 && (
+          <>
+            <h3 className="aet-sub">Análise Detalhada por Fator</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {comAnalise.map((fp) => {
+                const cfg = fatoresConfig.find((f) => f.codigo === fp.codigo_fator);
+                return (
+                  <div key={fp.codigo_fator} style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: 10 }}>
+                    <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "#374151" }}>
+                      {fp.codigo_fator} — {cfg?.nome ?? fp.codigo_fator} <ZonaTag zona={fp.zona} />
+                    </p>
+                    {fp.pergunta_critica && <p style={{ margin: "0 0 4px", fontSize: 11, fontStyle: "italic", color: "#4b5563" }}>“{fp.pergunta_critica}”</p>}
+                    {fp.observacao && <p style={{ margin: 0, fontSize: 11, lineHeight: 1.5, color: "#374151" }}>{fp.observacao}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </>
     );
   }
@@ -544,7 +724,7 @@ export default function AetTemplate({
         conteudoFixo = temSetores ? secaoSetores("aet_analise_ergonomica", "Análises Ergonômicas do Trabalho", intro, true) : null;
         break;
       case "aet_psicossocial":
-        conteudoFixo = placeholderSetor("aet_psicossocial", "Fatores Psicossociais", intro);
+        conteudoFixo = fatoresPsi.some((f) => f.avaliado) ? secaoPsicossocial(intro) : null;
         break;
       case "aet_consideracoes_finais":
         conteudoFixo = consideracoes ? (
