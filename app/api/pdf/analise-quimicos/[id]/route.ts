@@ -6,6 +6,7 @@ import type { Empresa, ConclusaoRapidaQuimico, CondicoesUsoQuimico } from "@/lib
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
+import { assinarCapitulosBg } from "@/lib/pdf/assinar-midia";
 
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
 
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .select("*")
       .eq("modulo", "analise_quimicos")
       .order("ordem", { ascending: true });
-    const capitulos = (rawCaps ?? []) as unknown as TextoPadraoCapitulo[];
+    const capitulos = await assinarCapitulosBg(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
 
     let empresa: Empresa | null = null;
     if (ana.id_empresa) {

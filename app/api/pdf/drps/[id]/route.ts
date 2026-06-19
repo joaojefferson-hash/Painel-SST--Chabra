@@ -14,6 +14,7 @@ import type {
 } from "@/lib/drps/types";
 import { montarValoresVariaveis } from "@/lib/drps/variaveis";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
+import { assinarCapitulosBg } from "@/lib/pdf/assinar-midia";
 
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
 
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     const planoMedidas = (rawPlano as unknown as DrpsPlanoMedidas) ?? null;
     const monitoramentos = (rawMon ?? []) as unknown as DrpsMonitoramento[];
     const revisao = (rawRev as unknown as DrpsRevisao) ?? null;
-    const capitulos = (rawCaps ?? []) as unknown as TextoPadraoCapitulo[];
+    const capitulos = await assinarCapitulosBg(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
 
     if (respondentes.length === 0) {
       return NextResponse.json({ error: "Nenhum respondente importado — não é possível gerar o laudo." }, { status: 400 });
