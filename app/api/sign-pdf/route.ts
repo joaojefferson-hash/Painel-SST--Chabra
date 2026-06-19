@@ -204,6 +204,9 @@ export async function POST(req: NextRequest) {
         .from("pdfs-assinados")
         .upload(pdfPath, new Uint8Array(pdfAssinado), {
           contentType: "application/pdf",
+          // Sem cache: o mesmo path é sobrescrito a cada (re)assinatura; com o
+          // padrão (3600s) o navegador/CDN reentregava o PDF antigo após re-assinar.
+          cacheControl: "0",
           upsert: true,
         });
 
