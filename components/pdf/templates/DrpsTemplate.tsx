@@ -91,6 +91,15 @@ const STYLE_BLOCK = `
 .drps-ex-list li { margin: 3pt 0; }
 .drps-conc-geral p { font-size: 12pt; line-height: 1.6; text-align: justify; color: #1f2937; margin: 0 0 12pt; text-indent: 1.25cm; }
 .drps-conc-geral ul, .drps-conc-geral ol { margin: 0 0 12pt 1.5em; font-size: 12pt; line-height: 1.6; }
+/* Tabelas coladas (Word/Excel/TipTap) na Conclusão Geral — sem estas regras as
+   tabelas saíam sem bordas/largura no PDF (texto "vazando"). */
+.drps-conc-geral table { border-collapse: collapse; width: 100%; table-layout: fixed; margin: 10pt 0; font-size: 10pt; }
+.drps-conc-geral th, .drps-conc-geral td { border: 1px solid #999; padding: 4px 6px; vertical-align: top; text-align: left; word-wrap: break-word; overflow-wrap: anywhere; }
+.drps-conc-geral th { background: #d4edda; color: #1e4d28; font-weight: 700; }
+.drps-conc-geral tr, .drps-conc-geral thead { break-inside: avoid; page-break-inside: avoid; }
+.drps-conc-geral thead { display: table-header-group; }
+/* TipTap resizable grava col widths em px que estouram a página; neutraliza p/ caber em 100%. */
+.drps-conc-geral colgroup col { width: auto !important; }
 `;
 
 function corMatriz(m: NivelMatriz): string {
