@@ -46,6 +46,13 @@ export interface MontarSignatarioOpts {
   cargo?: string | null;
   /** Registro profissional já formatado (ex: "Reg. 12345"). */
   registroProfissional?: string | null;
+  /**
+   * Força o selo "ASSINADO DIGITALMENTE" mesmo sem registro em `pdfs_assinados`
+   * ainda — usado ao GERAR o PDF que será assinado (a assinatura cria o registro
+   * depois). Renderiza o selo com os dados do responsável do documento. Sem isto,
+   * o PDF assinado sairia mostrando a linha de assinatura MANUAL (em branco).
+   */
+  forcarAssinado?: boolean;
 }
 
 export async function montarSignatarioTecnico(
@@ -108,6 +115,24 @@ export async function montarSignatarioTecnico(
         assinaturaImagemUrl,
       },
       dataHoraAssinatura: fmtDataHora(assinado.assinado_em),
+    };
+  }
+
+  // Ao GERAR o PDF que será assinado: ainda não há registro em pdfs_assinados,
+  // mas já sabemos quem assina (o responsável do documento). Renderiza o selo
+  // digital com os dados do responsável + carimbo de agora, para o PDF assinado
+  // sair com o selo (e não com a linha manual em branco).
+  if (opts.forcarAssinado) {
+    return {
+      signatario: {
+        nomeCompleto: responsavelNome,
+        cargo: opts.cargo ?? null,
+        registroProfissional: opts.registroProfissional ?? null,
+        cpf: null,
+        funcaoNoDocumento: funcao,
+        assinadoDigitalmente: true,
+      },
+      dataHoraAssinatura: fmtDataHora(),
     };
   }
 

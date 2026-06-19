@@ -98,12 +98,18 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     valores.usuario_logado = perfilLogado?.nome ?? rel.responsavel_tecnico ?? user.email ?? "";
     valores.tipo_relatorio = "DRPS — Diagnóstico de Riscos Psicossociais";
 
+    // ?assinado=1 → ao gerar o PDF que será assinado, já renderiza o selo digital
+    // (o registro em pdfs_assinados só existe DEPOIS da assinatura). Enviado pelo
+    // BotaoAssinarPdf na hora de assinar; o "Gerar Laudo" normal não envia.
+    const forcarAssinado = new URL(req.url).searchParams.get("assinado") === "1";
+
     const { signatario, dataHoraAssinatura } = await montarSignatarioTecnico(supabase, {
       tabela: "drps_relatorios_analise",
       docId: String(id),
       responsavelNome: rel.responsavel_tecnico as string | null,
       cargo: "Psicólogo(a)",
       registroProfissional: rel.crp ? `CRP ${rel.crp}` : null,
+      forcarAssinado,
     });
     const signatarios: Signatario[] = [signatario];
 

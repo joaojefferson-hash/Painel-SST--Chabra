@@ -100,7 +100,11 @@ export default function BotaoAssinarPdf({
         bytes = await res.arrayBuffer();
       } else if (apiPdfUrl) {
         // Template Puppeteer: a API gera o PDF server-side e retorna o buffer.
-        const res = await fetch(apiPdfUrl);
+        // assinado=1 → a rota já renderiza o selo digital no PDF que será
+        // assinado (o registro em pdfs_assinados só nasce após assinar). Rotas
+        // que não tratam o param simplesmente o ignoram (sem efeito colateral).
+        const sep = apiPdfUrl.includes("?") ? "&" : "?";
+        const res = await fetch(`${apiPdfUrl}${sep}assinado=1`);
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: "Erro ao gerar PDF" }));
           throw new Error((err as { error?: string }).error ?? "Erro ao gerar PDF");
