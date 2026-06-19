@@ -101,6 +101,11 @@ const STYLE_BLOCK = `
 .drps-conc-geral table { border-collapse: collapse; width: 100%; table-layout: fixed; margin: 10pt 0; font-size: 10pt; }
 .drps-conc-geral th, .drps-conc-geral td { border: 1px solid #999; padding: 4px 6px; vertical-align: top; text-align: left; word-wrap: break-word; overflow-wrap: anywhere; }
 .drps-conc-geral th { background: #d4edda; color: #1e4d28; font-weight: 700; }
+/* O TipTap embrulha o conteúdo da célula em <p>; sem isto eles herdam o
+   justify + text-indent 1.25cm da Conclusão (texto com buracos e recuado). */
+.drps-conc-geral td p, .drps-conc-geral th p { text-indent: 0; text-align: left; margin: 0 0 3pt; line-height: 1.35; }
+.drps-conc-geral td p:last-child, .drps-conc-geral th p:last-child { margin-bottom: 0; }
+.drps-conc-geral td ul, .drps-conc-geral td ol { margin: 0 0 0 1.1em; font-size: 10pt; }
 .drps-conc-geral tr, .drps-conc-geral thead { break-inside: avoid; page-break-inside: avoid; }
 .drps-conc-geral thead { display: table-header-group; }
 /* TipTap resizable grava col widths em px que estouram a página; neutraliza p/ caber em 100%. */
