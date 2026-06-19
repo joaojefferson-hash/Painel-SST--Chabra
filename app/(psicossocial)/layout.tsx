@@ -23,6 +23,7 @@ import {
   Printer,
   ClipboardList,
   Brain,
+  Workflow,
 } from "lucide-react";
 import SidebarShell, { type NavSection } from "@/components/layout/SidebarShell";
 import ModuleTopbar from "@/components/layout/ModuleTopbar";
@@ -91,6 +92,11 @@ function sectionsRelatorio(idRelatorio: string): NavSection[] {
           href: `${base}/conclusao-geral`,
           label: "Conclusão Geral",
           icon: CheckCircle2,
+        },
+        {
+          href: `${base}/plano-acao`,
+          label: "Plano de Ação 5W2H",
+          icon: Workflow,
         },
       ],
     },
