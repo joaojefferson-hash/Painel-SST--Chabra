@@ -1,0 +1,132 @@
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createSupabaseServerClient } from "@/lib/supabase/client";
+import type { Empresa } from "@/lib/supabase/types";
+import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
+import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
+import { montarValoresAet } from "@/lib/textos-padrao/variaveis-aet";
+import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
+import { assinarCapitulosBg } from "@/lib/pdf/assinar-midia";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+  const cookieStore = await cookies();
+  const supabase = createSupabaseServerClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
+  try {
+    const { data: rawRel, error: relErr } = await supabase
+      .from("aet_relatorios")
+      .select("*, empresas(nome_empresa, cnpj)")
+      .eq("id_relatorio", id)
+      .single();
+    if (relErr || !rawRel) {
+      return NextResponse.json({ error: "Relatório AET não encontrado" }, { status: 404 });
+    }
+    const rel = rawRel as Record<string, unknown>;
+
+    // Empresa completa para a seção "Identificação da Empresa".
+    let empresa: Empresa | null = null;
+    if (rel.id_empresa) {
+      const { data: rawEmp } = await supabase
+        .from("empresas").select("*").eq("id_empresa", rel.id_empresa as string).single();
+      empresa = (rawEmp as unknown as Empresa) ?? null;
+    }
+
+    const { data: rawCaps } = await supabase
+      .from("textos_padrao")
+      .select("*")
+      .eq("modulo", "aet")
+      .order("ordem", { ascending: true });
+    const capitulos = await assinarCapitulosBg(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const valoresVars = montarValoresAet(rel as any);
+
+    const { data: rawUsuario } = await supabase
+      .from("usuarios").select("nome").eq("email", user.email).single();
+    const perfilLogado = rawUsuario as { nome: string | null } | null;
+    valoresVars.usuario_logado = perfilLogado?.nome ?? (rel.responsavel_elaboracao as string) ?? user.email ?? "";
+    valoresVars.tipo_relatorio = "AET — Análise Ergonômica do Trabalho";
+
+    const { signatario, dataHoraAssinatura } = await montarSignatarioTecnico(supabase, {
+      tabela: "aet_relatorios",
+      docId: String(id),
+      responsavelNome: rel.responsavel_elaboracao as string | null,
+      cargo: (rel.titulo_profissional as string) ?? null,
+      registroProfissional: rel.registro_profissional ? `Reg. ${rel.registro_profissional}` : null,
+    });
+    const signatarios: Signatario[] = [signatario];
+
+    const empresasJoin = rel.empresas as { nome_empresa: string; cnpj: string | null } | null;
+    const folhaEmpresa = empresasJoin
+      ? { razaoSocial: empresasJoin.nome_empresa, cnpj: empresasJoin.cnpj ?? "" }
+      : null;
+
+    const shortId = String(id).replace(/-/g, "").slice(0, 8);
+    const identificadorDocumento = `AET-${new Date().getFullYear()}-${shortId}`;
+
+    const [{ default: React }, { renderToStaticMarkup }, { default: AetTemplate }] =
+      await Promise.all([
+        import("react"),
+        import("react-dom/server"),
+        import("@/components/pdf/templates/AetTemplate"),
+      ]);
+
+    const bodyHtml = renderToStaticMarkup(
+      React.createElement(AetTemplate, {
+        relatorio: {
+          setores: (rel.setores as Array<{ id: string }>) ?? [],
+          consideracoes_finais: (rel.consideracoes_finais as string) ?? null,
+        },
+        empresa,
+        capitulos,
+        valoresVars,
+        signatarios,
+        folhaEmpresa,
+        dataHoraAssinatura,
+        identificadorDocumento,
+      }),
+    );
+
+    const styleMatch = bodyHtml.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+    const headStyle = styleMatch ? styleMatch[1] : "";
+    const bodyWithoutStyle = bodyHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/, "");
+
+    const fullHtml = `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8" /><title>Laudo AET</title>
+<style>${headStyle}</style></head>
+<body style="margin:0;padding:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+${bodyWithoutStyle}
+</body></html>`;
+
+    const { gerarPdf } = await import("@/lib/pdf/gerar-pdf");
+    const pdfBuffer = await gerarPdf(fullHtml, {
+      margens: { top: "25mm", bottom: "25mm", left: "30mm", right: "20mm" },
+      // Numeração só após o sumário (capa/identificação/sumário ficam sem número).
+      numeroPaginasAposSeletor: '[data-slug="sumario"]',
+    });
+
+    // AET não usa anexos (não há AnexosManager no módulo).
+    return new NextResponse(new Uint8Array(pdfBuffer), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="laudo-aet-${shortId}.pdf"`,
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (err) {
+    console.error("[pdf/aet] Erro ao gerar PDF:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Erro interno ao gerar PDF" },
+      { status: 500 },
+    );
+  }
+}
