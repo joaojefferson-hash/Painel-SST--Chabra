@@ -223,7 +223,12 @@ export function useCongelarPdf() {
     mutationFn: async ({ apiPdfUrl, ...opts }: RegistrarPdfOpts & { apiPdfUrl: string }) => {
       const supabase = createSupabaseBrowserClient();
 
-      const res = await fetch(apiPdfUrl);
+      // A base congelada é o arquivo que será ASSINADO. Por isso gera já com o
+      // selo digital (assinado=1) — senão a base sai com a linha de assinatura
+      // manual em branco e a re-assinatura (que assina a base) reproduz isso.
+      // Rotas que não tratam o param simplesmente o ignoram (sem efeito colateral).
+      const sep = apiPdfUrl.includes("?") ? "&" : "?";
+      const res = await fetch(`${apiPdfUrl}${sep}assinado=1`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Falha ao gerar o PDF base" }));
         throw new Error((err as { error?: string }).error ?? "Falha ao gerar o PDF base");
