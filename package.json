@@ -1,6 +1,6 @@
 {
   "name": "painel-sst",
-  "version": "0.3.287",
+  "version": "0.3.288",
   "private": true,
   "main": "electron-dist/main.js",
   "scripts": {
@@ -34,6 +34,7 @@
     "@tiptap/extension-underline": "^3.23.4",
     "@tiptap/react": "^3.23.4",
     "@tiptap/starter-kit": "^3.23.4",
+    "asn1js": "^3.0.10",
     "better-sqlite3": "^11.10.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -46,7 +47,9 @@
     "node-forge": "^1.3.1",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.10.38",
+    "pkijs": "^3.4.0",
     "puppeteer-core": "^25.1.0",
+    "pvutils": "^1.1.5",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hot-toast": "^2.6.0",
