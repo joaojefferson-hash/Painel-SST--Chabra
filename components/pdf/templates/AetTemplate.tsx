@@ -36,6 +36,10 @@ export interface AetSetorLike {
   cargos?: AetCargoLike[];
   riscos?: AetRiscoLike[];
   owas?: Record<string, number[]> | null;
+  checklist?: Record<string, string> | null;
+  respostas_extras?: Record<string, string> | null;
+  parecer_tecnico?: string | null;
+  recomendacoes?: string | null;
 }
 
 interface AetOwasOpcao { value: number; label: string }
@@ -48,6 +52,53 @@ const SLUG_TO_OWAS_FIELD: Record<string, string> = {
   pernas: "posturas_pernas",
   esforco: "esforco",
 };
+
+export interface AetChecklistPerguntaLike { slug: string; secao?: string | null; label: string }
+
+// Labels padrão do checklist (fallback quando não há custom no banco). Espelha
+// CHECKLIST_PERGUNTAS_PADRAO de useAet.ts (que é "use client").
+const CHECKLIST_PADRAO: AetChecklistPerguntaLike[] = [
+  { slug: "levantamento_acima_limite", secao: "Postura", label: "Há registros de levantamento, transporte e descarga de materiais nesta atividade acima do limite recomendado?" },
+  { slug: "pausas_descanso", secao: "Postura", label: 'Caso a resposta anterior seja "em pé" a empresa oferece pausas para descanso ou disponibiliza cadeiras do tipo semi-sentado?' },
+  { slug: "uso_cadeira", secao: "Postura", label: "Para execução das atividades do dia-dia é disponibilizado o uso de cadeira?" },
+  { slug: "cadeira_adequada", secao: "Postura", label: "A cadeira é estofada e revestida, possui base giratória, assento com altura ajustável, ajustes de altura e inclinação, bordas arredondadas e formato anatômico?" },
+  { slug: "monitor", secao: "Postura", label: "A atividade necessita uso de monitor fixo sobre a mesa; caso positivo, este apresenta regulagens de altura e inclinação?" },
+  { slug: "organizacao_trabalho", secao: "Organização do Trabalho", label: "As normas de produção (equipamentos, modo operatório, segurança e qualidade) devem estar descritas nas instruções internas de trabalho, elaboradas pela empresa." },
+  { slug: "exigencia_levantamento", secao: "Exigência de Tempo", label: "Há registros de levantamento, transporte e descarga de materiais nesta atividade acima do limite recomendado?" },
+  { slug: "ritmo_por_demanda", secao: "Ritmo de Trabalho", label: "O ritmo de trabalho é determinado pela demanda de trabalho?" },
+  { slug: "pausas_formais", secao: "Adoção de Rodízios - Ergonômico", label: "Há pausas formais durante o ciclo de trabalho?" },
+  { slug: "rodizios_sistematizados", secao: "Adoção de Rodízios - Ergonômico", label: "Há rodízios sistematizados entre os postos de trabalho?" },
+];
+
+const SLUGS_PADRAO = new Set([
+  "levantamento_acima_limite", "trabalho_predominante", "pausas_descanso",
+  "uso_cadeira", "cadeira_adequada", "monitor", "organizacao_trabalho",
+  "exigencia_levantamento", "ritmo_por_demanda", "pausas_formais", "rodizios_sistematizados",
+]);
+
+function CheckSep({ title }: { title: string }) {
+  return <div className="aet-chk-sep"><p>{title}</p></div>;
+}
+function CheckRow({ label, value }: { label: string; value: string }) {
+  const sim = value === "sim";
+  const na = value === "nao_aplica";
+  return (
+    <div className="aet-chk-row">
+      <span className="lbl">{label}</span>
+      <span className={sim ? "aet-chk-tag aet-chk-tag--sim" : "aet-chk-tag aet-chk-tag--off"}>
+        {sim ? "Sim" : na ? "N/A" : "Não"}
+      </span>
+    </div>
+  );
+}
+function CheckSelect({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="aet-chk-row">
+      <span className="lbl">{label}</span>
+      <span className="aet-chk-tag aet-chk-tag--sim">{value || "—"}</span>
+    </div>
+  );
+}
 
 const CLASS_COLOR_HEX: Record<string, { bg: string; cor: string }> = {
   "Trivial": { bg: "#dcfce7", cor: "#166534" },
@@ -65,6 +116,7 @@ export interface AetTemplateProps {
   empresa: Partial<Empresa> | null;
   capitulos: TextoPadraoCapitulo[];
   owasConfig: AetOwasCfg[];
+  checklistPerguntas: AetChecklistPerguntaLike[];
   valoresVars: Record<string, string>;
   signatarios: Signatario[];
   folhaEmpresa: { razaoSocial: string; cnpj: string } | null;
@@ -126,6 +178,23 @@ const STYLE_BLOCK = `
 .aet-owas-chk--on { background: #374151; border-color: #374151; color: #fff; }
 .aet-owas-img { width: 96px; flex-shrink: 0; }
 .aet-owas-img img { width: 100%; height: auto; border: 1px solid #e5e7eb; border-radius: 4px; }
+/* Checklist */
+.aet-chk-wrap { padding: 10px 14px; border-top: 1px solid #f3f4f6; }
+.aet-chk-box { border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 8px; padding: 12px; }
+.aet-chk-tit { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin: 0 0 6px; }
+.aet-chk-sep { border-top: 1px solid #e5e7eb; padding-top: 8px; margin-top: 8px; }
+.aet-chk-sep:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+.aet-chk-sep p { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; margin: 0 0 4px; }
+.aet-chk-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.aet-chk-row .lbl { flex: 1; font-size: 11px; line-height: 1.35; color: #374151; }
+.aet-chk-tag { flex-shrink: 0; border-radius: 4px; padding: 1px 8px; font-size: 10px; font-weight: 600; }
+.aet-chk-tag--sim { background: #1f2937; color: #fff; }
+.aet-chk-tag--off { background: #fff; border: 1px solid #e5e7eb; color: #9ca3af; }
+.aet-rich { font-size: 11px; line-height: 1.55; color: #374151; }
+.aet-rich p { margin: 0 0 6px; }
+.aet-rich ul, .aet-rich ol { margin: 0 0 6px 1.2em; padding: 0; }
+.aet-rich table { border-collapse: collapse; width: 100%; font-size: 10px; margin: 6px 0; }
+.aet-rich th, .aet-rich td { border: 1px solid #cbd5e1; padding: 4px 6px; }
 `;
 
 function SectionTitulo({ titulo }: { titulo: string }) {
@@ -233,11 +302,82 @@ function BlocoOwas({ setor, owasConfig }: { setor: AetSetorLike; owasConfig: Aet
   );
 }
 
+/** Checklist ergonômico de um setor (Postura, Tempo, Ritmo, Rodízios, Organização). */
+function BlocoChecklist({ setor, perguntas }: { setor: AetSetorLike; perguntas: AetChecklistPerguntaLike[] }) {
+  const checklist = setor.checklist ?? {};
+  const pergunta = (slug: string) =>
+    perguntas.find((p) => p.slug === slug)?.label ?? CHECKLIST_PADRAO.find((p) => p.slug === slug)?.label ?? slug;
+  const lbl = (slug: string) => perguntas.find((p) => p.slug === slug)?.label ?? slug;
+  const secaoDe = (slug: string) => perguntas.find((p) => p.slug === slug)?.secao ?? "";
+  const customExtras = Object.entries(setor.respostas_extras ?? {}).filter(([slug]) => !SLUGS_PADRAO.has(slug));
+  const extrasDeSecao = (secao: string) => customExtras.filter(([slug]) => secaoDe(slug) === secao);
+  const extrasAdocao = customExtras.filter(([slug]) => secaoDe(slug).startsWith("Adoção"));
+  const extrasSemSecao = customExtras.filter(([slug]) => {
+    const s = secaoDe(slug);
+    return s !== "Postura" && s !== "Exigência de Tempo" && s !== "Ritmo de Trabalho" && !s.startsWith("Adoção") && s !== "Organização do Trabalho";
+  });
+  return (
+    <div className="aet-chk-wrap">
+      <div className="aet-chk-box">
+        <p className="aet-chk-tit">Checklist Ergonômico</p>
+        <CheckSep title="Postura" />
+        <CheckRow label={pergunta("levantamento_acima_limite")} value={checklist.levantamento_acima_limite ?? ""} />
+        <CheckSelect label={pergunta("trabalho_predominante")} value={checklist.trabalho_predominante ?? ""} />
+        <CheckRow label={pergunta("pausas_descanso")} value={checklist.pausas_descanso ?? ""} />
+        <CheckRow label={pergunta("uso_cadeira")} value={checklist.uso_cadeira ?? ""} />
+        <CheckRow label={pergunta("cadeira_adequada")} value={checklist.cadeira_adequada ?? ""} />
+        <CheckRow label={pergunta("monitor")} value={checklist.monitor ?? ""} />
+        {extrasDeSecao("Postura").map(([slug, val]) => <CheckRow key={slug} label={lbl(slug)} value={val} />)}
+        <CheckSep title="Exigência de Tempo" />
+        <CheckRow label={pergunta("exigencia_levantamento")} value={checklist.exigencia_levantamento ?? ""} />
+        {extrasDeSecao("Exigência de Tempo").map(([slug, val]) => <CheckRow key={slug} label={lbl(slug)} value={val} />)}
+        <CheckSep title="Ritmo de Trabalho" />
+        <CheckRow label={pergunta("ritmo_por_demanda")} value={checklist.ritmo_por_demanda ?? ""} />
+        {extrasDeSecao("Ritmo de Trabalho").map(([slug, val]) => <CheckRow key={slug} label={lbl(slug)} value={val} />)}
+        <CheckSep title="Adoção de Rodízios — Ergonômico" />
+        <CheckRow label={pergunta("pausas_formais")} value={checklist.pausas_formais ?? ""} />
+        <CheckRow label={pergunta("rodizios_sistematizados")} value={checklist.rodizios_sistematizados ?? ""} />
+        {extrasAdocao.map(([slug, val]) => <CheckRow key={slug} label={lbl(slug)} value={val} />)}
+        <CheckSep title="Organização do Trabalho" />
+        <p style={{ fontSize: 11, fontStyle: "italic", lineHeight: 1.5, color: "#4b5563", margin: 0 }}>{pergunta("organizacao_trabalho")}</p>
+        {extrasSemSecao.length > 0 && (
+          <>
+            <CheckSep title="Perguntas Adicionais" />
+            {extrasSemSecao.map(([slug, val]) => <CheckRow key={slug} label={lbl(slug)} value={val} />)}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Parecer técnico + recomendações (HTML do editor) de um setor. */
+function BlocoParecerRecom({ setor }: { setor: AetSetorLike }) {
+  if (!setor.parecer_tecnico && !setor.recomendacoes) return null;
+  return (
+    <>
+      {setor.parecer_tecnico && (
+        <div className="aet-chk-wrap">
+          <p className="aet-owas-tit">Parecer Técnico</p>
+          <div className="aet-rich" dangerouslySetInnerHTML={{ __html: setor.parecer_tecnico }} />
+        </div>
+      )}
+      {setor.recomendacoes && (
+        <div className="aet-chk-wrap">
+          <p className="aet-owas-tit">Recomendações</p>
+          <div className="aet-rich" dangerouslySetInnerHTML={{ __html: setor.recomendacoes }} />
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function AetTemplate({
   relatorio: rel,
   empresa,
   capitulos,
   owasConfig,
+  checklistPerguntas,
   valoresVars,
   signatarios,
   folhaEmpresa,
@@ -343,8 +483,10 @@ export default function AetTemplate({
             {comAnalise && (
               <div className="aet-analise" style={{ marginTop: 8 }}>
                 <BlocoOwas setor={s} owasConfig={owasConfig} />
+                <BlocoChecklist setor={s} perguntas={checklistPerguntas} />
+                <BlocoParecerRecom setor={s} />
                 <div className="aet-placeholder" style={{ margin: "0 14px 14px" }}>
-                  [Checklist Ergonômico + 13 Fatores — passos 4b/4c.]
+                  [13 Fatores Psicossociais — passo 4c.]
                 </div>
               </div>
             )}

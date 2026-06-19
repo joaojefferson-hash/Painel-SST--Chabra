@@ -70,6 +70,11 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       }),
     );
 
+    // Checklist ergonômico (labels custom; vazio → template usa o padrão interno).
+    const { data: rawChecklist } = await supabase
+      .from("aet_checklist_perguntas").select("slug, secao, label");
+    const checklistPerguntas = ((rawChecklist ?? []) as { slug: string; secao: string | null; label: string }[]);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const valoresVars = montarValoresAet(rel as any);
 
@@ -112,6 +117,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         empresa,
         capitulos,
         owasConfig,
+        checklistPerguntas,
         valoresVars,
         signatarios,
         folhaEmpresa,
