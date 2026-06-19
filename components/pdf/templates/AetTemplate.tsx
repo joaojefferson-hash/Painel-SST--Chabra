@@ -35,7 +35,19 @@ export interface AetSetorLike {
   descricao_atividade?: string | null;
   cargos?: AetCargoLike[];
   riscos?: AetRiscoLike[];
+  owas?: Record<string, number[]> | null;
 }
+
+interface AetOwasOpcao { value: number; label: string }
+/** Config de OWAS já com a imagem resolvida (absoluta/assinada) pela rota. */
+export interface AetOwasCfg { id: string; slug: string; titulo: string; opcoes: AetOwasOpcao[]; imagem: string | null }
+
+const SLUG_TO_OWAS_FIELD: Record<string, string> = {
+  costas: "posturas_costas",
+  bracos: "posturas_bracos",
+  pernas: "posturas_pernas",
+  esforco: "esforco",
+};
 
 const CLASS_COLOR_HEX: Record<string, { bg: string; cor: string }> = {
   "Trivial": { bg: "#dcfce7", cor: "#166534" },
@@ -52,6 +64,7 @@ export interface AetTemplateProps {
   };
   empresa: Partial<Empresa> | null;
   capitulos: TextoPadraoCapitulo[];
+  owasConfig: AetOwasCfg[];
   valoresVars: Record<string, string>;
   signatarios: Signatario[];
   folhaEmpresa: { razaoSocial: string; cnpj: string } | null;
@@ -99,6 +112,20 @@ const STYLE_BLOCK = `
 .aet-riscos th { background: #f3f4f6; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #4b5563; text-align: left; }
 .aet-riscos tr:nth-child(even) { background: #f9fafb; }
 .aet-placeholder { border: 1px dashed #cbd5e1; background: #f8fafc; color: #64748b; padding: 16px; border-radius: 8px; font-size: 11px; }
+/* OWAS */
+.aet-analise { border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; margin-bottom: 14pt; page-break-inside: auto; }
+.aet-owas-wrap { padding: 10px 14px; }
+.aet-owas-tit { margin: 0 0 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; }
+.aet-owas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.aet-owas-card { border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 6px; padding: 10px; }
+.aet-owas-card h4 { margin: 0 0 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; }
+.aet-owas-row { display: flex; gap: 10px; }
+.aet-owas-opts { flex: 1; }
+.aet-owas-opt { display: flex; align-items: flex-start; gap: 6px; margin: 3px 0; }
+.aet-owas-chk { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 3px; border: 1px solid #9ca3af; font-size: 9px; line-height: 1; }
+.aet-owas-chk--on { background: #374151; border-color: #374151; color: #fff; }
+.aet-owas-img { width: 96px; flex-shrink: 0; }
+.aet-owas-img img { width: 100%; height: auto; border: 1px solid #e5e7eb; border-radius: 4px; }
 `;
 
 function SectionTitulo({ titulo }: { titulo: string }) {
@@ -160,10 +187,57 @@ function SetorRiscosBlock({ setor, idx }: { setor: AetSetorLike; idx: number }) 
   );
 }
 
+/** Cards OWAS de um setor (posturas selecionadas + imagem de referência). */
+function BlocoOwas({ setor, owasConfig }: { setor: AetSetorLike; owasConfig: AetOwasCfg[] }) {
+  const owas = setor.owas ?? {};
+  const temOwas = owasConfig.some((cat) => {
+    const field = SLUG_TO_OWAS_FIELD[cat.slug];
+    return field && (owas[field] ?? []).length > 0;
+  });
+  if (!temOwas) return null;
+  return (
+    <div className="aet-owas-wrap">
+      <p className="aet-owas-tit">OWAS — Análise de Posturas</p>
+      <div className="aet-owas-grid">
+        {owasConfig.map((cat) => {
+          const field = SLUG_TO_OWAS_FIELD[cat.slug];
+          if (!field) return null;
+          const selected = (owas[field] ?? []) as number[];
+          return (
+            <div key={cat.id} className="aet-owas-card">
+              <h4>{cat.titulo}</h4>
+              <div className="aet-owas-row">
+                <div className="aet-owas-opts">
+                  {cat.opcoes.map((opt) => {
+                    const on = selected.includes(opt.value);
+                    return (
+                      <div key={opt.value} className="aet-owas-opt">
+                        <span className={on ? "aet-owas-chk aet-owas-chk--on" : "aet-owas-chk"}>{on ? "✓" : ""}</span>
+                        <span style={{ fontSize: 11, color: on ? "#111827" : "#9ca3af", lineHeight: 1.3 }}>{opt.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {cat.imagem && (
+                  <div className="aet-owas-img">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={cat.imagem} alt={`Referência OWAS: ${cat.titulo}`} />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function AetTemplate({
   relatorio: rel,
   empresa,
   capitulos,
+  owasConfig,
   valoresVars,
   signatarios,
   folhaEmpresa,
@@ -267,8 +341,11 @@ export default function AetTemplate({
           <div key={s.id} style={{ marginBottom: 16 }}>
             <SetorRiscosBlock setor={s} idx={i} />
             {comAnalise && (
-              <div className="aet-placeholder" style={{ marginTop: 8 }}>
-                [Análise ergonômica do setor (OWAS + checklist + 13 fatores) — passo 4.]
+              <div className="aet-analise" style={{ marginTop: 8 }}>
+                <BlocoOwas setor={s} owasConfig={owasConfig} />
+                <div className="aet-placeholder" style={{ margin: "0 14px 14px" }}>
+                  [Checklist Ergonômico + 13 Fatores — passos 4b/4c.]
+                </div>
               </div>
             )}
           </div>

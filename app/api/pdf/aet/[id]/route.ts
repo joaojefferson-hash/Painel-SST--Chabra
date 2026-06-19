@@ -6,7 +6,8 @@ import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { montarValoresAet } from "@/lib/textos-padrao/variaveis-aet";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
-import { assinarCapitulosBg } from "@/lib/pdf/assinar-midia";
+import { assinarCapitulosBg, assinarUmaMidiaPdf } from "@/lib/pdf/assinar-midia";
+import type { AetOwasCfg } from "@/components/pdf/templates/AetTemplate";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -46,6 +47,28 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       .eq("modulo", "aet")
       .order("ordem", { ascending: true });
     const capitulos = await assinarCapitulosBg(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
+
+    // OWAS config (aet_owas_categorias) — resolve imagem: custom (fotos) → assinada;
+    // default (/owas/x.svg, relativo) → absoluta (Puppeteer não tem origem).
+    const origin = new URL(_req.url).origin;
+    const { data: rawOwas } = await supabase
+      .from("aet_owas_categorias").select("*").order("ordem", { ascending: true });
+    const owasConfig: AetOwasCfg[] = await Promise.all(
+      ((rawOwas ?? []) as Record<string, unknown>[]).map(async (c) => {
+        const slug = String(c.slug ?? "");
+        const imagemUrl = (c.imagem_url as string | null) ?? null;
+        const imagem = imagemUrl
+          ? await assinarUmaMidiaPdf(supabase, imagemUrl, "fotos")
+          : `${origin}/owas/${slug}.svg`;
+        return {
+          id: String(c.id ?? slug),
+          slug,
+          titulo: (c.titulo as string) ?? "",
+          opcoes: Array.isArray(c.opcoes) ? (c.opcoes as { value: number; label: string }[]) : [],
+          imagem,
+        };
+      }),
+    );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const valoresVars = montarValoresAet(rel as any);
@@ -88,6 +111,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         },
         empresa,
         capitulos,
+        owasConfig,
         valoresVars,
         signatarios,
         folhaEmpresa,
