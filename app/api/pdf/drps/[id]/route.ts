@@ -165,6 +165,8 @@ ${bodyWithoutStyle}
       margens: { top: "14mm", bottom: "14mm", left: "12mm", right: "12mm" },
       // Numeração só após o sumário (capa/identificação/sumário ficam sem número).
       numeroPaginasAposSeletor: '[data-slug="sumario"]',
+      // Honra @page do CSS p/ capítulos em paisagem (drps_conclusao/assinatura).
+      preferCssPageSize: true,
     });
 
     const pdfFinal = await aplicarAnexosNoPdf(supabase, "psicossocial", id, pdfBuffer);

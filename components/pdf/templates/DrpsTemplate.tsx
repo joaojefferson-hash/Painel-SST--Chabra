@@ -52,6 +52,11 @@ export interface DrpsTemplateProps {
 }
 
 const STYLE_BLOCK = `
+/* Orientação por capítulo (requer gerarPdf com preferCssPageSize:true). Só size
+   aqui; a margem vem do option do Puppeteer (igual p/ retrato e paisagem). */
+@page { size: A4 portrait; }
+@page paisagem { size: A4 landscape; }
+.drps-cap-paisagem { page: paisagem; break-before: page; }
 * { box-sizing: border-box; }
 .drps-tabela { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 0; }
 .drps-tabela td, .drps-tabela th { border: 1px solid #cbd5e1; padding: 6px 9px; vertical-align: top; }
@@ -551,7 +556,11 @@ export default function DrpsTemplate({
       {temFixos ? (
         ordenados.map((c) =>
           c.tipo === "fixo" ? (
-            <div key={c.id_capitulo} className={classeQuebraFixo(c)} data-slug={c.slug_fixo ?? undefined}>{renderSecao(c.slug_fixo ?? "")}</div>
+            <div
+              key={c.id_capitulo}
+              className={`${classeQuebraFixo(c)}${c.orientacao === "paisagem" ? " drps-cap-paisagem" : ""}`}
+              data-slug={c.slug_fixo ?? undefined}
+            >{renderSecao(c.slug_fixo ?? "")}</div>
           ) : (
             <React.Fragment key={c.id_capitulo}>
               {renderEditavelUm(
