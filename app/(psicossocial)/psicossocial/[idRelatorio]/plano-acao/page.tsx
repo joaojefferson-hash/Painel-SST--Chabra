@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useState } from "react";
-import { Loader2, Save, Trash2, Plus, Workflow, AlertTriangle } from "lucide-react";
+import { use, useState, useEffect, useRef } from "react";
+import { Loader2, Save, Trash2, Plus, Workflow, AlertTriangle, ChevronDown, Check } from "lucide-react";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import { useDrpsRelatorio, useDrpsRespondentes } from "@/lib/hooks/useDrps";
 import { listarSetores } from "@/lib/drps/calculos";
@@ -214,31 +214,17 @@ function LinhaCard({
             placeholder="Objetivo / motivo da ação"
           />
         </Campo>
-        <Campo label="Onde (setores — pode escolher vários)" full>
+        <Campo label="Onde (setores — pode escolher vários)">
           {!canEdit ? (
-            <p className="text-sm text-gray-700">
+            <p className="py-1.5 text-sm text-gray-700">
               {selecionadosOnde.size ? Array.from(selecionadosOnde).join(", ") : "—"}
             </p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {opcoesOnde.map((s) => {
-                const ativo = selecionadosOnde.has(s);
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => toggleOnde(s)}
-                    className={
-                      ativo
-                        ? "rounded-full border border-verde-primary bg-verde-primary/10 px-3 py-1 text-xs font-medium text-verde-primary"
-                        : "rounded-full border border-gray-300 bg-white px-3 py-1 text-xs text-gray-600 hover:bg-gray-50"
-                    }
-                  >
-                    {s}
-                  </button>
-                );
-              })}
-            </div>
+            <MultiSelectSetores
+              opcoes={opcoesOnde}
+              selecionados={selecionadosOnde}
+              onToggle={toggleOnde}
+            />
           )}
         </Campo>
         <Campo label="Quando (prazo)">
@@ -304,6 +290,68 @@ function LinhaCard({
 
 const inputCls =
   "w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30 read-only:bg-gray-50 read-only:text-gray-600";
+
+/** Dropdown de múltipla escolha de setores (checkboxes, fecha ao clicar fora). */
+function MultiSelectSetores({
+  opcoes,
+  selecionados,
+  onToggle,
+}: {
+  opcoes: string[];
+  selecionados: Set<string>;
+  onToggle: (s: string) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!aberto) return;
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [aberto]);
+
+  const label = selecionados.size === 0 ? "Selecione os setores…" : Array.from(selecionados).join(", ");
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        className={`${inputCls} flex items-center justify-between gap-2 text-left`}
+      >
+        <span className={`truncate ${selecionados.size ? "text-gray-800" : "text-gray-400"}`}>{label}</span>
+        <ChevronDown className={`size-4 shrink-0 text-gray-400 transition-transform ${aberto ? "rotate-180" : ""}`} />
+      </button>
+      {aberto && (
+        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-gray-200 bg-white p-1 shadow-lg">
+          {opcoes.map((s) => {
+            const ativo = selecionados.has(s);
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => onToggle(s)}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <span
+                  className={`flex size-4 shrink-0 items-center justify-center rounded border ${
+                    ativo ? "border-verde-primary bg-verde-primary text-white" : "border-gray-300 bg-white"
+                  }`}
+                >
+                  {ativo && <Check className="size-3" />}
+                </span>
+                {s}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Campo({ label, full, children }: { label: string; full?: boolean; children: React.ReactNode }) {
   return (
