@@ -29,6 +29,14 @@ export interface GerarPdfOpts {
    * permite deslocar a numeração).
    */
   numeroPaginasAposSeletor?: string
+  /**
+   * Quando true, deixa o Chromium honrar o tamanho/orientação definidos no CSS
+   * via `@page` (`size: A4 landscape`, etc.) — necessário para capítulos em
+   * paisagem por seção. Implica REMOVER `format: 'A4'` (senão ele sobrescreve o
+   * CSS). Default false (mantém A4 retrato global; sem regressão nos demais laudos).
+   * Use só em templates que definem `@page` explicitamente (tamanho E margem).
+   */
+  preferCssPageSize?: boolean
 }
 
 /** Converte "12mm" → pontos PDF (1pt = 1/72in). */
@@ -113,11 +121,20 @@ export async function gerarPdf(
     const margens = opts?.margens ?? MARGENS_PADRAO
     const seletor = opts?.numeroPaginasAposSeletor
 
-    const basePdfOpts = {
-      format: 'A4' as const,
-      printBackground: opts?.printBackground ?? true,
-      margin: margens,
-    }
+    // Com preferCssPageSize, o tamanho/orientação vêm do CSS @page (necessário
+    // p/ paisagem por capítulo) — e NÃO se passa `format` (ele sobrescreveria).
+    // Sem a flag (default), mantém o A4 retrato global de sempre.
+    const basePdfOpts = opts?.preferCssPageSize
+      ? {
+          printBackground: opts?.printBackground ?? true,
+          margin: margens,
+          preferCSSPageSize: true as const,
+        }
+      : {
+          format: 'A4' as const,
+          printBackground: opts?.printBackground ?? true,
+          margin: margens,
+        }
 
     // Caso A: numeração a partir de um seletor — pdf-lib desenha "X / Y" só nas
     // páginas após o miolo inicial (capa/sumário), recomeçando em 1.
