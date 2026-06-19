@@ -19,7 +19,7 @@ import { useAnaliseQuimico } from "@/lib/hooks/useAnalisesQuimicos";
 import ConclusaoRapidaCard from "@/components/quimicos/ConclusaoRapidaCard";
 import RelatorioEstruturado from "@/components/quimicos/RelatorioEstruturado";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { baixarPdfAssinado } from "@/lib/pdf/baixar-assinado";
 
 export default function LaudoAnaliseQuimicoPage({
   params,
@@ -39,13 +39,7 @@ export default function LaudoAnaliseQuimicoPage({
     if (!pdfAssinado) return;
     setBaixando(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
-      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      await baixarPdfAssinado(pdfAssinado.pdf_path, "relatorio-assinado.pdf");
     } catch { toast.error("Erro ao baixar o PDF."); }
     finally { setBaixando(false); }
   }

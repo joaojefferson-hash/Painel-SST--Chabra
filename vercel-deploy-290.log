@@ -1,0 +1,55 @@
+<claude-code-hint v="1" type="plugin" value="vercel@claude-plugins-official" />
+Vercel CLI 54.7.1 (Node.js 24.14.0)
+Retrieving project…
+Deploying joao-jeffersons-projects/painel-sst-chabra
+Uploading [--------------------] (0.0B/36.3KB)
+Uploading [========------------] (16.0KB/36.3KB)
+Uploading [==========----------] (18.8KB/36.3KB)
+Uploading [===================-] (34.8KB/36.3KB)
+Uploading [====================] (36.3KB/36.3KB)
+  Inspect     https://vercel.com/joao-jeffersons-projects/painel-sst-chabra/AVRUrN9TmBku5CD91cJgHFKNf2TK
+▲ Production  https://painel-sst-chabra-rcmcm3hig-joao-jeffersons-projects.vercel.app
+Building…
+Running build in Washington, D.C., USA (East) – iad1
+Build machine configuration: 2 cores, 8 GB
+Retrieving list of deployment files...
+Downloading 501 deployment files...
+Downloading 501 deployment files...
+Restored build cache from previous deployment (4P792KwFRZWzuGLVjjdshxff5QKj)
+Running "vercel build"
+Vercel CLI 54.14.0
+Installing dependencies...
+up to date in 5s
+248 packages are looking for funding
+run `npm fund` for details
+Detected Next.js version: 15.5.15
+Running "npm run build"
+> painel-sst@0.3.290 build
+> next build
+▲ Next.js 15.5.15
+Creating an optimized production build ...
+[2K[1A[2K[G▲ Production  https://painel-sst-chabra-rcmcm3hig-joao-jeffersons-projects.vercel.app
+Completing…
+▲ Aliased     https://painel-sst-chabra.vercel.app
+{
+  "status": "ok",
+  "deployment": {
+    "id": "dpl_AVRUrN9TmBku5CD91cJgHFKNf2TK",
+    "url": "https://painel-sst-chabra-rcmcm3hig-joao-jeffersons-projects.vercel.app",
+    "inspectorUrl": "https://vercel.com/joao-jeffersons-projects/painel-sst-chabra/AVRUrN9TmBku5CD91cJgHFKNf2TK",
+    "readyState": "READY",
+    "target": "production",
+    "deploymentApiUrl": "https://api.vercel.com/v13/deployments/dpl_AVRUrN9TmBku5CD91cJgHFKNf2TK"
+  },
+  "message": "Deployment painel-sst-chabra-rcmcm3hig-joao-jeffersons-projects.vercel.app ready.",
+  "next": [
+    {
+      "command": "vercel inspect painel-sst-chabra-rcmcm3hig-joao-jeffersons-projects.vercel.app",
+      "when": "Inspect deployment"
+    },
+    {
+      "command": "vercel deploy --prod",
+      "when": "Promote to production"
+    }
+  ]
+}

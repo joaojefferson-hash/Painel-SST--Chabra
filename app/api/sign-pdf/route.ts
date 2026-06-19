@@ -7,15 +7,9 @@ import {
   createSupabaseServiceClient,
 } from "@/lib/supabase/client";
 import type { Usuario } from "@/lib/supabase/types";
-import { assinarPdf } from "@/lib/pdf/assinar-pdf";
 import { assinarPdfPades } from "@/lib/pdf/assinar-pdf-pades";
 
 export const runtime = "nodejs";
-
-// Módulos que usam o signer PAdES ICP-Brasil novo (conformidade ITI). Começa só
-// pelo DRPS enquanto validamos no validar.iti.gov.br; os demais seguem no signer
-// antigo até a migração ser confirmada (não-regressão).
-const TABELAS_PADES = new Set(["drps_relatorios_analise"]);
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
@@ -185,11 +179,10 @@ export async function POST(req: NextRequest) {
         reason: "Assinatura digital ICP-Brasil A1",
         location: "Brasil",
       };
-      // DRPS → signer PAdES ICP-Brasil (conformidade ITI); demais → signer atual.
-      pdfAssinado =
-        tabelaNome && TABELAS_PADES.has(tabelaNome)
-          ? await assinarPdfPades(pdfBuffer, assinarOpts)
-          : await assinarPdf(pdfBuffer, assinarOpts);
+      // Todos os documentos usam o signer PAdES ICP-Brasil (conformidade ITI,
+      // validado no validar.iti.gov.br). O signer antigo (assinar-pdf.ts) fica
+      // como referência/rollback, mas não é mais chamado.
+      pdfAssinado = await assinarPdfPades(pdfBuffer, assinarOpts);
     } catch {
       return NextResponse.json(
         { error: "Falha ao processar o PDF. Recarregue a página e tente novamente." },

@@ -25,7 +25,7 @@ import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import toast from "react-hot-toast";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { baixarPdfAssinado } from "@/lib/pdf/baixar-assinado";
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
 import { detectRegistroTipo } from "@/lib/registro-profissional";
@@ -218,13 +218,7 @@ export default function AetLaudoPage({
     if (!pdfAssinado) return;
     setBaixando(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
-      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      await baixarPdfAssinado(pdfAssinado.pdf_path, "relatorio-assinado.pdf");
     } catch { toast.error("Erro ao baixar o PDF."); }
     finally { setBaixando(false); }
   }

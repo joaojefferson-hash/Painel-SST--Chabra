@@ -16,6 +16,7 @@ import StatusBadge from "@/components/inspecoes/StatusBadge";
 import NivelBadge from "@/components/riscos/NivelBadge";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { baixarPdfAssinado } from "@/lib/pdf/baixar-assinado";
 import { fmtData, formatCNPJ } from "@/lib/utils";
 import { NIVEIS_RISCO, NIVEL_CONFIG } from "@/lib/constants";
 import type { Risco } from "@/lib/supabase/types";
@@ -93,13 +94,7 @@ export default function RelatorioConsolidadoPage({ params }: Props) {
     if (!pdfAssinado) return;
     setBaixando(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: blob, error } = await supabase.storage.from("pdfs-assinados").download(pdfAssinado.pdf_path);
-      if (error || !blob) { toast.error("Não foi possível baixar o PDF."); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "relatorio-assinado.pdf"; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      await baixarPdfAssinado(pdfAssinado.pdf_path, "relatorio-assinado.pdf");
     } catch { toast.error("Erro ao baixar o PDF."); }
     finally { setBaixando(false); }
   }

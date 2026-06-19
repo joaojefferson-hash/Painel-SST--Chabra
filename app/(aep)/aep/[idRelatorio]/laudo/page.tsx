@@ -13,7 +13,7 @@ import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import { usePdfAssinado, usePdfCongelado } from "@/lib/hooks/usePdfsGerados";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { baixarPdfAssinado } from "@/lib/pdf/baixar-assinado";
 import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
 import { formatarDataBR, substituirVariaveis, substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 import type { AepSetor, AepChecklistFisica, AepChecklistCognitiva, AepChecklistOrganizacional } from "@/lib/supabase/types";
@@ -273,17 +273,7 @@ export default function AepLaudoPage({
     if (!pdfAssinado) return;
     setBaixando(true);
     try {
-      const { data, error } = await createSupabaseBrowserClient()
-        .storage
-        .from("pdfs-assinados")
-        .download(pdfAssinado.pdf_path);
-      if (error || !data) { toast.error("Não foi possível baixar o PDF. Tente novamente."); return; }
-      const url = URL.createObjectURL(data);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "relatorio-aep-assinado.pdf";
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      await baixarPdfAssinado(pdfAssinado.pdf_path, "relatorio-aep-assinado.pdf");
     } catch {
       toast.error("Erro ao baixar o PDF.");
     } finally {
