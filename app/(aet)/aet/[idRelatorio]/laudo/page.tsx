@@ -470,12 +470,13 @@ export default function AetLaudoPage({
                   {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
                   Baixar PDF Assinado
                 </button>
-                <BotaoAssinarPdf reAssinatura={true} defaultSignatoryName={responsavel || undefined} tabelaNome="aet_relatorios" docId={idRelatorio} onAssinado={recarregar} />
+                <BotaoAssinarPdf reAssinatura={true} apiPdfUrl={`/api/pdf/aet/${idRelatorio}`} defaultSignatoryName={responsavel || undefined} tabelaNome="aet_relatorios" docId={idRelatorio} onAssinado={recarregar} />
               </>
             ) : (
-              <BotaoAssinarPdf defaultSignatoryName={responsavel || undefined} tabelaNome="aet_relatorios" docId={idRelatorio} onAssinado={recarregar} />
+              <BotaoAssinarPdf apiPdfUrl={`/api/pdf/aet/${idRelatorio}`} defaultSignatoryName={responsavel || undefined} tabelaNome="aet_relatorios" docId={idRelatorio} onAssinado={recarregar} />
             )}
             <BotaoGerarPdf
+              apiPdfUrl={`/api/pdf/aet/${idRelatorio}`}
               tabelaNome="aet_relatorios"
               docId={idRelatorio}
               label="Gerar Laudo"
