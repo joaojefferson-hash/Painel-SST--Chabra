@@ -18,6 +18,7 @@ import {
 import { useState, useEffect } from "react";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import StorageImg from "@/components/ui/StorageImg";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
@@ -1405,9 +1406,8 @@ function SetorAnaliseBlock({
                       </div>
                       {imageSrc && (
                         <div className="w-32 shrink-0 self-start">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={imageSrc}
+                          <StorageImg
+                            stored={imageSrc}
                             alt={`Referência OWAS: ${cat.titulo}`}
                             className="h-auto w-full rounded border border-gray-200"
                           />
@@ -1519,9 +1519,8 @@ function SetorAnaliseBlock({
                   className="relative w-40 shrink-0 overflow-hidden rounded-md border border-gray-200"
                   style={{ aspectRatio: "16/9" }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
+                  <StorageImg
+                    stored={url}
                     alt={`Foto ${i + 1}`}
                     className="h-full w-full object-cover"
                   />
