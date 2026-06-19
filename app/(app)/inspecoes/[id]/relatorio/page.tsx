@@ -24,6 +24,7 @@ import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import StorageImg from "@/components/ui/StorageImg";
 import { useInspecao, useSalvarElaboracao } from "@/lib/hooks/useInspecao";
 import { useCurrentUser } from "@/lib/hooks/useUsuario";
 import { FileSignature } from "lucide-react";
@@ -1290,12 +1291,10 @@ function RiscoCard({ risco, epis, perguntasMap }: { risco: Risco; epis: EpiEpc[]
         {/* Foto FDS química */}
         {risco.foto_quim_url && (
           <div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={risco.foto_quim_url}
+            <StorageImg
+              stored={risco.foto_quim_url}
               alt="FDS"
               className="max-h-24 rounded border border-gray-200"
-              referrerPolicy="no-referrer"
             />
           </div>
         )}
@@ -1348,15 +1347,17 @@ function RiscoCard({ risco, epis, perguntasMap }: { risco: Risco; epis: EpiEpc[]
                   {e.fotos_urls && e.fotos_urls.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {e.fotos_urls.map((url, i) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <span
                           key={i}
-                          src={url}
-                          alt={`${e.tipo} foto ${i + 1}`}
-                          className="h-16 w-16 cursor-pointer rounded border border-gray-200 object-cover hover:opacity-80 print:cursor-default"
-                          referrerPolicy="no-referrer"
                           onClick={() => window.open(url, "_blank")}
-                        />
+                          className="cursor-pointer print:cursor-default"
+                        >
+                          <StorageImg
+                            stored={e.fotos_storage_paths?.[i] || url}
+                            alt={`${e.tipo} foto ${i + 1}`}
+                            className="h-16 w-16 rounded border border-gray-200 object-cover hover:opacity-80"
+                          />
+                        </span>
                       ))}
                     </div>
                   )}
@@ -1453,12 +1454,10 @@ function FotoCard({ foto }: { foto: Foto }) {
       onClick={() => window.open(foto.arquivo_foto, "_blank")}
       title="Clique para ampliar"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={foto.arquivo_foto}
+      <StorageImg
+        stored={foto.storage_path || foto.arquivo_foto}
         alt={foto.legenda ?? foto.categoria}
         className="aspect-square w-full object-cover"
-        referrerPolicy="no-referrer"
       />
       {foto.legenda && (
         <p className="truncate p-1 text-[10px] text-gray-700">{foto.legenda}</p>
@@ -1560,13 +1559,11 @@ function ExtintoresGrid({ extintores }: { extintores: Extintor[] }) {
                 <div className="shrink-0">
                   <div className="grid grid-cols-2 gap-1">
                     {e.fotos_urls!.slice(0, 4).map((url, i) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <StorageImg
                         key={i}
-                        src={url}
+                        stored={e.fotos_storage_paths?.[i] || url}
                         alt={`Extintor foto ${i + 1}`}
                         className="h-[60px] w-[60px] rounded border border-gray-200 object-cover"
-                        referrerPolicy="no-referrer"
                       />
                     ))}
                   </div>
