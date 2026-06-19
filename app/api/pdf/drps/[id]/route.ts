@@ -51,6 +51,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       { data: rawMon },
       { data: rawRev },
       { data: rawCaps },
+      { data: rawPlanoAcao },
     ] = await Promise.all([
       supabase.from("drps_respondentes").select("*").eq("id_relatorio", id),
       supabase.from("drps_probabilidades").select("*").eq("id_relatorio", id),
@@ -58,7 +59,21 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       supabase.from("drps_monitoramento").select("*").eq("id_relatorio", id),
       supabase.from("drps_revisao").select("*").eq("id_relatorio", id).maybeSingle(),
       supabase.from("textos_padrao").select("*").eq("modulo", "psicossocial").order("ordem", { ascending: true }),
+      supabase.from("drps_plano_acao_5w2h").select("*").eq("id_relatorio", id).order("ordem", { ascending: true }).order("created_at", { ascending: true }),
     ]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const planoAcao = ((rawPlanoAcao ?? []) as any[]).map((l) => ({
+      ordem: l.ordem ?? 0,
+      acao: l.acao ?? null,
+      justificativa: l.justificativa ?? null,
+      onde: l.onde ?? null,
+      prazo: l.prazo ?? null,
+      responsavel: l.responsavel ?? null,
+      como: l.como ?? null,
+      quanto_custa: l.quanto_custa ?? null,
+      status: l.status ?? "PENDENTE",
+    }));
 
     const respondentes = (rawResp ?? []) as unknown as DrpsRespondente[];
     const probabilidades = (rawProb ?? []) as unknown as DrpsProbabilidade[];
@@ -152,6 +167,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         folhaEmpresa,
         dataHoraAssinatura,
         identificadorDocumento,
+        planoAcao,
       }),
     );
 

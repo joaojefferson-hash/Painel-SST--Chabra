@@ -25,6 +25,18 @@ import type {
   TopicoComMatriz,
 } from "@/lib/drps/types";
 
+export interface PlanoAcaoLinha {
+  ordem: number;
+  acao: string | null;
+  justificativa: string | null;
+  onde: string | null;
+  prazo: string | null;
+  responsavel: string | null;
+  como: string | null;
+  quanto_custa: string | null;
+  status: string;
+}
+
 export interface DrpsTemplateProps {
   relatorio: {
     revisao: number;
@@ -49,6 +61,7 @@ export interface DrpsTemplateProps {
   folhaEmpresa: { razaoSocial: string; cnpj: string } | null;
   dataHoraAssinatura: string;
   identificadorDocumento: string;
+  planoAcao: PlanoAcaoLinha[];
 }
 
 const STYLE_BLOCK = `
@@ -92,6 +105,8 @@ const STYLE_BLOCK = `
 .drps-ex-table th, .drps-ex-table td { border: 1px solid #b5b5b5; padding: 4pt 6pt; vertical-align: top; }
 .drps-ex-table th { background: #d4edda; color: #1e4d28; font-weight: 700; text-align: left; }
 .drps-ex-table td.mes { text-align: center; font-weight: 700; color: #006B54; }
+.drps-ex-table tr { break-inside: avoid; page-break-inside: avoid; }
+.drps-ex-table thead { display: table-header-group; }
 .drps-ex-list { margin: 6pt 0 12pt 1.5em; padding: 0; font-size: 11pt; line-height: 1.6; }
 .drps-ex-list li { margin: 3pt 0; }
 .drps-conc-geral p { font-size: 12pt; line-height: 1.6; text-align: justify; color: #1f2937; margin: 0 0 12pt; text-indent: 1.25cm; }
@@ -275,6 +290,7 @@ export default function DrpsTemplate({
   folhaEmpresa,
   dataHoraAssinatura,
   identificadorDocumento,
+  planoAcao,
 }: DrpsTemplateProps) {
   const setores = listarSetores(respondentes);
   const blocos = setores.map((s) => {
@@ -320,6 +336,7 @@ export default function DrpsTemplate({
       case "drps_analise_setor":    return blocos.length > 0;
       case "drps_conclusao":        return !!relatorio.conclusao_geral;
       case "drps_plano_medidas":    return planoComConteudo.length > 0;
+      case "drps_plano_acao_5w2h":  return planoAcao.length > 0;
       case "drps_revisao":          return topicosPorSetorMon.length > 0 || !!revisao;
       case "drps_assinatura":       return true; // folha de assinaturas é capítulo numerado
       // sumário não é seção numerada
@@ -463,6 +480,49 @@ export default function DrpsTemplate({
     </section>
   ) : null;
 
+  const STATUS_PLANO: Record<string, string> = {
+    PENDENTE: "Pendente",
+    EM_ANDAMENTO: "Em andamento",
+    CONCLUIDA: "Concluída",
+  };
+  const planoAcaoNode = planoAcao.length > 0 ? (
+    <section className="drps-sec">
+      <h2>{numLabel(numPorSlug["drps_plano_acao_5w2h"], "Plano de Ação 5W2H")}</h2>
+      <p style={{ textIndent: "1.25cm" }}>
+        Ações de gerenciamento dos riscos psicossociais no formato 5W2H — o quê,
+        por quê, onde, quando, quem, como e quanto custa — com status de execução.
+      </p>
+      <table className="drps-ex-table">
+        <thead>
+          <tr>
+            <th style={{ width: "16%" }}>O quê (ação)</th>
+            <th style={{ width: "15%" }}>Por quê</th>
+            <th style={{ width: "12%" }}>Onde</th>
+            <th style={{ width: "9%" }}>Quando</th>
+            <th style={{ width: "11%" }}>Quem</th>
+            <th style={{ width: "16%" }}>Como</th>
+            <th style={{ width: "11%" }}>Quanto custa</th>
+            <th style={{ width: "10%", textAlign: "center" }}>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {planoAcao.map((l, i) => (
+            <tr key={i}>
+              <td>{l.acao || "—"}</td>
+              <td>{l.justificativa || "—"}</td>
+              <td>{l.onde || "—"}</td>
+              <td>{l.prazo || "—"}</td>
+              <td>{l.responsavel || "—"}</td>
+              <td>{l.como || "—"}</td>
+              <td>{l.quanto_custa || "—"}</td>
+              <td style={{ textAlign: "center" }}>{STATUS_PLANO[l.status] ?? l.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  ) : null;
+
   const revisaoNode = revisao ? (
     <section className="drps-sec">
       <h2>Revisão e Melhoria Contínua</h2>
@@ -532,6 +592,7 @@ export default function DrpsTemplate({
         </>
       );
       case "drps_conclusao":     return conclusaoNode;
+      case "drps_plano_acao_5w2h": return planoAcaoNode;
       case "drps_plano_medidas": return medidasNode;
       case "drps_revisao":       return <>{monitNode}{revisaoNode}</>;
       case "drps_assinatura":    return folhaNode;
