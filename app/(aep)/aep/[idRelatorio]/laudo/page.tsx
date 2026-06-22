@@ -4,6 +4,7 @@ import { use, useMemo, useState } from "react";
 import { AlertTriangle, BadgeCheck, Download, Loader2 } from "lucide-react";
 import { useAepRelatorio, CLASS_COLOR_AEP, riscoMaximoSetor } from "@/lib/hooks/useAep";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
+import HtmlConteudoAssinado from "@/components/ui/HtmlConteudoAssinado";
 import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
@@ -560,9 +561,9 @@ export default function AepLaudoPage({
                 <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
                   {numLabel(numPorId[c.id_capitulo], substituirVariaveisTexto(c.titulo, valoresVars))}
                 </h2>
-                <div
+                <HtmlConteudoAssinado
                   className="prose prose-sm max-w-none text-xs leading-relaxed text-gray-700 [&_p]:mb-2 [&_table]:w-full [&_td]:border [&_td]:border-gray-300 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-gray-300 [&_th]:bg-gray-50 [&_th]:px-2 [&_th]:py-1"
-                  dangerouslySetInnerHTML={{ __html: substituirVariaveis(c.conteudo, valoresVars) }}
+                  html={substituirVariaveis(c.conteudo, valoresVars)}
                 />
               </div>
             );

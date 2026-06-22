@@ -1,7 +1,13 @@
 "use client";
 
 import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
-import type { ModuloTextoPadrao, PosicaoPdf } from "@/lib/textos-padrao/types";
+import StorageImg from "@/components/ui/StorageImg";
+import HtmlConteudoAssinado from "@/components/ui/HtmlConteudoAssinado";
+import type {
+  ModuloTextoPadrao,
+  PosicaoPdf,
+  TextoPadraoCapitulo,
+} from "@/lib/textos-padrao/types";
 import {
   substituirVariaveis,
   substituirVariaveisTexto,
@@ -184,73 +190,100 @@ export default function TextosPadraoPrint({
         }
       `}</style>
 
-      {capitulos.map((c, idx) => {
-        const ehCapa =
-          !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
-        const orientacao = c.orientacao ?? "retrato";
-        // Primeiro capítulo: sempre nova página (não tem o que continuar).
-        // Capa: sempre nova página (ocupa folha inteira).
-        // Demais: respeita `quebra_pagina` ('nova' | 'continua').
-        const novaPagina =
-          idx === 0 || ehCapa || (c.quebra_pagina ?? "nova") === "nova";
-        const conteudoSubstituido = substituirVariaveis(c.conteudo, valores);
-        const tituloSubstituido = substituirVariaveisTexto(c.titulo, valores);
-        const classes = [
-          "textos-padrao-capitulo",
-          orientacao === "paisagem"
-            ? "textos-padrao-capitulo--paisagem"
-            : "textos-padrao-capitulo--retrato",
-          novaPagina
-            ? "textos-padrao-capitulo--nova-pagina"
-            : "textos-padrao-capitulo--continua",
-          ehCapa ? "textos-padrao-capitulo--capa" : "",
-        ]
-          .filter(Boolean)
-          .join(" ");
-        return (
-          <article key={c.id_capitulo} className={classes}>
-            {ehCapa && c.bg_imagem_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={c.bg_imagem_url}
-                alt=""
-                className="textos-padrao-capitulo-bg-img"
-              />
-            )}
-            {!ehCapa && (
-              <h2 className="textos-padrao-capitulo-titulo">
-                {numero && capituloId ? `${numero}. ` : ""}{tituloSubstituido}
-              </h2>
-            )}
-            {ehCapa && c.caixas_texto && c.caixas_texto.length > 0 ? (
-              c.caixas_texto.map((cx) => (
-                <div
-                  key={cx.id}
-                  className="textos-padrao-caixa-texto"
-                  style={{
-                    left: `${cx.x}%`,
-                    top: `${cx.y}%`,
-                    width: `${cx.w ?? 40}%`,
-                    fontSize: cx.fontSize ?? 16,
-                    fontWeight: cx.bold ? 700 : 400,
-                    color: cx.color ?? "#ffffff",
-                    textAlign: cx.align ?? "left",
-                    whiteSpace: "pre-wrap",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {substituirVariaveisTexto(cx.conteudo, valores)}
-                </div>
-              ))
-            ) : !ehCapa ? (
-              <div
-                className="textos-padrao-capitulo-conteudo"
-                dangerouslySetInnerHTML={{ __html: conteudoSubstituido }}
-              />
-            ) : null}
-          </article>
-        );
-      })}
+      {capitulos.map((c, idx) => (
+        <CapituloPrint
+          key={c.id_capitulo}
+          c={c}
+          idx={idx}
+          valores={valores}
+          numero={numero}
+          capituloId={capituloId}
+        />
+      ))}
     </section>
+  );
+}
+
+/**
+ * Um capítulo de Texto Padrão na prévia em tela. Subcomponente próprio para que
+ * o hook de assinatura das imagens inline (`useHtmlImagensAssinadas`) seja
+ * chamado uma vez por capítulo (hooks não podem rodar dentro de um `.map`).
+ */
+function CapituloPrint({
+  c,
+  idx,
+  valores,
+  numero,
+  capituloId,
+}: {
+  c: TextoPadraoCapitulo;
+  idx: number;
+  valores: Record<string, string>;
+  numero?: number;
+  capituloId?: string;
+}) {
+  const ehCapa =
+    !!c.bg_imagem_url || (c.titulo ?? "").trim().toLowerCase() === "capa";
+  const orientacao = c.orientacao ?? "retrato";
+  // Primeiro capítulo: sempre nova página (não tem o que continuar).
+  // Capa: sempre nova página (ocupa folha inteira).
+  // Demais: respeita `quebra_pagina` ('nova' | 'continua').
+  const novaPagina =
+    idx === 0 || ehCapa || (c.quebra_pagina ?? "nova") === "nova";
+  const conteudoSubstituido = substituirVariaveis(c.conteudo, valores);
+  const tituloSubstituido = substituirVariaveisTexto(c.titulo, valores);
+  const classes = [
+    "textos-padrao-capitulo",
+    orientacao === "paisagem"
+      ? "textos-padrao-capitulo--paisagem"
+      : "textos-padrao-capitulo--retrato",
+    novaPagina
+      ? "textos-padrao-capitulo--nova-pagina"
+      : "textos-padrao-capitulo--continua",
+    ehCapa ? "textos-padrao-capitulo--capa" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return (
+    <article className={classes}>
+      {ehCapa && c.bg_imagem_url && (
+        <StorageImg
+          stored={c.bg_imagem_url}
+          alt=""
+          className="textos-padrao-capitulo-bg-img"
+        />
+      )}
+      {!ehCapa && (
+        <h2 className="textos-padrao-capitulo-titulo">
+          {numero && capituloId ? `${numero}. ` : ""}{tituloSubstituido}
+        </h2>
+      )}
+      {ehCapa && c.caixas_texto && c.caixas_texto.length > 0 ? (
+        c.caixas_texto.map((cx) => (
+          <div
+            key={cx.id}
+            className="textos-padrao-caixa-texto"
+            style={{
+              left: `${cx.x}%`,
+              top: `${cx.y}%`,
+              width: `${cx.w ?? 40}%`,
+              fontSize: cx.fontSize ?? 16,
+              fontWeight: cx.bold ? 700 : 400,
+              color: cx.color ?? "#ffffff",
+              textAlign: cx.align ?? "left",
+              whiteSpace: "pre-wrap",
+              lineHeight: 1.3,
+            }}
+          >
+            {substituirVariaveisTexto(cx.conteudo, valores)}
+          </div>
+        ))
+      ) : !ehCapa ? (
+        <HtmlConteudoAssinado
+          className="textos-padrao-capitulo-conteudo"
+          html={conteudoSubstituido}
+        />
+      ) : null}
+    </article>
   );
 }

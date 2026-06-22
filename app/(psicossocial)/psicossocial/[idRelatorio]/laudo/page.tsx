@@ -16,6 +16,7 @@ import DrpsSumarioPrint from "@/components/drps/DrpsSumarioPrint";
 import DrpsRelatorioExtrasPrint from "@/components/drps/DrpsRelatorioExtrasPrint";
 import DrpsGestaoResumoPrint from "@/components/drps/DrpsGestaoResumoPrint";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
+import HtmlConteudoAssinado from "@/components/ui/HtmlConteudoAssinado";
 import { useDrpsStore } from "@/lib/drps/store";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import {
@@ -227,7 +228,7 @@ export default function PsicossocialLaudoPage({
         .drps-conclusao-geral-print ul, .drps-conclusao-geral-print ol { margin: 0 0 12pt 1.5em; font-size: 12pt; line-height: 1.6; }
       `}</style>
       <h2>{numLabel(numPorSlug["drps_conclusao"], "Conclusão Geral")}</h2>
-      <div dangerouslySetInnerHTML={{ __html: relatorio.conclusao_geral }} />
+      <HtmlConteudoAssinado html={relatorio.conclusao_geral} />
     </section>
   ) : null;
 
@@ -369,9 +370,9 @@ export default function PsicossocialLaudoPage({
         <h2 className="mb-2 border-b-2 border-emerald-700 pb-1 text-sm font-bold text-emerald-900">
           {numLabel(numPorId[c.id_capitulo], substituirVariaveisTexto(c.titulo, valoresVars))}
         </h2>
-        <div
+        <HtmlConteudoAssinado
           className="prose prose-sm max-w-none text-xs leading-relaxed text-gray-700 [&_p]:mb-2 [&_table]:w-full [&_td]:border [&_td]:border-gray-300 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-gray-300 [&_th]:bg-gray-50 [&_th]:px-2 [&_th]:py-1"
-          dangerouslySetInnerHTML={{ __html: substituirVariaveis(c.conteudo, valoresVars) }}
+          html={substituirVariaveis(c.conteudo, valoresVars)}
         />
       </div>
     );
@@ -714,12 +715,10 @@ function BlocoSetorLaudo({
               <tr><td className="drps-header-section">Conclusão</td></tr>
               <tr>
                 <td className="align-top">
-                  <div
+                  <HtmlConteudoAssinado
                     className="tiptap-conteudo prose prose-sm max-w-none text-[11px] leading-relaxed text-gray-900"
                     style={{ minHeight: 70 }}
-                    dangerouslySetInnerHTML={{
-                      __html: conclusao || "<em style=\"color:#9ca3af\">(Conclusão não preenchida)</em>",
-                    }}
+                    html={conclusao || "<em style=\"color:#9ca3af\">(Conclusão não preenchida)</em>"}
                   />
                 </td>
               </tr>

@@ -17,6 +17,7 @@ import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import { montarValoresEmpresa, formatarDataBR, substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 import { useRelatorioConformidade } from "@/lib/hooks/useRelatoriosConformidade";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
+import StorageImg from "@/components/ui/StorageImg";
 import { baixarPdfAssinado } from "@/lib/pdf/baixar-assinado";
 import type { RelatorioConformidadeItem } from "@/lib/supabase/types";
 
@@ -459,10 +460,9 @@ function ItemRowReadOnly({ item }: { item: RelatorioConformidadeItem }) {
         <div className="mt-3 flex justify-center">
           <div className={fotoUrls.length === 1 ? "flex justify-center" : "grid grid-cols-2 gap-3 print:gap-2"}>
             {fotoUrls.map((url, idx) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <StorageImg
                 key={`${url}-${idx}`}
-                src={url}
+                stored={url}
                 alt={`Foto do item ${item.item_codigo}`}
                 className="h-36 w-44 object-cover rounded-md border border-gray-300 sm:h-40 sm:w-52 print:h-40 print:w-48"
               />

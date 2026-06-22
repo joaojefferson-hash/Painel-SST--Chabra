@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { extrairPathStorage } from "@/lib/storage/signed-url";
@@ -42,5 +43,46 @@ export function useSignedUrls(stored: (string | null | undefined)[], bucket = "f
       retry: 1,
       queryFn: () => assinar(bucket, path!),
     })),
+  });
+}
+
+const IMG_SRC_RE = /<img\b[^>]*?\bsrc\s*=\s*(["'])(.*?)\1/gi;
+
+/**
+ * Reescreve as imagens inline (`<img src=...>`) de uma string HTML salva (rich
+ * text), trocando cada src do bucket por URL assinada. É o análogo CLIENT do
+ * `assinarImagensHtml` do servidor — para as PRÉVIAS na tela (autenticadas).
+ * Fallback-seguro: src de origem externa fica intacta e, enquanto a assinatura
+ * não resolve, usa o valor original (o bucket ainda é público).
+ */
+export function useHtmlImagensAssinadas(
+  html: string | null | undefined,
+  bucket = "fotos",
+): string {
+  // Extrai as srcs únicas (ordem estável para os hooks de assinatura).
+  const srcs = useMemo(() => {
+    if (!html) return [] as string[];
+    const set = new Set<string>();
+    const re = new RegExp(IMG_SRC_RE.source, "gi");
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) !== null) set.add(m[2]);
+    return [...set];
+  }, [html]);
+
+  const resultados = useSignedUrls(srcs, bucket);
+
+  if (!html || srcs.length === 0) return html ?? "";
+
+  const mapa = new Map<string, string>();
+  srcs.forEach((src, i) => {
+    const assinada = resultados[i]?.data;
+    if (assinada) mapa.set(src, assinada);
+  });
+  if (mapa.size === 0) return html;
+
+  const re = new RegExp(IMG_SRC_RE.source, "gi");
+  return html.replace(re, (full, _quote: string, src: string) => {
+    const assinada = mapa.get(src);
+    return assinada ? full.replace(src, assinada) : full;
   });
 }

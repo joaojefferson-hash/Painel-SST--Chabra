@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import StorageImg from "@/components/ui/StorageImg";
+import { useHtmlImagensAssinadas } from "@/lib/hooks/useSignedUrl";
 import StorageBg from "@/components/ui/StorageBg";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
@@ -1111,10 +1112,12 @@ function Section({ num, title, children }: { num: string; title: string; childre
 }
 
 function RichBlock({ html }: { html: string }) {
+  // Assina as imagens inline (<img>) gravadas no HTML rich-text (prévia em tela).
+  const assinado = useHtmlImagensAssinadas(html);
   return (
     <div
       className="prose prose-xs max-w-none text-xs leading-relaxed text-gray-700 [&_a]:text-gray-700 [&_a]:no-underline [&_p]:my-1"
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: assinado }}
     />
   );
 }
