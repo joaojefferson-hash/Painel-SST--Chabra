@@ -25,7 +25,13 @@ export function extrairPathStorage(
     }
   }
 
-  // É uma URL, mas não deste bucket → não sabemos resolver.
+  // Origens que NÃO são objeto do bucket — não tentar assinar (senão o Supabase
+  // responde "Object not found" e o toast global de erro dispara):
+  //  - preview local em memória (data:/blob:);
+  //  - asset estático do app servido pelo Next (/owas/1.svg, /logo.png, etc.);
+  //  - URL de outra origem/bucket.
+  if (/^(data:|blob:)/i.test(s)) return null;
+  if (s.startsWith("/")) return null;
   if (/^https?:\/\//i.test(s)) return null;
 
   // Path puro — tolera prefixo "<bucket>/".

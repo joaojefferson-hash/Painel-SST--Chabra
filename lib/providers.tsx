@@ -10,7 +10,11 @@ export default function Providers({ children }: { children: ReactNode }) {
     () =>
       new QueryClient({
         queryCache: new QueryCache({
-          onError: (error) => {
+          onError: (error, query) => {
+            // Queries best-effort (ex.: assinar URL de mídia) marcam-se com
+            // meta.silent — uma falha não deve poluir a tela com toast de erro
+            // (a imagem só faz fallback). Ver useSignedUrl.
+            if (query.meta?.silent) return;
             toast.error(`Erro ao carregar dados: ${(error as Error).message}`);
           },
         }),

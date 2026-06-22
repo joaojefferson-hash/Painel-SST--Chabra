@@ -27,6 +27,7 @@ export function useSignedUrl(stored: string | null | undefined, bucket = "fotos"
     staleTime: (TTL - 300) * 1000,
     gcTime: TTL * 1000,
     retry: 1,
+    meta: { silent: true },
     queryFn: () => assinar(bucket, path!),
   });
 }
@@ -41,6 +42,7 @@ export function useSignedUrls(stored: (string | null | undefined)[], bucket = "f
       staleTime: (TTL - 300) * 1000,
       gcTime: TTL * 1000,
       retry: 1,
+      meta: { silent: true },
       queryFn: () => assinar(bucket, path!),
     })),
   });
