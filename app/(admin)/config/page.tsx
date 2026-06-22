@@ -575,12 +575,14 @@ function LogoUpload({ configs }: { configs: Configs }) {
     try {
       const supabase = createSupabaseBrowserClient();
       const ext = file.name.split(".").pop() ?? "png";
+      // Branding fica num bucket PÚBLICO dedicado (não em `fotos`, que será
+      // privatizado): o logo aparece na /login sem sessão e não pode ser assinado.
       const path = `_config/logo_${gerarId("LOGO")}.${ext}`;
       const { error } = await supabase.storage
-        .from("fotos")
+        .from("branding")
         .upload(path, file, { upsert: true });
       if (error) throw error;
-      const { data: pub } = supabase.storage.from("fotos").getPublicUrl(path);
+      const { data: pub } = supabase.storage.from("branding").getPublicUrl(path);
       save.mutate({ chave: "logo_url", valor: pub.publicUrl });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro";
@@ -668,12 +670,13 @@ function AssinaturaEmpresaUpload({ configs }: { configs: Configs }) {
     try {
       const supabase = createSupabaseBrowserClient();
       const ext = file.name.split(".").pop() ?? "png";
+      // Branding (assinatura da empresa) no bucket público dedicado — ver LogoUpload.
       const path = `assinaturas/empresa_${gerarId("EMP")}.${ext}`;
       const { error } = await supabase.storage
-        .from("fotos")
+        .from("branding")
         .upload(path, file, { upsert: true });
       if (error) throw error;
-      const { data: pub } = supabase.storage.from("fotos").getPublicUrl(path);
+      const { data: pub } = supabase.storage.from("branding").getPublicUrl(path);
       save.mutate({ chave: "assinatura_empresa_url", valor: pub.publicUrl });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro";
