@@ -23,6 +23,7 @@ import {
 } from "@/lib/hooks/useAnexos";
 import { VINCULOS_ANEXO, type Anexo, type ModuloAnexo, type TipoAnexo } from "@/lib/anexos/types";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { abrirMidiaAssinada } from "@/lib/storage/abrir-midia-assinada";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -139,15 +140,14 @@ export default function AnexosManager({ modulo, idReferencia }: Props) {
                 />
               </div>
               <span className="shrink-0 text-[10px] text-gray-400">{tamanhoLegivel(a.tamanho_bytes)}</span>
-              <a
-                href={a.url}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={() => abrirMidiaAssinada(a.url, "anexos")}
                 className="shrink-0 rounded-md border border-gray-300 bg-white p-1.5 text-gray-500 hover:bg-gray-50"
                 title="Abrir"
               >
                 <ExternalLink className="size-3.5" />
-              </a>
+              </button>
               <button
                 type="button"
                 onClick={() => atualizar.mutate({ id_anexo: a.id_anexo, incluir_no_pdf: !a.incluir_no_pdf })}
