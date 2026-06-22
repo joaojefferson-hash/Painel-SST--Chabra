@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FileText, Download, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { extrairPathStorage } from "@/lib/storage/signed-url";
 import { useDocumentosCliente } from "@/lib/hooks/useDocumentosCliente";
 import { StatusDocBadge } from "./StatusBadgeCliente";
 import type { StatusDocumentoPortal } from "@/lib/supabase/types";
@@ -16,14 +17,17 @@ const FILTROS: { label: string; value: StatusDocumentoPortal | "todos" }[] = [
 ];
 
 async function baixarPdf(url: string) {
-  if (url.startsWith("http")) {
+  // Resolve via URL assinada quando o valor aponta para um bucket (path puro OU
+  // URL pública/assinada legada). Se for URL externa, abre direto. Sem o
+  // extrairPathStorage, uma URL pública de bucket (http) era aberta direto e
+  // quebraria ao privatizar o bucket.
+  const bucket = url.includes("portal-anexos") ? "portal-anexos" : "fotos";
+  const path = extrairPathStorage(url, bucket);
+  if (!path) {
     window.open(url, "_blank");
     return;
   }
-  // storage path
   const sb = createSupabaseBrowserClient();
-  const bucket = url.includes("portal-anexos") ? "portal-anexos" : "fotos";
-  const path = url.replace(/^.*\/storage\/v1\/object\/public\/[^/]+\//, "");
   const { data } = await sb.storage.from(bucket).createSignedUrl(path, 120);
   if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   else toast.error("Não foi possível abrir o arquivo.");

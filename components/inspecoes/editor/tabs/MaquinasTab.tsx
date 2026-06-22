@@ -25,6 +25,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useImportarMaquinasInspecao } from "@/lib/hooks/useInventarioMaquinas";
 import RevisaoIAModal, { type CampoRevisaoIA } from "@/components/ui/RevisaoIAModal";
 import StorageImg from "@/components/ui/StorageImg";
+import { abrirMidiaAssinada } from "@/lib/storage/abrir-midia-assinada";
 import { cn } from "@/lib/utils";
 import type { InspecaoMaquina, Setor } from "@/lib/supabase/types";
 
@@ -708,7 +709,7 @@ export default function MaquinasTab({
                 {m.foto_urls.map((url, i) => (
                   <span
                     key={i}
-                    onClick={() => window.open(url, "_blank")}
+                    onClick={() => abrirMidiaAssinada(url)}
                     title="Clique para ampliar"
                     className="cursor-pointer"
                   >

@@ -26,6 +26,7 @@ import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import StorageImg from "@/components/ui/StorageImg";
+import { abrirMidiaAssinada } from "@/lib/storage/abrir-midia-assinada";
 import { useInspecao, useSalvarElaboracao } from "@/lib/hooks/useInspecao";
 import { useCurrentUser } from "@/lib/hooks/useUsuario";
 import { FileSignature } from "lucide-react";
@@ -1344,7 +1345,7 @@ function RiscoCard({ risco, epis, perguntasMap }: { risco: Risco; epis: EpiEpc[]
                       {e.fotos_urls.map((url, i) => (
                         <span
                           key={i}
-                          onClick={() => window.open(url, "_blank")}
+                          onClick={() => abrirMidiaAssinada(url)}
                           className="cursor-pointer print:cursor-default"
                         >
                           <StorageImg
@@ -1446,7 +1447,7 @@ function FotoCard({ foto }: { foto: Foto }) {
   return (
     <div
       className="cursor-pointer overflow-hidden rounded border border-gray-200 hover:ring-2 hover:ring-verde-primary print:cursor-default print:ring-0"
-      onClick={() => window.open(foto.arquivo_foto, "_blank")}
+      onClick={() => abrirMidiaAssinada(foto.arquivo_foto)}
       title="Clique para ampliar"
     >
       <StorageImg
