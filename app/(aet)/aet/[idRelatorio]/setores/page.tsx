@@ -32,6 +32,8 @@ import {
 } from "@/lib/hooks/useAet";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import RichTextEditor from "@/components/drps/RichTextEditor";
+import StorageImg from "@/components/ui/StorageImg";
+import HtmlConteudoAssinado from "@/components/ui/HtmlConteudoAssinado";
 import { cn } from "@/lib/utils";
 import type {
   AetSetor,
@@ -991,8 +993,7 @@ export default function AetSetoresPage({
                     <div className="grid grid-cols-3 gap-2">
                       {(setor.fotos ?? []).slice(0, 6).map((url, fIdx) => (
                         <div key={fIdx} className="group relative aspect-video overflow-hidden rounded-md border border-gray-200">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={url} alt={`Foto ${fIdx + 1}`} className="h-full w-full object-cover" />
+                          <StorageImg stored={url} alt={`Foto ${fIdx + 1}`} className="h-full w-full object-cover" />
                           {canEdit && (
                             <button type="button" onClick={() => removeFoto(setor.id, url)}
                               className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -1394,9 +1395,9 @@ export default function AetSetoresPage({
             </div>
           ) : (
             consideracoes ? (
-              <div
+              <HtmlConteudoAssinado
                 className="prose prose-xs max-w-none text-xs leading-relaxed text-gray-700 [&_a]:text-gray-700 [&_a]:no-underline [&_p]:my-1"
-                dangerouslySetInnerHTML={{ __html: consideracoes }}
+                html={consideracoes}
               />
             ) : (
               <p className="text-xs italic text-gray-400">Sem considerações finais registradas.</p>
@@ -1434,8 +1435,7 @@ function OwasGroup({
         </div>
         {imageSrc && (
           <div className="w-36 shrink-0 self-start">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imageSrc} alt={`Referência OWAS: ${categoria.titulo}`} className="h-auto w-full rounded border border-gray-200" />
+            <StorageImg stored={imageSrc} alt={`Referência OWAS: ${categoria.titulo}`} className="h-auto w-full rounded border border-gray-200" />
           </div>
         )}
       </div>

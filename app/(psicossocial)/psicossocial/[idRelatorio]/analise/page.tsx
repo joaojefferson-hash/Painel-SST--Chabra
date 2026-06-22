@@ -18,6 +18,7 @@ import RichTextEditor from "@/components/drps/RichTextEditor";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import DrpsSumarioPrint from "@/components/drps/DrpsSumarioPrint";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
+import HtmlConteudoAssinado from "@/components/ui/HtmlConteudoAssinado";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
 import { detectRegistroTipo } from "@/lib/registro-profissional";
 import DrpsRelatorioExtrasPrint from "@/components/drps/DrpsRelatorioExtrasPrint";
@@ -952,11 +953,9 @@ function renderCapitulosPosicao(
                 </div>
               ))
             ) : c.conteudo ? (
-              <div
+              <HtmlConteudoAssinado
                 className="drps-capitulo-conteudo"
-                dangerouslySetInnerHTML={{
-                  __html: substituirVariaveis(c.conteudo, valoresVars),
-                }}
+                html={substituirVariaveis(c.conteudo, valoresVars)}
               />
             ) : null}
           </article>
@@ -1360,12 +1359,10 @@ function BlocoSetor({
                   }
                 />
               </div>
-              <div
+              <HtmlConteudoAssinado
                 className="tiptap-conteudo prose prose-sm max-w-none hidden text-[11px] leading-relaxed text-gray-900 print:block"
                 style={{ minHeight: 70 }}
-                dangerouslySetInnerHTML={{
-                  __html: textoLocal || "<em style=\"color:#9ca3af\">(Conclusão não preenchida)</em>",
-                }}
+                html={textoLocal || "<em style=\"color:#9ca3af\">(Conclusão não preenchida)</em>"}
               />
             </td>
           </tr>

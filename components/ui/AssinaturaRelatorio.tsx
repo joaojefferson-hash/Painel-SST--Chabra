@@ -7,6 +7,7 @@ import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
+import StorageImg from "@/components/ui/StorageImg";
 import toast from "react-hot-toast";
 
 export default function AssinaturaRelatorio({
@@ -159,8 +160,7 @@ export default function AssinaturaRelatorio({
       {/* ── Rubrica fixada em cada página impressa ── */}
       {assinaturaUrl && (
         <div className="rubrica-print-fixed print:block hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={assinaturaUrl} alt="Rubrica" className="h-8 w-auto object-contain opacity-70" />
+          <StorageImg stored={assinaturaUrl} alt="Rubrica" className="h-8 w-auto object-contain opacity-70" />
         </div>
       )}
 
@@ -214,9 +214,8 @@ export default function AssinaturaRelatorio({
               </div>
             ) : assinaturaPorImagem ? (
               <div className="flex h-32 w-72 items-end justify-center pb-1">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={assinaturaUrl!}
+                <StorageImg
+                  stored={assinaturaUrl!}
                   alt="Assinatura"
                   className="max-h-28 max-w-[280px] object-contain"
                 />
@@ -236,8 +235,7 @@ export default function AssinaturaRelatorio({
                 <div className="flex items-stretch gap-0">
                   <div className="flex w-24 shrink-0 items-center justify-center border-r border-blue-100 bg-blue-50/40 p-2">
                     {assinaturaUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={assinaturaUrl} alt="Assinatura" className="max-h-14 max-w-[80px] object-contain" />
+                      <StorageImg stored={assinaturaUrl} alt="Assinatura" className="max-h-14 max-w-[80px] object-contain" />
                     ) : certificado === "A3" ? (
                       <ShieldCheck className="size-10 text-purple-400" />
                     ) : (
