@@ -135,9 +135,10 @@ const STYLE_BLOCK = `
 .textos-padrao-capitulo--nova-pagina { page-break-before: always; }
 .textos-padrao-capitulo--continua    { page-break-before: auto; margin-top: 16pt; }
 /* Capa no estilo DRPS (img 100%, sem full-bleed → não corta caixas na borda) */
-.tp-capa { position: relative; width: 100%; margin-bottom: 16pt; page-break-after: always; }
-.tp-capa img.bg { width: 100%; height: auto; display: block; }
-.tp-capa .caixa { position: absolute; white-space: pre-wrap; line-height: 1.3; }
+.tp-capa { position: relative; width: 210mm; height: 297mm; overflow: hidden; page-break-after: always;
+  margin: calc(-1 * var(--pm-top, 20mm)) calc(-1 * var(--pm-right, 15mm)) calc(-1 * var(--pm-bottom, 20mm)) calc(-1 * var(--pm-left, 15mm)); }
+.tp-capa img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; z-index: 0; }
+.tp-capa .caixa { position: absolute; z-index: 1; white-space: pre-wrap; line-height: 1.3; }
 .textos-padrao-capitulo-titulo {
   font-size: 14pt; font-weight: 700; color: #1e4d28;
   border-bottom: 2px solid #006B54; padding-bottom: 4px; margin-bottom: 12pt;

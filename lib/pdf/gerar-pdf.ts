@@ -117,8 +117,17 @@ export async function gerarPdf(
 
   try {
     const page = await browser.newPage()
-    await page.setContent(html, { waitUntil: 'networkidle0' })
     const margens = opts?.margens ?? MARGENS_PADRAO
+    // Expõe as margens da página como variáveis CSS para o HTML. As capas
+    // (`.tp-capa`) usam-nas para sangrar exatamente até a borda do papel
+    // (margem negativa = -margem da página), sem moldura branca nem corte das
+    // caixas de texto. Injetado antes do HTML; o Chromium hoista o <style>.
+    const cssVars =
+      `<style>:root{` +
+      `--pm-top:${margens.top};--pm-right:${margens.right};` +
+      `--pm-bottom:${margens.bottom};--pm-left:${margens.left};` +
+      `}</style>`
+    await page.setContent(cssVars + html, { waitUntil: 'networkidle0' })
     const seletor = opts?.numeroPaginasAposSeletor
 
     // Com preferCssPageSize, o tamanho/orientação vêm do CSS @page (necessário

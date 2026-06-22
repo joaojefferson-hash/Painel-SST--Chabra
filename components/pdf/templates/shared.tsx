@@ -28,9 +28,10 @@ export const TP_STYLE = `
 .tp-cap .corpo table { border-collapse: collapse; width: 100%; margin: 8pt 0; font-size: 10pt; }
 .tp-cap .corpo th, .tp-cap .corpo td { border: 1px solid #999; padding: 4px 6px; vertical-align: top; }
 .tp-cap .corpo th { background: #d4edda; color: #1e4d28; font-weight: 700; text-align: left; }
-.tp-capa { position: relative; width: 100%; margin-bottom: 16pt; page-break-after: always; }
-.tp-capa img.bg { width: 100%; height: auto; display: block; border-radius: 4px; }
-.tp-capa .caixa { position: absolute; white-space: pre-wrap; line-height: 1.3; }
+.tp-capa { position: relative; width: 210mm; height: 297mm; overflow: hidden; page-break-after: always;
+  margin: calc(-1 * var(--pm-top, 20mm)) calc(-1 * var(--pm-right, 15mm)) calc(-1 * var(--pm-bottom, 20mm)) calc(-1 * var(--pm-left, 15mm)); }
+.tp-capa img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; z-index: 0; }
+.tp-capa .caixa { position: absolute; z-index: 1; white-space: pre-wrap; line-height: 1.3; }
 .textos-padrao-capitulo--nova-pagina { page-break-before: always; }
 .textos-padrao-capitulo--continua { page-break-before: auto; }
 `;

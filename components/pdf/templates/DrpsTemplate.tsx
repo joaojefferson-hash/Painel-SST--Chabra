@@ -94,9 +94,10 @@ const STYLE_BLOCK = `
 .tp-cap .corpo table { border-collapse: collapse; width: 100%; margin: 8pt 0; font-size: 10pt; }
 .tp-cap .corpo th, .tp-cap .corpo td { border: 1px solid #999; padding: 4px 6px; }
 .tp-cap .corpo th { background: #d4edda; color: #1e4d28; }
-.tp-capa { position: relative; width: 100%; margin-bottom: 16pt; page-break-after: always; }
-.tp-capa img.bg { width: 100%; height: auto; display: block; }
-.tp-capa .caixa { position: absolute; white-space: pre-wrap; line-height: 1.3; }
+.tp-capa { position: relative; width: 210mm; height: 297mm; overflow: hidden; page-break-after: always;
+  margin: calc(-1 * var(--pm-top, 20mm)) calc(-1 * var(--pm-right, 15mm)) calc(-1 * var(--pm-bottom, 20mm)) calc(-1 * var(--pm-left, 15mm)); }
+.tp-capa img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; z-index: 0; }
+.tp-capa .caixa { position: absolute; z-index: 1; white-space: pre-wrap; line-height: 1.3; }
 .drps-sec { font-family: 'Times New Roman', Times, serif; }
 .drps-sec h2 { font-size: 16pt; font-weight: 700; color: #1e4d28; border-bottom: 2px solid #006B54; padding-bottom: 6px; margin: 0 0 14pt; text-transform: uppercase; letter-spacing: .05em; }
 .drps-sec h3 { font-size: 13pt; font-weight: 700; color: #1e4d28; margin: 14pt 0 6pt; }
