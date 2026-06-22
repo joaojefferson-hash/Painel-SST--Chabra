@@ -26,6 +26,7 @@ import { useImportarMaquinasInspecao } from "@/lib/hooks/useInventarioMaquinas";
 import RevisaoIAModal, { type CampoRevisaoIA } from "@/components/ui/RevisaoIAModal";
 import StorageImg from "@/components/ui/StorageImg";
 import { abrirMidiaAssinada } from "@/lib/storage/abrir-midia-assinada";
+import { extrairPathStorage } from "@/lib/storage/signed-url";
 import { cn } from "@/lib/utils";
 import type { InspecaoMaquina, Setor } from "@/lib/supabase/types";
 
@@ -594,8 +595,30 @@ export default function MaquinasTab({
     toast.success("Sugestões aplicadas — revise e salve");
   }
 
-  function gerarRelatorio() {
-    const html = buildRelatorioHTML(maquinas, setoresMap);
+  async function gerarRelatorio() {
+    // O popup é aberto via document.write — uma janela SEM sessão Supabase, que
+    // não consegue assinar URL. Então assino as fotos AQUI (em lote) e embuto as
+    // URLs assinadas no HTML. Sem isso, ao privatizar o bucket `fotos` o relatório
+    // sairia com as imagens quebradas.
+    const todas = Array.from(new Set(maquinas.flatMap((m) => m.foto_urls).filter(Boolean)));
+    const assinadas = new Map<string, string>();
+    const comPath = todas
+      .map((u) => ({ u, path: extrairPathStorage(u, "fotos") }))
+      .filter((x): x is { u: string; path: string } => !!x.path);
+    if (comPath.length) {
+      try {
+        const sb = createSupabaseBrowserClient();
+        const { data } = await sb.storage
+          .from("fotos")
+          .createSignedUrls(comPath.map((x) => x.path), 3600);
+        data?.forEach((d, i) => {
+          if (d.signedUrl) assinadas.set(comPath[i].u, d.signedUrl);
+        });
+      } catch {
+        // fallback: mantém as URLs originais (degrada como antes, não trava o relatório)
+      }
+    }
+    const html = buildRelatorioHTML(maquinas, setoresMap, assinadas);
     const w = window.open("", "_blank");
     if (!w) { toast.error("Popup bloqueado. Permita popups para este site."); return; }
     w.document.write(html);
@@ -1241,7 +1264,8 @@ async function resizeAndBase64(file: File, maxPx = 1024): Promise<string> {
 
 function buildRelatorioHTML(
   maquinas: InspecaoMaquina[],
-  setoresMap: Map<string, string>
+  setoresMap: Map<string, string>,
+  fotosAssinadas: Map<string, string> = new Map()
 ): string {
   const grauCores: Record<string, string> = {
     BAIXO: "#166534",
@@ -1280,7 +1304,7 @@ function buildRelatorioHTML(
             ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${m.foto_urls
                 .map(
                   (u) =>
-                    `<img src="${u}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;" referrerpolicy="no-referrer"/>`
+                    `<img src="${fotosAssinadas.get(u) ?? u}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;" referrerpolicy="no-referrer"/>`
                 )
                 .join("")}</div>`
             : "";
