@@ -10,7 +10,7 @@ import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
-import { assinarMidiaPdf, assinarCapitulosBg } from "@/lib/pdf/assinar-midia";
+import { assinarMidiaPdf, assinarCapitulos } from "@/lib/pdf/assinar-midia";
 
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
 
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .select("*")
       .eq("modulo", "apreciacao_maquinas")
       .order("ordem", { ascending: true });
-    const capitulos = await assinarCapitulosBg(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
+    const capitulos = await assinarCapitulos(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
 
     let empresa: Empresa | null = null;
     if (ap.id_empresa) {

@@ -7,7 +7,7 @@ import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
-import { assinarCapitulosBg } from "@/lib/pdf/assinar-midia";
+import { assinarCapitulos } from "@/lib/pdf/assinar-midia";
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
 
 export const runtime = "nodejs";
@@ -162,7 +162,7 @@ export async function GET(
   if (capsError) console.error("[pdf/aep] textos_padrao error:", capsError);
   console.log("[pdf/aep] capitulos count:", caps?.length ?? 0);
 
-  const capitulos = await assinarCapitulosBg(supabase, (caps ?? []) as TextoPadraoCapitulo[]);
+  const capitulos = await assinarCapitulos(supabase, (caps ?? []) as TextoPadraoCapitulo[]);
 
   // Variáveis dinâmicas para substituição nos textos padrão
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -14,7 +14,7 @@ import type {
 } from "@/lib/drps/types";
 import { montarValoresVariaveis } from "@/lib/drps/variaveis";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
-import { assinarCapitulosBg } from "@/lib/pdf/assinar-midia";
+import { assinarCapitulos, assinarImagensHtml } from "@/lib/pdf/assinar-midia";
 
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
 
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     const planoMedidas = (rawPlano as unknown as DrpsPlanoMedidas) ?? null;
     const monitoramentos = (rawMon ?? []) as unknown as DrpsMonitoramento[];
     const revisao = (rawRev as unknown as DrpsRevisao) ?? null;
-    const capitulos = await assinarCapitulosBg(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
+    const capitulos = await assinarCapitulos(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
 
     if (respondentes.length === 0) {
       return NextResponse.json({ error: "Nenhum respondente importado — não é possível gerar o laudo." }, { status: 400 });
@@ -132,6 +132,18 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       ? { razaoSocial: empresa.nome_empresa, cnpj: empresa.cnpj ?? "" }
       : null;
 
+    // Assina as imagens inline (<img>) gravadas no HTML das conclusões (rich text).
+    const conclusaoGeralAssinada = await assinarImagensHtml(supabase, rel.conclusao_geral);
+    const conclusoesPorSetorAssinadas = rel.conclusoes_por_setor
+      ? Object.fromEntries(
+          await Promise.all(
+            Object.entries(rel.conclusoes_por_setor as Record<string, string>).map(
+              async ([setor, html]) => [setor, await assinarImagensHtml(supabase, html)] as const,
+            ),
+          ),
+        )
+      : rel.conclusoes_por_setor;
+
     const shortId = String(id).replace(/-/g, "").slice(0, 8);
     const identificadorDocumento = `DRPS-${new Date().getFullYear()}-${shortId}`;
 
@@ -151,8 +163,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           data_elaboracao: rel.data_elaboracao,
           agravos_por_setor: rel.agravos_por_setor,
           medidas_por_setor: rel.medidas_por_setor,
-          conclusoes_por_setor: rel.conclusoes_por_setor,
-          conclusao_geral: rel.conclusao_geral,
+          conclusoes_por_setor: conclusoesPorSetorAssinadas,
+          conclusao_geral: conclusaoGeralAssinada,
         },
         empresa,
         respondentes,

@@ -6,7 +6,7 @@ import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { montarValoresAet } from "@/lib/textos-padrao/variaveis-aet";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
-import { assinarCapitulosBg, assinarUmaMidiaPdf } from "@/lib/pdf/assinar-midia";
+import { assinarCapitulos, assinarUmaMidiaPdf, assinarImagensHtml } from "@/lib/pdf/assinar-midia";
 import type {
   AetOwasCfg, AetFatorConfigLike, AetFatorPerguntaLike,
   AetQpsRespostaLike, AetFatorPsiLike, AetQpsMetaLike,
@@ -49,7 +49,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       .select("*")
       .eq("modulo", "aet")
       .order("ordem", { ascending: true });
-    const capitulos = await assinarCapitulosBg(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
+    const capitulos = await assinarCapitulos(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
 
     // OWAS config (aet_owas_categorias) — resolve imagem: custom (fotos) → assinada;
     // default (/owas/x.svg, relativo) → absoluta (Puppeteer não tem origem).
@@ -126,10 +126,26 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         import("@/components/pdf/templates/AetTemplate"),
       ]);
 
+    // Assina as imagens inline (<img>) gravadas no HTML rich-text de cada setor
+    // (parecer técnico e recomendações).
+    const setoresAssinados = await Promise.all(
+      ((rel.setores as Array<Record<string, unknown>>) ?? []).map(async (s) => ({
+        ...s,
+        parecer_tecnico:
+          typeof s.parecer_tecnico === "string"
+            ? await assinarImagensHtml(supabase, s.parecer_tecnico)
+            : s.parecer_tecnico,
+        recomendacoes:
+          typeof s.recomendacoes === "string"
+            ? await assinarImagensHtml(supabase, s.recomendacoes)
+            : s.recomendacoes,
+      })),
+    );
+
     const bodyHtml = renderToStaticMarkup(
       React.createElement(AetTemplate, {
         relatorio: {
-          setores: (rel.setores as Array<{ id: string }>) ?? [],
+          setores: setoresAssinados as unknown as Array<{ id: string }>,
           consideracoes_finais: (rel.consideracoes_finais as string) ?? null,
         },
         empresa,

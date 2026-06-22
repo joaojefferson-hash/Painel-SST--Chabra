@@ -9,7 +9,7 @@ import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variav
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
 
 import { aplicarAnexosNoPdf } from "@/lib/anexos/server";
-import { assinarMidiaPdf, assinarCapitulosBg } from "@/lib/pdf/assinar-midia";
+import { assinarMidiaPdf, assinarCapitulos } from "@/lib/pdf/assinar-midia";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .select("*")
       .eq("modulo", "nao_conformidade")
       .order("ordem", { ascending: true });
-    const capitulos = await assinarCapitulosBg(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
+    const capitulos = await assinarCapitulos(supabase, (rawCaps ?? []) as unknown as TextoPadraoCapitulo[]);
 
     let empresa: Empresa | null = null;
     if (rel.id_empresa) {
