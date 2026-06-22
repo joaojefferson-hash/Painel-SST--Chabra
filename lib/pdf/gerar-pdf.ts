@@ -37,6 +37,14 @@ export interface GerarPdfOpts {
    * Use só em templates que definem `@page` explicitamente (tamanho E margem).
    */
   preferCssPageSize?: boolean
+  /**
+   * Capa full-bleed: a capa (`.tp-capa { page: capa }`) ocupa a folha inteira,
+   * sem moldura branca. Implementado com `@page capa { margin: 0 }` honrado via
+   * preferCSSPageSize — único jeito confiável (margem negativa NÃO sangra para a
+   * área de margem da página no Chromium). As demais páginas mantêm as margens
+   * normais (vêm da opção `margens`, pois o `@page` padrão não declara margem).
+   */
+  capaFullBleed?: boolean
 }
 
 /** Converte "12mm" → pontos PDF (1pt = 1/72in). */
@@ -118,22 +126,20 @@ export async function gerarPdf(
   try {
     const page = await browser.newPage()
     const margens = opts?.margens ?? MARGENS_PADRAO
-    // Expõe as margens da página como variáveis CSS para o HTML. As capas
-    // (`.tp-capa`) usam-nas para sangrar exatamente até a borda do papel
-    // (margem negativa = -margem da página), sem moldura branca nem corte das
-    // caixas de texto. Injetado antes do HTML; o Chromium hoista o <style>.
-    const cssVars =
-      `<style>:root{` +
-      `--pm-top:${margens.top};--pm-right:${margens.right};` +
-      `--pm-bottom:${margens.bottom};--pm-left:${margens.left};` +
-      `}</style>`
-    await page.setContent(cssVars + html, { waitUntil: 'networkidle0' })
+    // Capa full-bleed: define a named page `capa` sem margem. A `.tp-capa` usa
+    // `page: capa` e ocupa a folha inteira; as demais páginas seguem com as
+    // margens normais (a opção `margens` abaixo, já que o `@page` padrão não
+    // declara margem). Requer preferCSSPageSize para o Chromium honrar o @page.
+    const capaCss = opts?.capaFullBleed
+      ? `<style>@page{size:A4 portrait;}@page capa{size:A4 portrait;margin:0;}</style>`
+      : ''
+    await page.setContent(capaCss + html, { waitUntil: 'networkidle0' })
     const seletor = opts?.numeroPaginasAposSeletor
 
     // Com preferCssPageSize, o tamanho/orientação vêm do CSS @page (necessário
     // p/ paisagem por capítulo) — e NÃO se passa `format` (ele sobrescreveria).
     // Sem a flag (default), mantém o A4 retrato global de sempre.
-    const basePdfOpts = opts?.preferCssPageSize
+    const basePdfOpts = (opts?.preferCssPageSize || opts?.capaFullBleed)
       ? {
           printBackground: opts?.printBackground ?? true,
           margin: margens,

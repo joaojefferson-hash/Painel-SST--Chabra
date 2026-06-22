@@ -181,6 +181,7 @@ ${bodyWithoutStyle}
       margens: { top: "25mm", bottom: "25mm", left: "30mm", right: "20mm" },
       // Numeração só após o sumário (capa/identificação/sumário ficam sem número).
       numeroPaginasAposSeletor: '[data-slug="sumario"]',
+      capaFullBleed: true,
     });
 
     // AET não usa anexos (não há AnexosManager no módulo).

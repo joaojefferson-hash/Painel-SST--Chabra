@@ -127,6 +127,7 @@ ${bodyWithoutStyle}
       margens: { top: "20mm", bottom: "20mm", left: "18mm", right: "15mm" },
       // Numeração só após o sumário (capa/identificação/sumário ficam sem número).
       numeroPaginasAposSeletor: '[data-slug="sumario"]',
+      capaFullBleed: true,
     });
 
     const pdfFinal = await aplicarAnexosNoPdf(supabase, "analise_quimicos", id, pdfBuffer);

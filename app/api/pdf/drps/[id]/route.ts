@@ -201,6 +201,7 @@ ${bodyWithoutStyle}
       numeroPaginasAposSeletor: '[data-slug="sumario"]',
       // Honra @page do CSS p/ capítulos em paisagem (drps_conclusao/assinatura).
       preferCssPageSize: true,
+      capaFullBleed: true,
     });
 
     const pdfFinal = await aplicarAnexosNoPdf(supabase, "psicossocial", id, pdfBuffer);
