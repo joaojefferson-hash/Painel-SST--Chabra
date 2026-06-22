@@ -210,15 +210,16 @@ body {
 .textos-padrao-capitulo--paisagem { page: textopadrao-paisagem; }
 .textos-padrao-capitulo:last-child { page-break-after: always; }
 .textos-padrao-capitulo--capa {
+  page: capa;
   position: relative;
-  margin: -3cm -2cm -2cm -3cm;
+  margin: 0;
   padding: 0;
   height: 297mm;
   width: 210mm;
   overflow: hidden;
 }
 .textos-padrao-capitulo--paisagem.textos-padrao-capitulo--capa {
-  margin: -2cm -3cm -3cm -2cm;
+  margin: 0;
   height: 210mm;
   width: 297mm;
 }

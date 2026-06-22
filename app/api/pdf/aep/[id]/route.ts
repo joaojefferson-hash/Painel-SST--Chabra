@@ -248,6 +248,9 @@ ${bodyWithoutStyle}
     margens: { top: "25mm", bottom: "25mm", left: "30mm", right: "20mm" },
     // Numeração só após o sumário (capa/identificação/sumário ficam sem número).
     numeroPaginasAposSeletor: '[data-slug="sumario"]',
+    // Capa full-bleed (@page capa margin:0); ativa preferCSSPageSize, então os
+    // capítulos em paisagem (@page textopadrao-paisagem) passam a ser honrados.
+    capaFullBleed: true,
   });
 
   const pdfFinal = await aplicarAnexosNoPdf(supabase, "aep", id, pdfBuffer);
