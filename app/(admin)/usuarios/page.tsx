@@ -17,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
+import StorageImg from "@/components/ui/StorageImg";
 import { detectRegistroTipo } from "@/lib/registro-profissional";
 import Badge from "@/components/ui/Badge";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -945,9 +946,8 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
           {/* Preview */}
           {form.assinatura_url ? (
             <div className="mt-2 flex items-center gap-3 rounded-md border border-gray-200 bg-gray-50 p-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={form.assinatura_url}
+              <StorageImg
+                stored={form.assinatura_url}
                 alt="Assinatura"
                 className="max-h-14 max-w-[180px] object-contain"
               />

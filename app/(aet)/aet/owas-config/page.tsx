@@ -18,6 +18,7 @@ import {
   useAetDeletarChecklistPergunta,
 } from "@/lib/hooks/useAet";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import StorageImg from "@/components/ui/StorageImg";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { AetChecklistPergunta, AetOwasCategoria, AetOwasOpcao, AetOwasSelectCampo } from "@/lib/supabase/types";
 
@@ -374,9 +375,8 @@ function CategoriaCard({
             Imagem de Referência
           </p>
           <div className="space-y-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageSrc}
+            <StorageImg
+              stored={imageSrc}
               alt={`Referência OWAS: ${categoria.titulo}`}
               className="h-auto w-full max-w-[260px] rounded border border-gray-200"
             />

@@ -19,6 +19,7 @@ import {
   STATUS_MAQUINA_LABELS,
   type StatusMaquina,
 } from "@/lib/supabase/types";
+import StorageImg from "@/components/ui/StorageImg";
 
 const STATUS_CORES: Record<StatusMaquina, string> = {
   OPERANTE: "bg-emerald-100 text-emerald-700",
@@ -192,12 +193,10 @@ export default function InventarioMaquinasPage() {
                 >
                   <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gray-100">
                     {m.foto_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={m.foto_url}
+                      <StorageImg
+                        stored={m.foto_url}
                         alt={m.nome}
                         className="size-full object-cover"
-                        referrerPolicy="no-referrer"
                       />
                     ) : (
                       <ImageOff className="size-6 text-gray-300" />

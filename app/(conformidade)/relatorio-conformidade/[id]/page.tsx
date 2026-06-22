@@ -24,6 +24,7 @@ import {
 import toast from "react-hot-toast";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
+import StorageImg from "@/components/ui/StorageImg";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import {
   montarValoresEmpresa,
@@ -553,13 +554,13 @@ export default function DetalheConformidadePage({
           >
             <X className="size-5" />
           </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightbox}
-            alt="Foto ampliada"
-            className="max-h-[90vh] max-w-[90vw] object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
+          <span className="contents" onClick={(e) => e.stopPropagation()}>
+            <StorageImg
+              stored={lightbox}
+              alt="Foto ampliada"
+              className="max-h-[90vh] max-w-[90vw] object-contain"
+            />
+          </span>
         </div>
       )}
 
@@ -1046,9 +1047,8 @@ function FotoThumb({
         className="block overflow-hidden rounded-md border border-gray-300 print:border-gray-400"
         title="Ampliar"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={url}
+        <StorageImg
+          stored={url}
           alt={`Foto do item ${itemCodigo}`}
           className="h-36 w-44 object-cover sm:h-40 sm:w-52 print:h-40 print:w-48"
         />

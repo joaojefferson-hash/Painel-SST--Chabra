@@ -5,6 +5,7 @@ import { AlertTriangle, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { usePortalNaoConformidades } from "@/lib/hooks/usePortalCliente";
 import { useCurrentUser } from "@/lib/hooks/useUsuario";
 import UploadAnexoCliente, { AnexoItem } from "./UploadAnexoCliente";
+import StorageImg from "@/components/ui/StorageImg";
 import { useQuery } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PortalAnexo } from "@/lib/supabase/types";
@@ -167,10 +168,9 @@ export default function NaoConformidadesCliente() {
                     {item.foto_urls && item.foto_urls.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {item.foto_urls.map((url, i) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <StorageImg
                             key={i}
-                            src={url}
+                            stored={url}
                             alt={`Foto ${i + 1}`}
                             className="h-20 w-20 rounded-md object-cover ring-1 ring-gray-200"
                           />

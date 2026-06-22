@@ -18,6 +18,7 @@ import RichTextEditor from "@/components/drps/RichTextEditor";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import DrpsSumarioPrint from "@/components/drps/DrpsSumarioPrint";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
+import StorageImg from "@/components/ui/StorageImg";
 import HtmlConteudoAssinado from "@/components/ui/HtmlConteudoAssinado";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
 import { detectRegistroTipo } from "@/lib/registro-profissional";
@@ -919,9 +920,8 @@ function renderCapitulosPosicao(
             }
           >
             {ehCapa && c.bg_imagem_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={c.bg_imagem_url}
+              <StorageImg
+                stored={c.bg_imagem_url}
                 alt=""
                 className="drps-capitulo-bg-img"
               />

@@ -28,6 +28,7 @@ import {
 import { useIsAdmin } from "@/lib/hooks/useUsuario";
 import toast from "react-hot-toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import StorageImg from "@/components/ui/StorageImg";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import RichTextEditor from "@/components/drps/RichTextEditor";
 import CapaEditor from "@/components/drps/CapaEditor";
@@ -945,9 +946,8 @@ function CapituloCard({
         </span>
         {capitulo.bg_imagem_url ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={capitulo.bg_imagem_url}
+            <StorageImg
+              stored={capitulo.bg_imagem_url}
               alt="Fundo"
               className="h-10 w-16 rounded border border-gray-300 object-cover"
             />

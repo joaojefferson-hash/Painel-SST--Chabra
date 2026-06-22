@@ -16,6 +16,7 @@ import {
 } from "@/lib/hooks/useAet";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import RichTextEditor from "@/components/drps/RichTextEditor";
+import StorageImg from "@/components/ui/StorageImg";
 import { cn } from "@/lib/utils";
 import type { AetOwas, AetOwasCategoria, AetSetor, AetChecklist, RespostaChecklist } from "@/lib/supabase/types";
 
@@ -392,9 +393,8 @@ function OwasGroup({
         </div>
         {imageSrc && (
           <div className="w-36 shrink-0 self-start">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageSrc}
+            <StorageImg
+              stored={imageSrc}
               alt={`Referência OWAS: ${categoria.titulo}`}
               className="h-auto w-full rounded border border-gray-200"
             />

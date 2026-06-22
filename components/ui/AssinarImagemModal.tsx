@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { BadgeCheck, FileImage, Loader2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
+import StorageImg from "@/components/ui/StorageImg";
 import { useUserStore } from "@/lib/store";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -128,9 +129,8 @@ export default function AssinarImagemModal({
             </select>
             {atual?.assinatura_url && (
               <div className="mt-2 flex items-center gap-2 rounded-md border border-gray-200 bg-white p-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={atual.assinatura_url}
+                <StorageImg
+                  stored={atual.assinatura_url}
                   alt="Assinatura"
                   className="max-h-12 max-w-[120px] object-contain"
                 />

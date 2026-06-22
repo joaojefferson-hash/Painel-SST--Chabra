@@ -17,6 +17,7 @@ import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import StorageImg from "@/components/ui/StorageImg";
 import NivelBadge from "@/components/riscos/NivelBadge";
 import {
   fmtData,
@@ -520,12 +521,10 @@ export default function PgrPage({ params }: Props) {
                       </dl>
                     )}
                     {r.foto_quim_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={r.foto_quim_url}
+                      <StorageImg
+                        stored={r.foto_quim_url}
                         alt="FDS"
                         className="mt-1.5 max-h-24 rounded border border-gray-200"
-                        referrerPolicy="no-referrer"
                       />
                     )}
                     {r.observacoes_risco && (
