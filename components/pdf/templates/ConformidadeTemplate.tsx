@@ -2,13 +2,10 @@ import React from "react";
 import FolhaAssinaturas from "@/components/pdf/FolhaAssinaturas";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { SecaoIdentificacaoEmpresa, SecaoSumario } from "@/components/pdf/SecoesComuns";
-import { classeQuebraFixo, numerarCapitulos, numLabel } from "@/components/pdf/templates/shared";
+import { classeQuebraFixo, numerarCapitulos, numLabel, renderEditavelUm } from "@/components/pdf/templates/shared";
 import type { Empresa } from "@/lib/supabase/types";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
-import {
-  substituirVariaveis,
-  substituirVariaveisTexto,
-} from "@/lib/textos-padrao/variaveis";
+import { substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 
 export interface ConformidadeItemLocal {
   id_item: string;
@@ -52,6 +49,9 @@ const STYLE_BLOCK = `
 .tp-cap .corpo p { margin: 0 0 8pt; }
 .tp-cap .corpo table { border-collapse: collapse; width: 100%; margin: 8pt 0; font-size: 10pt; }
 .tp-cap .corpo th, .tp-cap .corpo td { border: 1px solid #999; padding: 4px 6px; }
+.tp-capa { page: capa; position: relative; width: 210mm; height: 297mm; overflow: hidden; page-break-after: always; }
+.tp-capa img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; z-index: 0; }
+.tp-capa .caixa { position: absolute; z-index: 1; white-space: pre-wrap; line-height: 1.3; }
 .sec-titulo { font-size: 13pt; font-weight: 700; color: #0f766e; border-bottom: 2px solid #0f766e; padding-bottom: 3px; margin: 0 0 8pt; }
 .item { border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; margin-bottom: 8px; page-break-inside: avoid; }
 .item .cab { display: flex; align-items: flex-start; gap: 8px; }
@@ -225,15 +225,13 @@ export default function ConformidadeTemplate({
         <div key={c.id_capitulo} className={classeQuebraFixo(c)} data-slug={c.slug_fixo ?? undefined}>{s}</div>
       ) : null;
     }
-    const titulo = numPorId[c.id_capitulo]
-      ? `${numPorId[c.id_capitulo]}. ${substituirVariaveisTexto(c.titulo, valores)}`
-      : substituirVariaveisTexto(c.titulo, valores);
-    return (
-      <div key={c.id_capitulo} className="tp-cap">
-        {!c.bg_imagem_url && <h2>{titulo}</h2>}
-        <div className="corpo" dangerouslySetInnerHTML={{ __html: substituirVariaveis(c.conteudo, valores) }} />
-      </div>
-    );
+    // Editável: usa o render compartilhado (igual aos demais laudos) — desenha a
+    // CAPA (bg_imagem_url + caixas) full-bleed, ou título + conteúdo. O número do
+    // sumário vai prefixado no título (a capa não é numerada → sem prefixo).
+    const cNum = numPorId[c.id_capitulo]
+      ? { ...c, titulo: `${numPorId[c.id_capitulo]}. ${c.titulo}` }
+      : c;
+    return renderEditavelUm(cNum, valores);
   }
 
   return (
