@@ -41,6 +41,38 @@ export default function VisaoGeralPage() {
     return s;
   }, [laudosVal]);
 
+  // Laudos por tipo (donut) — exclui inspeções.
+  const laudosPorTipo = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const l of laudosVal) {
+      if (l.tipo === "Inspeção") continue;
+      m.set(l.tipo, (m.get(l.tipo) ?? 0) + 1);
+    }
+    return [...m.entries()]
+      .map(([tipo, valor]) => ({ tipo, valor }))
+      .sort((a, b) => b.valor - a.valor);
+  }, [laudosVal]);
+
+  // Inspeções por mês (barras) — últimos 6 meses.
+  const inspecoesPorMes = useMemo(() => {
+    const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+    const hoje = new Date();
+    const buckets: { mes: string; valor: number }[] = [];
+    const idx = new Map<string, number>();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      idx.set(key, buckets.length);
+      buckets.push({ mes: `${MESES[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`, valor: 0 });
+    }
+    for (const l of laudosVal) {
+      if (l.tipo !== "Inspeção" || !l.dataDoc) continue;
+      const i = idx.get(l.dataDoc.slice(0, 7));
+      if (i !== undefined) buckets[i].valor++;
+    }
+    return buckets;
+  }, [laudosVal]);
+
   // Enriquece a atividade com nome da empresa + técnico vinculado (via id_empresa).
   const atividade = stats.atividadeRecente.map((a) => ({
     ...a,
@@ -93,6 +125,8 @@ export default function VisaoGeralPage() {
       vencimentos={vencimentos}
       vencimentosLoading={vencLoading}
       saude={saude}
+      laudosPorTipo={laudosPorTipo}
+      inspecoesPorMes={inspecoesPorMes}
       onLogout={handleLogout}
     />
   );

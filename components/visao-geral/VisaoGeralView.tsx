@@ -23,6 +23,7 @@ import type { AtividadeItem } from "@/lib/hooks/useHomeStats";
 import type { VencimentosData, VencimentoItem } from "@/lib/hooks/useVencimentos";
 import AnimatedNumber from "./AnimatedNumber";
 import SaudeAnel, { type SaudeDocumentos } from "./SaudeAnel";
+import GraficosVisaoGeral, { type FatiaTipo, type PontoMes } from "./GraficosVisaoGeral";
 import { cn } from "@/lib/utils";
 
 const VERDE_SIDEBAR = "#0f3d28";
@@ -54,6 +55,10 @@ export interface VisaoGeralViewProps {
   vencimentosLoading?: boolean;
   /** Saúde dos documentos (anel) — total + composição por status de validade. */
   saude?: SaudeDocumentos;
+  /** Composição de laudos por tipo (donut). */
+  laudosPorTipo?: FatiaTipo[];
+  /** Inspeções por mês (barras). */
+  inspecoesPorMes?: PontoMes[];
   onLogout: () => void;
 }
 
@@ -76,6 +81,8 @@ export default function VisaoGeralView({
   vencimentos,
   vencimentosLoading,
   saude,
+  laudosPorTipo,
+  inspecoesPorMes,
   onLogout,
 }: VisaoGeralViewProps) {
   const totais = data?.totais;
@@ -237,6 +244,14 @@ export default function VisaoGeralView({
                   ))}
                 </div>
               )}
+
+              {/* Gráficos — laudos por tipo + inspeções por mês */}
+              {(laudosPorTipo?.length || inspecoesPorMes?.length) ? (
+                <GraficosVisaoGeral
+                  laudosPorTipo={laudosPorTipo ?? []}
+                  inspecoesPorMes={inspecoesPorMes ?? []}
+                />
+              ) : null}
 
               {/* Vencimentos */}
               <div className="mt-9 flex items-center justify-between">
