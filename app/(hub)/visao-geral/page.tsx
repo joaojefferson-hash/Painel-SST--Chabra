@@ -7,6 +7,7 @@ import { useUserStore } from "@/lib/store";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import { useVisaoGeralUnidades } from "@/lib/hooks/useVisaoGeralUnidades";
 import { useHomeStats } from "@/lib/hooks/useHomeStats";
+import { useAtividadeContexto } from "@/lib/hooks/useAtividadeContexto";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import VisaoGeralView, { type PendenciaItem } from "@/components/visao-geral/VisaoGeralView";
 
@@ -17,6 +18,14 @@ export default function VisaoGeralPage() {
   const { data: configs } = useConfiguracoes();
   const { data, isLoading, error } = useVisaoGeralUnidades();
   const stats = useHomeStats();
+  const { data: ctx, isLoading: ctxLoading } = useAtividadeContexto();
+
+  // Enriquece a atividade com nome da empresa + técnico vinculado (via id_empresa).
+  const atividade = stats.atividadeRecente.map((a) => ({
+    ...a,
+    empresaNome: a.id_empresa ? ctx?.nomePorEmpresa.get(a.id_empresa) ?? null : null,
+    tecnicoVinculado: a.id_empresa ? ctx?.tecnicoPorEmpresa.get(a.id_empresa) ?? null : null,
+  }));
 
   // Pendências = itens não finalizados por módulo (rascunho/em andamento).
   const pendencias: PendenciaItem[] = [
@@ -57,9 +66,9 @@ export default function VisaoGeralPage() {
       data={data}
       isLoading={isLoading}
       hasError={!!error}
-      atividade={stats.atividadeRecente}
+      atividade={atividade}
       pendencias={pendencias}
-      statsLoading={stats.isLoading}
+      statsLoading={stats.isLoading || ctxLoading}
       onLogout={handleLogout}
     />
   );

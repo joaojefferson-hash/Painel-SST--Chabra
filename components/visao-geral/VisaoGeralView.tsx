@@ -215,18 +215,30 @@ export default function VisaoGeralView({
                     ) : (atividade ?? []).length === 0 ? (
                       <p className="p-4 text-sm text-gray-400">Nenhuma atividade recente.</p>
                     ) : (
-                      (atividade ?? []).map((a, i) => (
-                        <Link
-                          key={`${a.href}-${i}`}
-                          href={a.href}
-                          className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-gray-50"
-                        >
-                          <span className="size-2 shrink-0 rounded-full" style={{ background: moduloAccent(a.modulo) }} />
-                          <span className="min-w-0 flex-1 truncate text-sm text-gray-800">{a.titulo}</span>
-                          {a.status && <StatusPill status={a.status} />}
-                          <span className="shrink-0 text-xs text-gray-400">{tempoRelativo(a.data)}</span>
-                        </Link>
-                      ))
+                      (atividade ?? []).map((a, i) => {
+                        const contexto = [
+                          a.empresaNome,
+                          a.responsavel ? `resp.: ${a.responsavel}` : null,
+                          a.tecnicoVinculado ? `téc.: ${a.tecnicoVinculado}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ");
+                        return (
+                          <Link
+                            key={`${a.href}-${i}`}
+                            href={a.href}
+                            className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-gray-50"
+                          >
+                            <span className="mt-1.5 size-2 shrink-0 rounded-full" style={{ background: moduloAccent(a.modulo) }} />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm text-gray-800">{a.titulo}</p>
+                              {contexto && <p className="truncate text-xs text-gray-400">{contexto}</p>}
+                            </div>
+                            {a.status && <StatusPill status={a.status} />}
+                            <span className="mt-0.5 shrink-0 text-xs text-gray-400">{tempoRelativo(a.data)}</span>
+                          </Link>
+                        );
+                      })
                     )}
                   </div>
                 </section>
