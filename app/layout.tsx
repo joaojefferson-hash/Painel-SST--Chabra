@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "@/lib/providers";
 import UpdateBanner from "@/components/UpdateBanner";
 import ElectronIconSync from "@/components/ElectronIconSync";
+import PageTransitions from "@/components/PageTransitions";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={inter.variable}>
       <body className="font-sans antialiased">
         <Providers>
+          <PageTransitions />
           {children}
           <UpdateBanner />
           <ElectronIconSync />
