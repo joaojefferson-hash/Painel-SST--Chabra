@@ -10,6 +10,7 @@ import {
   Shield,
   ClipboardList,
   FileText,
+  FileClock,
   ArrowRight,
   Loader2,
   Settings,
@@ -113,6 +114,9 @@ export default function VisaoGeralView({
           <Link href="/empresas">
             <NavItem icon={<Building2 className="size-[15px]" />} label="Empresas" />
           </Link>
+          <Link href="/validades">
+            <NavItem icon={<FileClock className="size-[15px]" />} label="Validades" />
+          </Link>
         </nav>
 
         <p className="mb-1 mt-7 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/40">
@@ -212,12 +216,17 @@ export default function VisaoGeralView({
               {/* Vencimentos */}
               <div className="mt-9 flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Vencimentos</p>
-                {!vencimentosLoading && (
-                  <p className="text-xs text-gray-500">
-                    <span className="font-semibold text-red-600">{vencidos.length}</span> vencido(s) ·{" "}
-                    <span className="font-semibold text-amber-600">{vencendo.length}</span> a vencer (60 dias)
-                  </p>
-                )}
+                <div className="flex items-center gap-3">
+                  {!vencimentosLoading && (
+                    <p className="text-xs text-gray-500">
+                      <span className="font-semibold text-red-600">{vencidos.length}</span> vencido(s) ·{" "}
+                      <span className="font-semibold text-amber-600">{vencendo.length}</span> a vencer (60 dias)
+                    </p>
+                  )}
+                  <Link href="/validades" className="text-xs font-semibold text-verde-primary hover:underline">
+                    Gerenciar →
+                  </Link>
+                </div>
               </div>
               <div className="mt-2 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                 {vencimentosLoading ? (
