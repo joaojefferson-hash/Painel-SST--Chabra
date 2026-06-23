@@ -216,11 +216,7 @@ export default function VisaoGeralView({
                       <p className="p-4 text-sm text-gray-400">Nenhuma atividade recente.</p>
                     ) : (
                       (atividade ?? []).map((a, i) => {
-                        const contexto = [
-                          a.empresaNome,
-                          a.responsavel ? `resp.: ${a.responsavel}` : null,
-                          a.tecnicoVinculado ? `téc.: ${a.tecnicoVinculado}` : null,
-                        ]
+                        const secundario = [a.titulo, a.tecnicoVinculado ? `téc.: ${a.tecnicoVinculado}` : null]
                           .filter(Boolean)
                           .join(" · ");
                         return (
@@ -231,8 +227,13 @@ export default function VisaoGeralView({
                           >
                             <span className="mt-1.5 size-2 shrink-0 rounded-full" style={{ background: moduloAccent(a.modulo) }} />
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm text-gray-800">{a.titulo}</p>
-                              {contexto && <p className="truncate text-xs text-gray-400">{contexto}</p>}
+                              <p className="truncate text-sm font-medium text-gray-800">
+                                {a.empresaNome ?? "Sem empresa"}
+                                {a.responsavel ? (
+                                  <span className="font-normal text-gray-500"> · resp.: {a.responsavel}</span>
+                                ) : null}
+                              </p>
+                              <p className="truncate text-xs text-gray-400">{secundario}</p>
                             </div>
                             {a.status && <StatusPill status={a.status} />}
                             <span className="mt-0.5 shrink-0 text-xs text-gray-400">{tempoRelativo(a.data)}</span>

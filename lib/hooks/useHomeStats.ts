@@ -367,7 +367,7 @@ export function useHomeStats(): HomeStatsData {
   for (const r of inspecoesQ.data ?? []) {
     atividade.push({
       modulo: "painel",
-      titulo: `Inspeção ${r.id_inspecao}${r.revisao ? ` (rev. ${r.revisao})` : ""}`,
+      titulo: `Inspeção${r.revisao ? ` (rev. ${r.revisao})` : ""}`,
       href: `/inspecoes/${r.id_inspecao}`,
       status: r.status,
       data: dataRow(r),
@@ -392,7 +392,7 @@ export function useHomeStats(): HomeStatsData {
   for (const r of ncQ.data ?? []) {
     atividade.push({
       modulo: "nao_conformidade",
-      titulo: r.titulo || `RNC ${r.id_relatorio}`,
+      titulo: r.titulo || "Não conformidade",
       href: `/relatorio-nao-conformidade/${r.id_relatorio}`,
       status: r.status,
       data: dataRow(r),
@@ -433,10 +433,7 @@ export function useHomeStats(): HomeStatsData {
   for (const r of apreciacoesQ.data ?? []) {
     atividade.push({
       modulo: "apreciacao_maquinas",
-      titulo:
-        r.titulo ||
-        r.maquina_descricao ||
-        `Apreciação ${r.id_apreciacao.slice(-6)}`,
+      titulo: r.titulo || r.maquina_descricao || "Apreciação NR-12",
       href: `/apreciacao-maquinas/${r.id_apreciacao}`,
       status: r.status,
       data: dataRow(r),
