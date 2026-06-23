@@ -233,8 +233,10 @@ export default function VisaoGeralView({
                 Unidades
               </p>
               {isLoading ? (
-                <div className="flex items-center gap-2 py-10 text-sm text-gray-400">
-                  <Loader2 className="size-4 animate-spin" /> Carregando unidades…
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="skeleton-shimmer h-[92px]" />
+                  ))}
                 </div>
               ) : unidades.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-gray-300 bg-white py-10 text-center text-sm text-gray-500">
@@ -262,9 +264,16 @@ export default function VisaoGeralView({
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Vencimentos</p>
                 <div className="flex items-center gap-3">
                   {!vencimentosLoading && (
-                    <p className="text-xs text-gray-500">
-                      <span className="font-semibold text-red-600">{vencidos.length}</span> vencido(s) ·{" "}
-                      <span className="font-semibold text-amber-600">{vencendo.length}</span> a vencer (60 dias)
+                    <p className="flex items-center gap-2 text-xs text-gray-500">
+                      {vencidos.length > 0 && (
+                        <span className="pulse-alerta inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 font-semibold text-red-600">
+                          <span className="size-1.5 rounded-full bg-red-500" />
+                          {vencidos.length} vencido(s)
+                        </span>
+                      )}
+                      <span>
+                        <span className="font-semibold text-amber-600">{vencendo.length}</span> a vencer (60 dias)
+                      </span>
                     </p>
                   )}
                   <Link href="/validades" className="text-xs font-semibold text-verde-primary hover:underline">
@@ -340,7 +349,7 @@ export default function VisaoGeralView({
                   <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                     <p className="text-2xl font-bold text-gray-900">
                       {statsLoading ? (
-                        <span className="inline-block h-7 w-10 animate-pulse rounded bg-gray-100" />
+                        <span className="skeleton-shimmer inline-block h-7 w-12" />
                       ) : (
                         totalPendencias
                       )}
@@ -389,10 +398,13 @@ function NavItem({
   return (
     <div
       className={cn(
-        "flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-sm font-medium transition-colors",
+        "relative flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-sm font-medium transition-all duration-200",
         active ? "bg-white/[0.14] text-white" : "text-white/65 hover:bg-white/[0.08] hover:text-white/90",
       )}
     >
+      {active && (
+        <span className="absolute -left-1 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-emerald-400" />
+      )}
       <span className={active ? "text-white" : "text-white/40"}>{icon}</span>
       <span className="flex-1 truncate text-left">{label}</span>
       {badge !== undefined && (
@@ -426,7 +438,7 @@ function ResumoCard({
       </div>
       <p className="mt-2 text-2xl font-bold text-gray-900">
         {loading ? (
-          <span className="inline-block h-7 w-10 animate-pulse rounded bg-gray-100" />
+          <span className="skeleton-shimmer inline-block h-7 w-12" />
         ) : (
           <AnimatedNumber value={valor ?? 0} />
         )}
