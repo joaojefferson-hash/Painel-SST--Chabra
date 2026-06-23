@@ -317,6 +317,14 @@ function InicioContent() {
     >
       <header className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
+          <Link
+            href="/visao-geral"
+            className="flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+            title="Voltar à Visão geral"
+          >
+            <ArrowLeft className="size-4" />
+            <span className="hidden sm:inline">Visão geral</span>
+          </Link>
           {configs?.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
