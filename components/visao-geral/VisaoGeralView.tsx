@@ -14,10 +14,20 @@ import {
   Loader2,
   Settings,
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import type { UnidadeResumo, VisaoGeralData } from "@/lib/hooks/useVisaoGeralUnidades";
+import type { AtividadeItem } from "@/lib/hooks/useHomeStats";
 import { cn } from "@/lib/utils";
 
 const VERDE_SIDEBAR = "#0f3d28";
+
+/** Item de pendência (módulo com registros não finalizados). */
+export interface PendenciaItem {
+  label: string;
+  pendente: number;
+  href: string;
+}
 
 export interface VisaoGeralViewProps {
   logoUrl?: string | null;
@@ -29,6 +39,11 @@ export interface VisaoGeralViewProps {
   data?: VisaoGeralData;
   isLoading: boolean;
   hasError: boolean;
+  /** Últimos registros editados (do useHomeStats). */
+  atividade?: AtividadeItem[];
+  /** Módulos com itens não finalizados (do useHomeStats). */
+  pendencias?: PendenciaItem[];
+  statsLoading?: boolean;
   onLogout: () => void;
 }
 
@@ -45,11 +60,15 @@ export default function VisaoGeralView({
   data,
   isLoading,
   hasError,
+  atividade,
+  pendencias,
+  statsLoading,
   onLogout,
 }: VisaoGeralViewProps) {
   const totais = data?.totais;
   const unidades = data?.unidades ?? [];
   const escopoRestrito = userPerfil === "Tecnico" && vinculadasCount > 0;
+  const totalPendencias = (pendencias ?? []).reduce((s, p) => s + p.pendente, 0);
 
   return (
     <div className="flex min-h-screen bg-[#f6f5f2]">
@@ -181,6 +200,71 @@ export default function VisaoGeralView({
                   ))}
                 </div>
               )}
+
+              {/* Atividade recente + Pendências */}
+              <div className="mt-9 grid grid-cols-1 gap-5 lg:grid-cols-3">
+                <section className="lg:col-span-2">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    Atividade recente
+                  </p>
+                  <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                    {statsLoading ? (
+                      <div className="flex items-center gap-2 p-4 text-sm text-gray-400">
+                        <Loader2 className="size-4 animate-spin" /> Carregando…
+                      </div>
+                    ) : (atividade ?? []).length === 0 ? (
+                      <p className="p-4 text-sm text-gray-400">Nenhuma atividade recente.</p>
+                    ) : (
+                      (atividade ?? []).map((a, i) => (
+                        <Link
+                          key={`${a.href}-${i}`}
+                          href={a.href}
+                          className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-gray-50"
+                        >
+                          <span className="size-2 shrink-0 rounded-full" style={{ background: moduloAccent(a.modulo) }} />
+                          <span className="min-w-0 flex-1 truncate text-sm text-gray-800">{a.titulo}</span>
+                          {a.status && <StatusPill status={a.status} />}
+                          <span className="shrink-0 text-xs text-gray-400">{tempoRelativo(a.data)}</span>
+                        </Link>
+                      ))
+                    )}
+                  </div>
+                </section>
+
+                <section>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    Pendências
+                  </p>
+                  <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {statsLoading ? (
+                        <span className="inline-block h-7 w-10 animate-pulse rounded bg-gray-100" />
+                      ) : (
+                        totalPendencias
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500">itens não finalizados</p>
+                    <div className="mt-3 space-y-1">
+                      {statsLoading ? null : (pendencias ?? []).length === 0 ? (
+                        <p className="text-sm text-gray-400">Nada pendente 🎉</p>
+                      ) : (
+                        (pendencias ?? []).map((p) => (
+                          <Link
+                            key={p.label}
+                            href={p.href}
+                            className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-gray-50"
+                          >
+                            <span className="truncate text-gray-700">{p.label}</span>
+                            <span className="ml-2 shrink-0 rounded-full bg-amber-100 px-2 text-xs font-semibold text-amber-700">
+                              {p.pendente}
+                            </span>
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </section>
+              </div>
             </>
           )}
         </div>
@@ -277,6 +361,46 @@ function Metric({ label, valor }: { label: string; valor: number }) {
   return (
     <span className="text-gray-600">
       <span className="font-bold text-gray-900">{valor}</span> {label}
+    </span>
+  );
+}
+
+const MODULO_ACCENT: Record<string, string> = {
+  painel: "#00835A",
+  conformidade: "#0D9488",
+  nao_conformidade: "#dc2626",
+  psicossocial: "#7c3aed",
+  analise_quimicos: "#d97706",
+  inventario_maquinas: "#475569",
+  apreciacao_maquinas: "#0ea5e9",
+  aet: "#16a34a",
+  aep: "#0891b2",
+};
+
+function moduloAccent(m: string): string {
+  return MODULO_ACCENT[m] ?? "#9ca3af";
+}
+
+function tempoRelativo(iso: string): string {
+  try {
+    return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: ptBR });
+  } catch {
+    return "";
+  }
+}
+
+const STATUS_PENDENTE = ["RASCUNHO", "EM_ANDAMENTO", "ABERTA", "EM_TRATAMENTO", "PENDENTE"];
+
+function StatusPill({ status }: { status: string }) {
+  const pend = STATUS_PENDENTE.includes(status.toUpperCase());
+  return (
+    <span
+      className={cn(
+        "hidden shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold sm:inline-block",
+        pend ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700",
+      )}
+    >
+      {status.replace(/_/g, " ").toLowerCase()}
     </span>
   );
 }
