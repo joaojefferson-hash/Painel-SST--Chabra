@@ -10,6 +10,7 @@ import { useHomeStats } from "@/lib/hooks/useHomeStats";
 import { useAtividadeContexto } from "@/lib/hooks/useAtividadeContexto";
 import { useVencimentos } from "@/lib/hooks/useVencimentos";
 import { useLaudosValidade } from "@/lib/hooks/useLaudosValidade";
+import { useInspecoesStatus } from "@/lib/hooks/useInspecoesStatus";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import VisaoGeralView, { type PendenciaItem } from "@/components/visao-geral/VisaoGeralView";
 
@@ -23,6 +24,7 @@ export default function VisaoGeralPage() {
   const { data: ctx, isLoading: ctxLoading } = useAtividadeContexto();
   const { data: vencimentos, isLoading: vencLoading } = useVencimentos();
   const { data: laudosVal = [] } = useLaudosValidade();
+  const { data: inspecoesPorStatus = [] } = useInspecoesStatus();
 
   // Saúde dos documentos (anel): total + composição por status de validade.
   const saude = useMemo(() => {
@@ -127,6 +129,7 @@ export default function VisaoGeralPage() {
       saude={saude}
       laudosPorTipo={laudosPorTipo}
       inspecoesPorMes={inspecoesPorMes}
+      inspecoesPorStatus={inspecoesPorStatus}
       onLogout={handleLogout}
     />
   );

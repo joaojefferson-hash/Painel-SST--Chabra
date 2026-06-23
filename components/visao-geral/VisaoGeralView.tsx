@@ -23,7 +23,7 @@ import type { AtividadeItem } from "@/lib/hooks/useHomeStats";
 import type { VencimentosData, VencimentoItem } from "@/lib/hooks/useVencimentos";
 import AnimatedNumber from "./AnimatedNumber";
 import SaudeAnel, { type SaudeDocumentos } from "./SaudeAnel";
-import GraficosVisaoGeral, { type FatiaTipo, type PontoMes } from "./GraficosVisaoGeral";
+import GraficosVisaoGeral, { type FatiaTipo, type PontoMes, type FatiaStatus } from "./GraficosVisaoGeral";
 import { cn } from "@/lib/utils";
 
 const VERDE_SIDEBAR = "#0f3d28";
@@ -59,6 +59,8 @@ export interface VisaoGeralViewProps {
   laudosPorTipo?: FatiaTipo[];
   /** Inspeções por mês (barras). */
   inspecoesPorMes?: PontoMes[];
+  /** Inspeções por status (donut). */
+  inspecoesPorStatus?: FatiaStatus[];
   onLogout: () => void;
 }
 
@@ -83,6 +85,7 @@ export default function VisaoGeralView({
   saude,
   laudosPorTipo,
   inspecoesPorMes,
+  inspecoesPorStatus,
   onLogout,
 }: VisaoGeralViewProps) {
   const totais = data?.totais;
@@ -245,11 +248,12 @@ export default function VisaoGeralView({
                 </div>
               )}
 
-              {/* Gráficos — laudos por tipo + inspeções por mês */}
+              {/* Gráficos — inspeções por mês/status + laudos por tipo */}
               {(laudosPorTipo?.length || inspecoesPorMes?.length) ? (
                 <GraficosVisaoGeral
                   laudosPorTipo={laudosPorTipo ?? []}
                   inspecoesPorMes={inspecoesPorMes ?? []}
+                  inspecoesPorStatus={inspecoesPorStatus ?? []}
                 />
               ) : null}
 
