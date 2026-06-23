@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -20,6 +21,8 @@ import { ptBR } from "date-fns/locale";
 import type { UnidadeResumo, VisaoGeralData } from "@/lib/hooks/useVisaoGeralUnidades";
 import type { AtividadeItem } from "@/lib/hooks/useHomeStats";
 import type { VencimentosData, VencimentoItem } from "@/lib/hooks/useVencimentos";
+import AnimatedNumber from "./AnimatedNumber";
+import SaudeAnel, { type SaudeDocumentos } from "./SaudeAnel";
 import { cn } from "@/lib/utils";
 
 const VERDE_SIDEBAR = "#0f3d28";
@@ -49,6 +52,8 @@ export interface VisaoGeralViewProps {
   /** Laudos vencidos / a vencer (do useVencimentos). */
   vencimentos?: VencimentosData;
   vencimentosLoading?: boolean;
+  /** Saúde dos documentos (anel) — total + composição por status de validade. */
+  saude?: SaudeDocumentos;
   onLogout: () => void;
 }
 
@@ -70,6 +75,7 @@ export default function VisaoGeralView({
   statsLoading,
   vencimentos,
   vencimentosLoading,
+  saude,
   onLogout,
 }: VisaoGeralViewProps) {
   const totais = data?.totais;
@@ -78,6 +84,17 @@ export default function VisaoGeralView({
   const totalPendencias = (pendencias ?? []).reduce((s, p) => s + p.pendente, 0);
   const vencidos = vencimentos?.vencidos ?? [];
   const vencendo = vencimentos?.vencendo ?? [];
+
+  // Saudação + data (no mount, evita mismatch de SSR).
+  const [agora, setAgora] = useState<Date | null>(null);
+  useEffect(() => setAgora(new Date()), []);
+  const hora = agora?.getHours() ?? -1;
+  const saudacao = hora < 0 ? "Olá" : hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+  const primeiroNome = (userNome ?? "").split(" ")[0];
+  const dataFmt = agora
+    ? agora.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })
+    : "";
+  const dataExtenso = dataFmt ? dataFmt.charAt(0).toUpperCase() + dataFmt.slice(1) : "";
 
   return (
     <div className="flex min-h-screen bg-[#f6f5f2]">
@@ -153,29 +170,37 @@ export default function VisaoGeralView({
       {/* ── Conteúdo ─────────────────────────────────────────── */}
       <main className="flex-1 overflow-x-hidden px-5 py-7 sm:px-8">
         <div className="mx-auto max-w-6xl">
-          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Visão geral</h1>
-              <p className="mt-1 max-w-xl text-sm text-gray-500">
-                Panorama por unidade — empresas, inspeções e laudos em cada base.
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="reveal-up">
+              <h1 className="text-3xl font-bold text-gray-900">
+                {saudacao}{primeiroNome ? `, ${primeiroNome}` : ""} <span aria-hidden>👋</span>
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Visão geral por unidade{dataExtenso ? ` · ${dataExtenso}` : ""}
               </p>
-            </div>
-            <div
-              className="w-full rounded-2xl p-4 text-white shadow-sm md:w-72"
-              style={{ background: "linear-gradient(135deg, #0f3d28 0%, #006B54 100%)" }}
-            >
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/60">
-                Seu acesso
-              </p>
-              <p className="mt-1 text-lg font-bold">
-                {escopoRestrito ? `${vinculadasCount} empresa(s) vinculada(s)` : "Acesso total"}
-              </p>
-              <p className="mt-1 text-xs text-white/70">
+              <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs text-gray-500 shadow-sm">
+                <span className="size-1.5 rounded-full bg-verde-primary" />
                 {escopoRestrito
-                  ? "Você vê os dados das empresas vinculadas e das sem unidade."
-                  : `Todas as ${totais?.unidades ?? 0} unidade(s) e empresas.`}
+                  ? `${vinculadasCount} empresa(s) vinculada(s)`
+                  : `Acesso total · ${totais?.unidades ?? 0} unidades`}
               </p>
             </div>
+            {saude && (
+              <div
+                className="reveal-up w-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:w-auto"
+                style={{ animationDelay: "90ms" }}
+              >
+                <div className="mb-3 flex items-center justify-between gap-8">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                    Saúde dos documentos
+                  </p>
+                  <Link href="/validades" className="text-xs font-semibold text-verde-primary hover:underline">
+                    Gerenciar →
+                  </Link>
+                </div>
+                <SaudeAnel saude={saude} />
+              </div>
+            )}
           </div>
 
           {hasError ? (
@@ -188,10 +213,10 @@ export default function VisaoGeralView({
                 Resumo
               </p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <ResumoCard label="Unidades" valor={totais?.unidades} icon={<MapPin className="size-4" />} loading={isLoading} />
-                <ResumoCard label="Empresas" valor={totais?.empresas} icon={<Building2 className="size-4" />} loading={isLoading} />
-                <ResumoCard label="Inspeções" valor={totais?.inspecoes} icon={<ClipboardList className="size-4" />} loading={isLoading} />
-                <ResumoCard label="Laudos" valor={totais?.laudos} icon={<FileText className="size-4" />} loading={isLoading} />
+                <ResumoCard label="Unidades" valor={totais?.unidades} icon={<MapPin className="size-4" />} loading={isLoading} delay={0} />
+                <ResumoCard label="Empresas" valor={totais?.empresas} icon={<Building2 className="size-4" />} loading={isLoading} delay={60} />
+                <ResumoCard label="Inspeções" valor={totais?.inspecoes} icon={<ClipboardList className="size-4" />} loading={isLoading} delay={120} />
+                <ResumoCard label="Laudos" valor={totais?.laudos} icon={<FileText className="size-4" />} loading={isLoading} delay={180} />
               </div>
 
               <p className="mb-2 mt-9 text-xs font-semibold uppercase tracking-wider text-gray-400">
@@ -207,8 +232,8 @@ export default function VisaoGeralView({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {unidades.map((u) => (
-                    <UnidadeCard key={u.id_unidade ?? "sem"} u={u} />
+                  {unidades.map((u, i) => (
+                    <UnidadeCard key={u.id_unidade ?? "sem"} u={u} delay={i * 45} />
                   ))}
                 </div>
               )}
@@ -363,32 +388,42 @@ function ResumoCard({
   valor,
   icon,
   loading,
+  delay = 0,
 }: {
   label: string;
   valor?: number;
   icon: React.ReactNode;
   loading?: boolean;
+  delay?: number;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div
+      className="reveal-up rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+      style={{ animationDelay: `${delay}ms` }}
+    >
       <div className="flex items-center gap-1.5 text-gray-400">
         {icon}
         <span className="text-[11px] font-semibold uppercase tracking-wider">{label}</span>
       </div>
       <p className="mt-2 text-2xl font-bold text-gray-900">
-        {loading ? <span className="inline-block h-7 w-10 animate-pulse rounded bg-gray-100" /> : valor ?? 0}
+        {loading ? (
+          <span className="inline-block h-7 w-10 animate-pulse rounded bg-gray-100" />
+        ) : (
+          <AnimatedNumber value={valor ?? 0} />
+        )}
       </p>
     </div>
   );
 }
 
-function UnidadeCard({ u }: { u: UnidadeResumo }) {
+function UnidadeCard({ u, delay = 0 }: { u: UnidadeResumo; delay?: number }) {
   const semUnidade = u.id_unidade === null;
   const href = `/empresas?unidade=${semUnidade ? "__sem__" : u.id_unidade}`;
   return (
     <Link
       href={href}
-      className="group flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-verde-primary hover:shadow"
+      style={{ animationDelay: `${delay}ms` }}
+      className="reveal-up group flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-verde-primary hover:shadow-md"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

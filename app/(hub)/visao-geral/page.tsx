@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { useUserStore } from "@/lib/store";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
@@ -9,6 +9,7 @@ import { useVisaoGeralUnidades } from "@/lib/hooks/useVisaoGeralUnidades";
 import { useHomeStats } from "@/lib/hooks/useHomeStats";
 import { useAtividadeContexto } from "@/lib/hooks/useAtividadeContexto";
 import { useVencimentos } from "@/lib/hooks/useVencimentos";
+import { useLaudosValidade } from "@/lib/hooks/useLaudosValidade";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import VisaoGeralView, { type PendenciaItem } from "@/components/visao-geral/VisaoGeralView";
 
@@ -21,6 +22,24 @@ export default function VisaoGeralPage() {
   const stats = useHomeStats();
   const { data: ctx, isLoading: ctxLoading } = useAtividadeContexto();
   const { data: vencimentos, isLoading: vencLoading } = useVencimentos();
+  const { data: laudosVal = [] } = useLaudosValidade();
+
+  // Saúde dos documentos (anel): total + composição por status de validade.
+  const saude = useMemo(() => {
+    const s = { total: laudosVal.length, emDia: 0, vencendo: 0, vencido: 0, semValidade: 0 };
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    for (const l of laudosVal) {
+      if (!l.data_validade) { s.semValidade++; continue; }
+      const dias = Math.round(
+        (new Date(l.data_validade + "T00:00:00").getTime() - hoje.getTime()) / 86_400_000,
+      );
+      if (dias < 0) s.vencido++;
+      else if (dias <= 60) s.vencendo++;
+      else s.emDia++;
+    }
+    return s;
+  }, [laudosVal]);
 
   // Enriquece a atividade com nome da empresa + técnico vinculado (via id_empresa).
   const atividade = stats.atividadeRecente.map((a) => ({
@@ -73,6 +92,7 @@ export default function VisaoGeralPage() {
       statsLoading={stats.isLoading || ctxLoading}
       vencimentos={vencimentos}
       vencimentosLoading={vencLoading}
+      saude={saude}
       onLogout={handleLogout}
     />
   );
