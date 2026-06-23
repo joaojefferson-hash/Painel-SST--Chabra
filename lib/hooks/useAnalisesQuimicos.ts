@@ -281,6 +281,30 @@ export function useGerarAnaliseQuimico() {
   });
 }
 
+/** Atualiza metadados editáveis da análise (hoje só a validade do documento). */
+export function useAtualizarAnaliseQuimico() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { id_analise: string; data_validade?: string | null }) => {
+      const supabase = createSupabaseBrowserClient();
+      const patch: Partial<AnaliseQuimico> = { updated_at: new Date().toISOString() };
+      if (params.data_validade !== undefined)
+        patch.data_validade = params.data_validade || null;
+      const { error } = await supabase
+        .from("analises_quimicos")
+        .update(patch as never)
+        .eq("id_analise", params.id_analise);
+      if (error) throw error;
+      return params;
+    },
+    onSuccess: (params) => {
+      qc.invalidateQueries({ queryKey: ["analise-quimico", params.id_analise] });
+      qc.invalidateQueries({ queryKey: ["analises-quimicos"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 export function useExcluirAnaliseQuimico() {
   const qc = useQueryClient();
 

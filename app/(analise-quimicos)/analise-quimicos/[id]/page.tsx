@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -17,13 +17,14 @@ import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import {
   useAnaliseQuimico,
   useExcluirAnaliseQuimico,
+  useAtualizarAnaliseQuimico,
 } from "@/lib/hooks/useAnalisesQuimicos";
 import ConclusaoRapidaCard from "@/components/quimicos/ConclusaoRapidaCard";
 import RelatorioEstruturado from "@/components/quimicos/RelatorioEstruturado";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import { montarValoresEmpresa, formatarDataBR } from "@/lib/textos-padrao/variaveis";
-import { useCanDelete } from "@/lib/hooks/useUsuario";
+import { useCanDelete, useCanEdit } from "@/lib/hooks/useUsuario";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function AnaliseDetalhePage({
@@ -37,7 +38,13 @@ export default function AnaliseDetalhePage({
   const { data: analise, isLoading, error } = useAnaliseQuimico(id);
   const { data: empresa } = useEmpresa(analise?.id_empresa ?? null);
   const excluir = useExcluirAnaliseQuimico();
+  const canEdit = useCanEdit();
+  const atualizar = useAtualizarAnaliseQuimico();
   const [confirmExcluirOpen, setConfirmExcluirOpen] = useState(false);
+  const [validade, setValidade] = useState("");
+  useEffect(() => {
+    setValidade(analise?.data_validade ?? "");
+  }, [analise?.data_validade]);
 
   if (isLoading) {
     return (
@@ -185,6 +192,27 @@ export default function AnaliseDetalhePage({
             )}
           </div>
         )}
+      </div>
+
+      {/* Validade do documento (editável) — alimenta os vencimentos da Visão geral */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm print:hidden">
+        <label className="text-sm font-semibold text-gray-700">Validade do documento</label>
+        <input
+          type="date"
+          value={validade}
+          disabled={!canEdit}
+          onChange={(e) => setValidade(e.target.value)}
+          onBlur={() => {
+            if ((analise.data_validade ?? "") !== validade) {
+              atualizar.mutate(
+                { id_analise: analise.id_analise, data_validade: validade || null },
+                { onSuccess: () => toast.success("Validade salva") },
+              );
+            }
+          }}
+          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-verde-primary focus:outline-none disabled:bg-gray-100"
+        />
+        <span className="text-xs text-gray-400">Usada nos alertas de vencimento da Visão geral.</span>
       </div>
 
       {/* Conclusão rápida */}

@@ -8,6 +8,7 @@ import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import { useVisaoGeralUnidades } from "@/lib/hooks/useVisaoGeralUnidades";
 import { useHomeStats } from "@/lib/hooks/useHomeStats";
 import { useAtividadeContexto } from "@/lib/hooks/useAtividadeContexto";
+import { useVencimentos } from "@/lib/hooks/useVencimentos";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import VisaoGeralView, { type PendenciaItem } from "@/components/visao-geral/VisaoGeralView";
 
@@ -19,6 +20,7 @@ export default function VisaoGeralPage() {
   const { data, isLoading, error } = useVisaoGeralUnidades();
   const stats = useHomeStats();
   const { data: ctx, isLoading: ctxLoading } = useAtividadeContexto();
+  const { data: vencimentos, isLoading: vencLoading } = useVencimentos();
 
   // Enriquece a atividade com nome da empresa + técnico vinculado (via id_empresa).
   const atividade = stats.atividadeRecente.map((a) => ({
@@ -69,6 +71,8 @@ export default function VisaoGeralPage() {
       atividade={atividade}
       pendencias={pendencias}
       statsLoading={stats.isLoading || ctxLoading}
+      vencimentos={vencimentos}
+      vencimentosLoading={vencLoading}
       onLogout={handleLogout}
     />
   );

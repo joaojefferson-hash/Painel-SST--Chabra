@@ -202,6 +202,7 @@ export function useAtualizarApreciacaoMaquina() {
       responsavel_empresa?: string | null;
       cidade?: string | null;
       data_apreciacao?: string | null;
+      data_validade?: string | null;
       conclusao_tecnica?: string | null;
       recomendacoes?: string | null;
       risco_residual?: RiscoResidual | null;
@@ -233,6 +234,8 @@ export function useAtualizarApreciacaoMaquina() {
       if (params.cidade !== undefined) patch.cidade = params.cidade;
       if (params.data_apreciacao !== undefined)
         patch.data_apreciacao = params.data_apreciacao;
+      if (params.data_validade !== undefined)
+        patch.data_validade = params.data_validade || null;
       if (params.conclusao_tecnica !== undefined)
         patch.conclusao_tecnica = params.conclusao_tecnica;
       if (params.recomendacoes !== undefined)

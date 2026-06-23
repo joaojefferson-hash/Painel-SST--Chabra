@@ -105,6 +105,7 @@ export default function DetalheApreciacaoPage() {
   const [responsavelEmpresa, setResponsavelEmpresa] = useState("");
   const [cidade, setCidade] = useState("");
   const [dataApreciacao, setDataApreciacao] = useState("");
+  const [dataValidade, setDataValidade] = useState("");
   const [conclusao, setConclusao] = useState("");
   const [recomendacoes, setRecomendacoes] = useState("");
   const [riscoResidual, setRiscoResidual] = useState<RiscoResidual | "">("");
@@ -141,6 +142,7 @@ export default function DetalheApreciacaoPage() {
     setResponsavelEmpresa(apreciacao.responsavel_empresa ?? "");
     setCidade(apreciacao.cidade ?? "");
     setDataApreciacao(apreciacao.data_apreciacao ?? "");
+    setDataValidade(apreciacao.data_validade ?? "");
     setConclusao(apreciacao.conclusao_tecnica ?? "");
     setRecomendacoes(apreciacao.recomendacoes ?? "");
     setRiscoResidual(apreciacao.risco_residual ?? "");
@@ -200,6 +202,7 @@ export default function DetalheApreciacaoPage() {
     || responsavelEmpresa !== (apreciacao.responsavel_empresa ?? "")
     || cidade !== (apreciacao.cidade ?? "")
     || dataApreciacao !== (apreciacao.data_apreciacao ?? "")
+    || dataValidade !== (apreciacao.data_validade ?? "")
     || observacoes !== (apreciacao.observacoes_gerais ?? "")
     || conclusao !== (apreciacao.conclusao_tecnica ?? "")
     || recomendacoes !== (apreciacao.recomendacoes ?? "")
@@ -217,6 +220,7 @@ export default function DetalheApreciacaoPage() {
         responsavel_empresa: responsavelEmpresa.trim() || null,
         cidade: cidade.trim() || null,
         data_apreciacao: dataApreciacao || null,
+        data_validade: dataValidade || null,
         observacoes_gerais: observacoes.trim() || null,
       });
       toast.success("Dados gerais salvos");
@@ -696,6 +700,16 @@ export default function DetalheApreciacaoPage() {
               type="date"
               value={dataApreciacao}
               onChange={(e) => setDataApreciacao(e.target.value)}
+              disabled={readOnly}
+              className={inputClass}
+            />
+          </Campo>
+          <Campo label="Validade do documento" htmlFor="validade">
+            <input
+              id="validade"
+              type="date"
+              value={dataValidade}
+              onChange={(e) => setDataValidade(e.target.value)}
               disabled={readOnly}
               className={inputClass}
             />

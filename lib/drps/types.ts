@@ -12,6 +12,8 @@ export interface DrpsRelatorio {
   revisao: number;
   status: StatusRelatorio;
   data_elaboracao: string | null;
+  /** Validade do documento (informada pelo usuário) — alerta de vencimento. */
+  data_validade?: string | null;
   responsavel_tecnico: string | null;
   crp: string | null;
   funcoes: string | null;

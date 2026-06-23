@@ -204,6 +204,7 @@ export function useAtualizarRelatorioConformidade() {
       responsavel_empresa?: string | null;
       cidade?: string | null;
       data_inspecao?: string | null;
+      data_validade?: string | null;
       observacoes_gerais?: string | null;
       status?: StatusRelatorioConformidade;
     }) => {
@@ -218,6 +219,8 @@ export function useAtualizarRelatorioConformidade() {
       if (params.cidade !== undefined) patch.cidade = params.cidade;
       if (params.data_inspecao !== undefined)
         patch.data_inspecao = params.data_inspecao;
+      if (params.data_validade !== undefined)
+        patch.data_validade = params.data_validade || null;
       if (params.observacoes_gerais !== undefined)
         patch.observacoes_gerais = params.observacoes_gerais;
       if (params.status !== undefined) {

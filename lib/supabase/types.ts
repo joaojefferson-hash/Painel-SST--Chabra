@@ -745,6 +745,8 @@ export interface AnaliseQuimico {
   condicoes_uso: CondicoesUsoQuimico | null;
   resultado_texto: string;
   conclusao_rapida: ConclusaoRapidaQuimico | null;
+  /** Validade do documento (informada pelo usuário) — alerta de vencimento. */
+  data_validade?: string | null;
   usuario_email: string | null;
   usuario_nome: string | null;
   created_at: string;
@@ -888,6 +890,8 @@ export interface ApreciacaoMaquina {
   responsavel_empresa: string | null;
   cidade: string | null;
   data_apreciacao: string | null;
+  /** Validade do documento (informada pelo usuário) — alerta de vencimento. */
+  data_validade?: string | null;
   conclusao_tecnica: string | null;
   recomendacoes: string | null;
   risco_residual: RiscoResidual | null;
@@ -1146,6 +1150,8 @@ export interface RelatorioConformidade {
   /** Cidade da auditoria, usada na linha de fechamento ("Cidade, dd de mês de YYYY"). */
   cidade: string | null;
   data_inspecao: string | null;
+  /** Validade do documento (informada pelo usuário) — alerta de vencimento. */
+  data_validade?: string | null;
   observacoes_gerais: string | null;
   status: StatusRelatorioConformidade;
   finalizado_em: string | null;
@@ -1206,6 +1212,8 @@ export interface RelatorioNaoConformidade {
   /** Cidade da auditoria, usada na linha de fechamento. */
   cidade: string | null;
   data_inspecao: string | null;
+  /** Validade do documento (informada pelo usuário) — alerta de vencimento. */
+  data_validade?: string | null;
   observacoes_gerais: string | null;
   status: StatusRelatorioNC;
   finalizado_em: string | null;
@@ -1473,6 +1481,8 @@ export interface AepRelatorio {
   titulo_profissional: string;
   registro_profissional: string;
   data_elaboracao: string | null;
+  /** Validade do documento (informada pelo usuário) — alerta de vencimento. */
+  data_validade?: string | null;
   endereco_empresa: string | null;
   conclusao: string;
   usuario: string | null;
@@ -1620,6 +1630,8 @@ export interface AetRelatorio {
   id_relatorio: string;
   id_empresa: string;
   data_elaboracao: string | null;
+  /** Validade do documento (informada pelo usuário) — alerta de vencimento. */
+  data_validade?: string | null;
   responsavel_elaboracao: string;
   titulo_profissional: string;
   registro_profissional: string;

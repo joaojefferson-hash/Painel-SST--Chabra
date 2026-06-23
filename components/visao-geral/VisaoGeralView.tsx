@@ -18,6 +18,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { UnidadeResumo, VisaoGeralData } from "@/lib/hooks/useVisaoGeralUnidades";
 import type { AtividadeItem } from "@/lib/hooks/useHomeStats";
+import type { VencimentosData, VencimentoItem } from "@/lib/hooks/useVencimentos";
 import { cn } from "@/lib/utils";
 
 const VERDE_SIDEBAR = "#0f3d28";
@@ -44,6 +45,9 @@ export interface VisaoGeralViewProps {
   /** Módulos com itens não finalizados (do useHomeStats). */
   pendencias?: PendenciaItem[];
   statsLoading?: boolean;
+  /** Laudos vencidos / a vencer (do useVencimentos). */
+  vencimentos?: VencimentosData;
+  vencimentosLoading?: boolean;
   onLogout: () => void;
 }
 
@@ -63,12 +67,16 @@ export default function VisaoGeralView({
   atividade,
   pendencias,
   statsLoading,
+  vencimentos,
+  vencimentosLoading,
   onLogout,
 }: VisaoGeralViewProps) {
   const totais = data?.totais;
   const unidades = data?.unidades ?? [];
   const escopoRestrito = userPerfil === "Tecnico" && vinculadasCount > 0;
   const totalPendencias = (pendencias ?? []).reduce((s, p) => s + p.pendente, 0);
+  const vencidos = vencimentos?.vencidos ?? [];
+  const vencendo = vencimentos?.vencendo ?? [];
 
   return (
     <div className="flex min-h-screen bg-[#f6f5f2]">
@@ -200,6 +208,34 @@ export default function VisaoGeralView({
                   ))}
                 </div>
               )}
+
+              {/* Vencimentos */}
+              <div className="mt-9 flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Vencimentos</p>
+                {!vencimentosLoading && (
+                  <p className="text-xs text-gray-500">
+                    <span className="font-semibold text-red-600">{vencidos.length}</span> vencido(s) ·{" "}
+                    <span className="font-semibold text-amber-600">{vencendo.length}</span> a vencer (60 dias)
+                  </p>
+                )}
+              </div>
+              <div className="mt-2 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                {vencimentosLoading ? (
+                  <div className="flex items-center gap-2 p-4 text-sm text-gray-400">
+                    <Loader2 className="size-4 animate-spin" /> Carregando…
+                  </div>
+                ) : vencidos.length === 0 && vencendo.length === 0 ? (
+                  <p className="p-4 text-sm text-gray-400">
+                    Nenhum laudo vencido ou a vencer. Informe a validade nos editores dos laudos.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {[...vencidos, ...vencendo].slice(0, 8).map((v, i) => (
+                      <VencimentoRow key={`${v.href}-${i}`} v={v} />
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Atividade recente + Pendências */}
               <div className="mt-9 grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -415,5 +451,30 @@ function StatusPill({ status }: { status: string }) {
     >
       {status.replace(/_/g, " ").toLowerCase()}
     </span>
+  );
+}
+
+function fmtData(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
+function VencimentoRow({ v }: { v: VencimentoItem }) {
+  const vencido = v.dias < 0;
+  return (
+    <Link href={v.href} className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-gray-50">
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-gray-800">{v.empresaNome ?? "Sem empresa"}</span>
+        <span className="block truncate text-xs text-gray-400">{v.tipo} · vence {fmtData(v.data_validade)}</span>
+      </span>
+      <span
+        className={cn(
+          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+          vencido ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700",
+        )}
+      >
+        {vencido ? `vencido há ${Math.abs(v.dias)}d` : v.dias === 0 ? "vence hoje" : `faltam ${v.dias}d`}
+      </span>
+    </Link>
   );
 }

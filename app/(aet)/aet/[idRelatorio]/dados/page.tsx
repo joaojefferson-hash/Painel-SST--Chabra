@@ -117,10 +117,12 @@ export default function AetDadosPage({
     titulo_profissional: string;
     registro_profissional: string;
     data_elaboracao: string;
+    data_validade: string;
     status: "RASCUNHO" | "CONCLUIDO";
   }) {
     salvar.mutate(
-      { id: idRelatorio, patch },
+      // data_validade é coluna `date`: "" → null.
+      { id: idRelatorio, patch: { ...patch, data_validade: patch.data_validade || null } },
       {
         onSuccess: () => toast.success("Dados salvos"),
         onError: (e: Error) => toast.error(e.message),
@@ -174,6 +176,7 @@ function CaracterizacaoCard({
     titulo_profissional: string;
     registro_profissional: string;
     data_elaboracao: string;
+    data_validade: string;
     status: "RASCUNHO" | "CONCLUIDO";
   }) => void;
 }) {
@@ -182,6 +185,7 @@ function CaracterizacaoCard({
     titulo_profissional: rel?.titulo_profissional ?? "",
     registro_profissional: rel?.registro_profissional ?? "",
     data_elaboracao: rel?.data_elaboracao ?? "",
+    data_validade: rel?.data_validade ?? "",
     status: (rel?.status ?? "RASCUNHO") as "RASCUNHO" | "CONCLUIDO",
   });
   const [dirty, setDirty] = useState(false);
@@ -193,6 +197,7 @@ function CaracterizacaoCard({
       titulo_profissional: rel.titulo_profissional,
       registro_profissional: rel.registro_profissional,
       data_elaboracao: rel.data_elaboracao ?? "",
+      data_validade: rel.data_validade ?? "",
       status: rel.status,
     });
     setDirty(false);
@@ -267,6 +272,18 @@ function CaracterizacaoCard({
               value={form.data_elaboracao}
               disabled={!canEdit}
               onChange={(e) => set("data_elaboracao", e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-verde-primary focus:outline-none disabled:bg-gray-100"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Validade do Documento
+            </label>
+            <input
+              type="date"
+              value={form.data_validade}
+              disabled={!canEdit}
+              onChange={(e) => set("data_validade", e.target.value)}
               className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-verde-primary focus:outline-none disabled:bg-gray-100"
             />
           </div>

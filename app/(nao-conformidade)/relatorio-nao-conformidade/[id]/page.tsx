@@ -1224,6 +1224,7 @@ function EditarCabecalho({
     responsavel_empresa?: string | null;
     cidade?: string | null;
     data_inspecao?: string | null;
+    data_validade?: string | null;
   }) => void;
 }) {
   const nrsDisponiveis = useMemo(() => listarNRs(), []);
@@ -1236,6 +1237,7 @@ function EditarCabecalho({
   );
   const [cidade, setCidade] = useState(relatorio.cidade ?? "");
   const [dataInsp, setDataInsp] = useState(relatorio.data_inspecao ?? "");
+  const [dataValidade, setDataValidade] = useState(relatorio.data_validade ?? "");
 
   if (!aberto) {
     return (
@@ -1337,6 +1339,16 @@ function EditarCabecalho({
           value={dataInsp}
           onChange={(e) => setDataInsp(e.target.value)}
           onBlur={() => onSalvar({ data_inspecao: dataInsp || null })}
+          className={inputCls}
+        />
+      </div>
+      <div>
+        <label className={lblCls}>Validade do documento</label>
+        <input
+          type="date"
+          value={dataValidade}
+          onChange={(e) => setDataValidade(e.target.value)}
+          onBlur={() => onSalvar({ data_validade: dataValidade || null })}
           className={inputCls}
         />
       </div>
