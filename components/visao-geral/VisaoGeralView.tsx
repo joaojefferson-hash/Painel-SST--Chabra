@@ -95,7 +95,7 @@ export default function VisaoGeralView({
           {unidades
             .filter((u) => u.id_unidade)
             .map((u) => (
-              <Link key={u.id_unidade} href="/empresas">
+              <Link key={u.id_unidade} href={`/empresas?unidade=${u.id_unidade}`}>
                 <NavItem icon={<MapPin className="size-[15px]" />} label={u.nome} badge={u.empresas} />
               </Link>
             ))}
@@ -242,9 +242,10 @@ function ResumoCard({
 
 function UnidadeCard({ u }: { u: UnidadeResumo }) {
   const semUnidade = u.id_unidade === null;
+  const href = `/empresas?unidade=${semUnidade ? "__sem__" : u.id_unidade}`;
   return (
     <Link
-      href="/empresas"
+      href={href}
       className="group flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-verde-primary hover:shadow"
     >
       <div className="flex items-center justify-between">

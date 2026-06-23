@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Plus, Search, Building2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -14,7 +15,8 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useCanCreate, useCanDelete, useCanEdit } from "@/lib/hooks/useUsuario";
 import type { Empresa } from "@/lib/supabase/types";
 
-export default function EmpresasPage() {
+function EmpresasInner() {
+  const searchParams = useSearchParams();
   const { data: empresas = [], isLoading, error } = useEmpresas();
   const { data: unidades = [] } = useUnidades();
   const canEdit = useCanEdit();
@@ -22,7 +24,8 @@ export default function EmpresasPage() {
   const canDelete = useCanDelete();
   const qc = useQueryClient();
   const [busca, setBusca] = useState("");
-  const [filtroUnidade, setFiltroUnidade] = useState("");
+  // Pré-filtra por unidade quando vem da "Visão geral" (/empresas?unidade=ID|__sem__).
+  const [filtroUnidade, setFiltroUnidade] = useState(searchParams.get("unidade") ?? "");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Empresa | null>(null);
   const [confirmDel, setConfirmDel] = useState<Empresa | null>(null);
@@ -182,5 +185,14 @@ export default function EmpresasPage() {
         onCancel={() => setConfirmDel(null)}
       />
     </div>
+  );
+}
+
+export default function EmpresasPage() {
+  // useSearchParams exige Suspense boundary (padrão do projeto).
+  return (
+    <Suspense fallback={null}>
+      <EmpresasInner />
+    </Suspense>
   );
 }
