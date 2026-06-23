@@ -222,6 +222,8 @@ export interface Inspecao {
   id_inspecao: string;
   id_empresa: string;
   data_inspecao: string | null;
+  /** Validade do documento (PGR) — alerta de vencimento. */
+  data_validade?: string | null;
   status: StatusInspecao;
   revisao: number;
   responsavel: string | null;

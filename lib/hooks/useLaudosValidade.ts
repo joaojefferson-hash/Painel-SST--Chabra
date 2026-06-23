@@ -11,7 +11,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
  */
 
 export type TipoLaudo =
-  | "Conformidade" | "Não Conformidade" | "AET" | "AEP" | "DRPS"
+  | "Inspeção" | "Conformidade" | "Não Conformidade" | "AET" | "AEP" | "DRPS"
   | "Análise de Químicos" | "Apreciação";
 
 export interface LaudoValidadeItem {
@@ -32,14 +32,17 @@ interface Fonte {
   dataCol: string;
   tipo: TipoLaudo;
   href: (id: string) => string;
+  /** Exclui registros com esse status (soft-delete). */
+  excluirStatus?: string;
 }
 
 const FONTES: Fonte[] = [
+  { tabela: "inspecoes", idCol: "id_inspecao", dataCol: "data_inspecao", tipo: "Inspeção", href: (id) => `/inspecoes/${id}`, excluirStatus: "DELETADA" },
   { tabela: "relatorios_conformidade", idCol: "id_relatorio", dataCol: "data_inspecao", tipo: "Conformidade", href: (id) => `/relatorio-conformidade/${id}` },
   { tabela: "relatorios_nao_conformidade", idCol: "id_relatorio", dataCol: "data_inspecao", tipo: "Não Conformidade", href: (id) => `/relatorio-nao-conformidade/${id}` },
   { tabela: "aet_relatorios", idCol: "id_relatorio", dataCol: "data_elaboracao", tipo: "AET", href: (id) => `/aet/${id}/dados` },
   { tabela: "aep_relatorios", idCol: "id_relatorio", dataCol: "data_elaboracao", tipo: "AEP", href: (id) => `/aep/${id}/dados` },
-  { tabela: "drps_relatorios", idCol: "id_relatorio", dataCol: "data_elaboracao", tipo: "DRPS", href: (id) => `/psicossocial/${id}/metadados` },
+  { tabela: "drps_relatorios", idCol: "id_relatorio", dataCol: "data_elaboracao", tipo: "DRPS", href: (id) => `/psicossocial/${id}/metadados`, excluirStatus: "DELETADO" },
   { tabela: "analises_quimicos", idCol: "id_analise", dataCol: "created_at", tipo: "Análise de Químicos", href: (id) => `/analise-quimicos/${id}` },
   { tabela: "apreciacoes_maquinas", idCol: "id_apreciacao", dataCol: "data_apreciacao", tipo: "Apreciação", href: (id) => `/apreciacao-maquinas/${id}` },
 ];
@@ -58,9 +61,9 @@ export function useLaudosValidade() {
 
       const listas = await Promise.all(
         FONTES.map(async (f) => {
-          const { data, error } = await sb
-            .from(f.tabela)
-            .select(`${f.idCol}, id_empresa, ${f.dataCol}, data_validade`);
+          let q = sb.from(f.tabela).select(`${f.idCol}, id_empresa, ${f.dataCol}, data_validade`);
+          if (f.excluirStatus) q = q.neq("status", f.excluirStatus);
+          const { data, error } = await q;
           if (error) return [] as LaudoValidadeItem[];
           return ((data ?? []) as Record<string, string | null>[]).map((r) => {
             const id = r[f.idCol] as string;

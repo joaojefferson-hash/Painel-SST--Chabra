@@ -30,14 +30,16 @@ interface Fonte {
   idCol: string;
   tipo: string;
   href: (id: string) => string;
+  excluirStatus?: string;
 }
 
 const FONTES: Fonte[] = [
+  { tabela: "inspecoes", idCol: "id_inspecao", tipo: "Inspeção", href: (id) => `/inspecoes/${id}`, excluirStatus: "DELETADA" },
   { tabela: "relatorios_conformidade", idCol: "id_relatorio", tipo: "Conformidade", href: (id) => `/relatorio-conformidade/${id}` },
   { tabela: "relatorios_nao_conformidade", idCol: "id_relatorio", tipo: "Não Conformidade", href: (id) => `/relatorio-nao-conformidade/${id}` },
   { tabela: "aet_relatorios", idCol: "id_relatorio", tipo: "AET", href: (id) => `/aet/${id}` },
   { tabela: "aep_relatorios", idCol: "id_relatorio", tipo: "AEP", href: (id) => `/aep/${id}` },
-  { tabela: "drps_relatorios", idCol: "id_relatorio", tipo: "DRPS", href: (id) => `/psicossocial/${id}/metadados` },
+  { tabela: "drps_relatorios", idCol: "id_relatorio", tipo: "DRPS", href: (id) => `/psicossocial/${id}/metadados`, excluirStatus: "DELETADO" },
   { tabela: "analises_quimicos", idCol: "id_analise", tipo: "Análise de Químicos", href: (id) => `/analise-quimicos/${id}` },
   { tabela: "apreciacoes_maquinas", idCol: "id_apreciacao", tipo: "Apreciação NR-12", href: (id) => `/apreciacao-maquinas/${id}` },
 ];
@@ -66,10 +68,12 @@ export function useVencimentos() {
       // busca os documentos com validade informada em cada fonte
       const listas = await Promise.all(
         FONTES.map(async (f) => {
-          const { data, error } = await sb
+          let q = sb
             .from(f.tabela)
             .select(`${f.idCol}, id_empresa, data_validade`)
             .not("data_validade", "is", null);
+          if (f.excluirStatus) q = q.neq("status", f.excluirStatus);
+          const { data, error } = await q;
           if (error) return [] as VencimentoItem[]; // degrada por fonte (não quebra o painel)
           return ((data ?? []) as Record<string, string | null>[]).map((r) => {
             const id = r[f.idCol] as string;
