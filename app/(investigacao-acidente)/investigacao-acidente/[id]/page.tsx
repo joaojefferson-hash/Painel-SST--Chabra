@@ -10,21 +10,25 @@ import {
   useEnviarMedidasParaPlano,
 } from "@/lib/hooks/useInvestigacaoAcidente";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
+import { useCatalogoEmpresa } from "@/lib/hooks/useCatalogoEmpresa";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
+import MultiChipInput from "@/components/ui/MultiChipInput";
+import BodyMap from "@/components/investigacao/BodyMap";
+import { ISHIKAWA_CATS } from "@/lib/investigacao/ishikawa";
 import type { TestemunhaAcidente } from "@/lib/supabase/types";
 
 interface FormState {
   data_acidente: string;
   hora_acidente: string;
   local_acidente: string;
-  setor: string;
+  setores: string[];
   data_investigacao: string;
   responsavel_tecnico: string;
   numero_cat: string;
   data_cat: string;
   acidentado_nome: string;
-  acidentado_cargo: string;
+  acidentado_funcoes: string[];
   acidentado_admissao: string;
   tipo_acidente: string;
   houve_afastamento: boolean;
@@ -32,13 +36,14 @@ interface FormState {
   gravidade: string;
   descricao: string;
   agente_causador: string;
-  parte_corpo: string;
+  partes_corpo: string[];
   natureza_lesao: string;
   cid: string;
   testemunhas: TestemunhaAcidente[];
   causas_imediatas: string;
   causas_basicas: string;
   cinco_porques: string[];
+  ishikawa: Record<string, string[]>;
   medidas: string;
   conclusao: string;
   status: string;
@@ -46,13 +51,13 @@ interface FormState {
 }
 
 const VAZIO: FormState = {
-  data_acidente: "", hora_acidente: "", local_acidente: "", setor: "",
+  data_acidente: "", hora_acidente: "", local_acidente: "", setores: [],
   data_investigacao: "", responsavel_tecnico: "", numero_cat: "", data_cat: "",
-  acidentado_nome: "", acidentado_cargo: "", acidentado_admissao: "",
+  acidentado_nome: "", acidentado_funcoes: [], acidentado_admissao: "",
   tipo_acidente: "", houve_afastamento: false, dias_afastamento: "", gravidade: "",
-  descricao: "", agente_causador: "", parte_corpo: "", natureza_lesao: "", cid: "",
+  descricao: "", agente_causador: "", partes_corpo: [], natureza_lesao: "", cid: "",
   testemunhas: [], causas_imediatas: "", causas_basicas: "", cinco_porques: [],
-  medidas: "", conclusao: "", status: "RASCUNHO", data_validade: "",
+  ishikawa: {}, medidas: "", conclusao: "", status: "RASCUNHO", data_validade: "",
 };
 
 export default function EditorInvestigacaoPage() {
@@ -61,6 +66,7 @@ export default function EditorInvestigacaoPage() {
   const { data, isLoading, isError } = useInvestigacaoAcidente(id);
   const salvar = useSalvarInvestigacao();
   const enviarPlano = useEnviarMedidasParaPlano();
+  const { data: catalogo } = useCatalogoEmpresa(data?.id_empresa);
   const canEdit = useCanEdit();
   const ro = !canEdit;
 
@@ -73,13 +79,13 @@ export default function EditorInvestigacaoPage() {
       data_acidente: data.data_acidente ?? "",
       hora_acidente: data.hora_acidente ?? "",
       local_acidente: data.local_acidente ?? "",
-      setor: data.setor ?? "",
+      setores: data.setores ?? [],
       data_investigacao: data.data_investigacao ?? "",
       responsavel_tecnico: data.responsavel_tecnico ?? "",
       numero_cat: data.numero_cat ?? "",
       data_cat: data.data_cat ?? "",
       acidentado_nome: data.acidentado_nome ?? "",
-      acidentado_cargo: data.acidentado_cargo ?? "",
+      acidentado_funcoes: data.acidentado_funcoes ?? [],
       acidentado_admissao: data.acidentado_admissao ?? "",
       tipo_acidente: data.tipo_acidente ?? "",
       houve_afastamento: data.houve_afastamento ?? false,
@@ -87,13 +93,14 @@ export default function EditorInvestigacaoPage() {
       gravidade: data.gravidade ?? "",
       descricao: data.descricao ?? "",
       agente_causador: data.agente_causador ?? "",
-      parte_corpo: data.parte_corpo ?? "",
+      partes_corpo: data.partes_corpo ?? [],
       natureza_lesao: data.natureza_lesao ?? "",
       cid: data.cid ?? "",
       testemunhas: data.testemunhas ?? [],
       causas_imediatas: data.causas_imediatas ?? "",
       causas_basicas: data.causas_basicas ?? "",
       cinco_porques: data.cinco_porques ?? [],
+      ishikawa: data.ishikawa ?? {},
       medidas: data.medidas ?? "",
       conclusao: data.conclusao ?? "",
       status: data.status ?? "RASCUNHO",
@@ -113,13 +120,13 @@ export default function EditorInvestigacaoPage() {
       data_acidente: form.data_acidente || null,
       hora_acidente: form.hora_acidente || null,
       local_acidente: form.local_acidente || null,
-      setor: form.setor || null,
+      setores: form.setores,
       data_investigacao: form.data_investigacao || null,
       responsavel_tecnico: form.responsavel_tecnico || null,
       numero_cat: form.numero_cat || null,
       data_cat: form.data_cat || null,
       acidentado_nome: form.acidentado_nome || null,
-      acidentado_cargo: form.acidentado_cargo || null,
+      acidentado_funcoes: form.acidentado_funcoes,
       acidentado_admissao: form.acidentado_admissao || null,
       tipo_acidente: (form.tipo_acidente || null) as never,
       houve_afastamento: form.houve_afastamento,
@@ -127,13 +134,14 @@ export default function EditorInvestigacaoPage() {
       gravidade: (form.gravidade || null) as never,
       descricao: form.descricao || null,
       agente_causador: form.agente_causador || null,
-      parte_corpo: form.parte_corpo || null,
+      partes_corpo: form.partes_corpo,
       natureza_lesao: form.natureza_lesao || null,
       cid: form.cid || null,
       testemunhas: form.testemunhas.filter((t) => t.nome.trim() || t.depoimento.trim()),
       causas_imediatas: form.causas_imediatas || null,
       causas_basicas: form.causas_basicas || null,
       cinco_porques: form.cinco_porques.filter((p) => p.trim()),
+      ishikawa: form.ishikawa,
       medidas: form.medidas || null,
       conclusao: form.conclusao || null,
       status: form.status as never,
@@ -186,7 +194,10 @@ export default function EditorInvestigacaoPage() {
           <Campo label="Data do acidente" type="date" value={form.data_acidente} onChange={(v) => set("data_acidente", v)} ro={ro} />
           <Campo label="Hora" type="time" value={form.hora_acidente} onChange={(v) => set("hora_acidente", v)} ro={ro} />
           <Campo label="Local" value={form.local_acidente} onChange={(v) => set("local_acidente", v)} ro={ro} />
-          <Campo label="Setor" value={form.setor} onChange={(v) => set("setor", v)} ro={ro} />
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">Setores</label>
+            <MultiChipInput value={form.setores} onChange={(v) => set("setores", v)} sugestoes={catalogo?.setores ?? []} placeholder="Adicionar setor…" ro={ro} />
+          </div>
           <Campo label="Data da investigação" type="date" value={form.data_investigacao} onChange={(v) => set("data_investigacao", v)} ro={ro} />
           <Campo label="Responsável técnico" value={form.responsavel_tecnico} onChange={(v) => set("responsavel_tecnico", v)} ro={ro} />
           <Campo label="Nº da CAT" value={form.numero_cat} onChange={(v) => set("numero_cat", v)} ro={ro} />
@@ -198,7 +209,10 @@ export default function EditorInvestigacaoPage() {
       <Secao titulo="Acidentado">
         <Grid>
           <Campo label="Nome" value={form.acidentado_nome} onChange={(v) => set("acidentado_nome", v)} ro={ro} />
-          <Campo label="Cargo / função" value={form.acidentado_cargo} onChange={(v) => set("acidentado_cargo", v)} ro={ro} />
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">Cargo / função</label>
+            <MultiChipInput value={form.acidentado_funcoes} onChange={(v) => set("acidentado_funcoes", v)} sugestoes={catalogo?.cargos ?? []} placeholder="Adicionar cargo/função…" ro={ro} />
+          </div>
           <Campo label="Admissão" type="date" value={form.acidentado_admissao} onChange={(v) => set("acidentado_admissao", v)} ro={ro} />
           <Sel label="Tipo de acidente" value={form.tipo_acidente} onChange={(v) => set("tipo_acidente", v)} ro={ro}
             opcoes={[["", "—"], ["TIPICO", "Típico"], ["TRAJETO", "Trajeto"], ["DOENCA", "Doença ocupacional"]]} />
@@ -221,10 +235,13 @@ export default function EditorInvestigacaoPage() {
         <Area label="Relato do ocorrido" value={form.descricao} onChange={(v) => set("descricao", v)} ro={ro} rows={4} />
         <Grid>
           <Campo label="Agente causador" value={form.agente_causador} onChange={(v) => set("agente_causador", v)} ro={ro} />
-          <Campo label="Parte do corpo atingida" value={form.parte_corpo} onChange={(v) => set("parte_corpo", v)} ro={ro} />
           <Campo label="Natureza da lesão" value={form.natureza_lesao} onChange={(v) => set("natureza_lesao", v)} ro={ro} />
           <Campo label="CID" value={form.cid} onChange={(v) => set("cid", v)} ro={ro} />
         </Grid>
+        <div className="mt-2">
+          <label className="mb-1.5 block text-xs font-medium text-gray-600">Parte(s) do corpo atingida(s)</label>
+          <BodyMap value={form.partes_corpo} onChange={(v) => set("partes_corpo", v)} ro={ro} />
+        </div>
       </Secao>
 
       {/* 4. Testemunhas */}
@@ -305,6 +322,26 @@ export default function EditorInvestigacaoPage() {
               </button>
             )}
           </div>
+        </div>
+      </Secao>
+
+      {/* Diagrama de Ishikawa */}
+      <Secao titulo="Diagrama de Ishikawa (6M)">
+        <p className="-mt-1 mb-1 text-xs text-gray-500">
+          Causas do acidente por categoria. Aparece como espinha de peixe no laudo.
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {ISHIKAWA_CATS.map((cat) => (
+            <div key={cat} className="rounded-lg border border-gray-200 p-3">
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-verde-primary">{cat}</p>
+              <MultiChipInput
+                value={form.ishikawa[cat] ?? []}
+                onChange={(v) => set("ishikawa", { ...form.ishikawa, [cat]: v })}
+                placeholder="Adicionar causa…"
+                ro={ro}
+              />
+            </div>
+          ))}
         </div>
       </Secao>
 

@@ -84,10 +84,15 @@ export interface InvestigacaoAcidente {
   houve_afastamento: boolean;
   dias_afastamento: number | null;
   gravidade: GravidadeAcidente | null;
+  /** Setores e funções do acidentado (múltiplos). `setor`/`acidentado_cargo` (single) ficam de legado. */
+  setores: string[];
+  acidentado_funcoes: string[];
   // Descrição
   descricao: string | null;
   agente_causador: string | null;
+  /** Parte do corpo (legado single) + partes do corpo atingidas (lista + silhueta). */
   parte_corpo: string | null;
+  partes_corpo: string[];
   natureza_lesao: string | null;
   cid: string | null;
   // Testemunhas (JSONB)
@@ -97,6 +102,8 @@ export interface InvestigacaoAcidente {
   causas_basicas: string | null;
   /** 5 Porquês — respostas em ordem (até 5). */
   cinco_porques: string[];
+  /** Diagrama de Ishikawa: categoria (6M) → causas. */
+  ishikawa: Record<string, string[]>;
   // Medidas + conclusão
   medidas: string | null;
   conclusao: string | null;

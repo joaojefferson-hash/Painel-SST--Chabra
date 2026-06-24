@@ -1,6 +1,8 @@
 import React from "react";
 import FolhaAssinaturas, { type Signatario } from "@/components/pdf/FolhaAssinaturas";
 import { SecaoIdentificacaoEmpresa } from "@/components/pdf/SecoesComuns";
+import BodyMapStatic from "@/components/investigacao/BodyMapStatic";
+import { ISHIKAWA_CATS } from "@/lib/investigacao/ishikawa";
 import type { Empresa, InvestigacaoAcidente } from "@/lib/supabase/types";
 
 export interface InvestigacaoTemplateProps {
@@ -73,6 +75,36 @@ function Bloco({ rot, val }: { rot: string; val: string | null | undefined }) {
   );
 }
 
+function IshikawaPdf({ ishikawa }: { ishikawa: Record<string, string[]> }) {
+  const temAlgo = ISHIKAWA_CATS.some((c) => (ishikawa?.[c] ?? []).length > 0);
+  if (!temAlgo) return null;
+  const top = ISHIKAWA_CATS.slice(0, 3);
+  const bot = ISHIKAWA_CATS.slice(3);
+  const Box = ({ cat }: { cat: string }) => (
+    <div style={{ flex: 1, minWidth: 0, border: "1px solid #d1d5db", borderRadius: 6, padding: "5px 8px" }}>
+      <p style={{ margin: 0, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".03em", color: VERDE }}>{cat}</p>
+      <ul style={{ margin: "2px 0 0", paddingLeft: 13 }}>
+        {(ishikawa?.[cat] ?? []).map((c, i) => (
+          <li key={i} style={{ fontSize: "9.5pt", color: "#374151" }}>{c}</li>
+        ))}
+      </ul>
+    </div>
+  );
+  return (
+    <div style={{ marginTop: 6, pageBreakInside: "avoid" }}>
+      <p style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em", color: "#6b7280", margin: "0 0 4px" }}>
+        Diagrama de Ishikawa (6M)
+      </p>
+      <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>{top.map((c) => <Box key={c} cat={c} />)}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "5px 0" }}>
+        <div style={{ flex: 1, height: 3, background: VERDE, borderRadius: 2 }} />
+        <div style={{ background: VERDE, color: "#fff", padding: "4px 12px", borderRadius: 6, fontWeight: 700, fontSize: 10, whiteSpace: "nowrap" }}>ACIDENTE</div>
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>{bot.map((c) => <Box key={c} cat={c} />)}</div>
+    </div>
+  );
+}
+
 export default function InvestigacaoAcidenteTemplate({
   inv,
   empresa,
@@ -104,7 +136,7 @@ export default function InvestigacaoAcidenteTemplate({
           <Campo rot="Data do acidente" val={fmt(inv.data_acidente)} />
           <Campo rot="Hora" val={inv.hora_acidente} />
           <Campo rot="Local" val={inv.local_acidente} />
-          <Campo rot="Setor" val={inv.setor} />
+          <Campo rot="Setores" val={(inv.setores ?? []).join(", ")} />
           <Campo rot="Data da investigação" val={fmt(inv.data_investigacao)} />
           <Campo rot="Responsável técnico" val={inv.responsavel_tecnico} />
           <Campo rot="Nº da CAT" val={inv.numero_cat} />
@@ -116,7 +148,7 @@ export default function InvestigacaoAcidenteTemplate({
         <p className="ia-sec">2. Acidentado</p>
         <div className="ia-grid">
           <Campo rot="Nome" val={inv.acidentado_nome} />
-          <Campo rot="Cargo / função" val={inv.acidentado_cargo} />
+          <Campo rot="Cargo / função" val={(inv.acidentado_funcoes ?? []).join(", ")} />
           <Campo rot="Admissão" val={fmt(inv.acidentado_admissao)} />
           <Campo rot="Tipo de acidente" val={inv.tipo_acidente ? TIPO_LABEL[inv.tipo_acidente] : "—"} />
           <Campo rot="Gravidade" val={inv.gravidade ? GRAV_LABEL[inv.gravidade] : "—"} />
@@ -129,10 +161,20 @@ export default function InvestigacaoAcidenteTemplate({
         <Bloco rot="Relato do ocorrido" val={inv.descricao} />
         <div className="ia-grid" style={{ marginTop: 8 }}>
           <Campo rot="Agente causador" val={inv.agente_causador} />
-          <Campo rot="Parte do corpo atingida" val={inv.parte_corpo} />
           <Campo rot="Natureza da lesão" val={inv.natureza_lesao} />
           <Campo rot="CID" val={inv.cid} />
         </div>
+        {(inv.partes_corpo ?? []).length > 0 && (
+          <div style={{ marginTop: 10, display: "flex", gap: 16, alignItems: "center" }}>
+            <BodyMapStatic value={inv.partes_corpo} />
+            <div>
+              <p style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em", color: "#6b7280", margin: "0 0 2px" }}>
+                Partes do corpo atingidas
+              </p>
+              <p style={{ fontSize: "11pt", color: "#111827", margin: 0 }}>{inv.partes_corpo.join(" · ")}</p>
+            </div>
+          </div>
+        )}
       </section>
 
       {testemunhas.length > 0 && (
@@ -163,6 +205,7 @@ export default function InvestigacaoAcidenteTemplate({
             </ul>
           </div>
         )}
+        <IshikawaPdf ishikawa={inv.ishikawa} />
       </section>
 
       {(inv.medidas?.trim() || inv.conclusao?.trim()) && (
