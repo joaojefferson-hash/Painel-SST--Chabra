@@ -53,6 +53,12 @@ export interface Subtarefa {
   feito: boolean;
 }
 
+export interface Recorrencia {
+  tipo: "diaria" | "semanal" | "mensal";
+  intervalo: number;
+  proxima_geracao: string; // YYYY-MM-DD
+}
+
 export type TipoCampo = "texto" | "numero" | "data" | "selecao" | "multi" | "checkbox" | "moeda" | "url";
 
 export interface GestaoCampo {
@@ -79,6 +85,7 @@ export interface GestaoTarefa {
   etiquetas: string[];
   subtarefas: Subtarefa[];
   campos: Record<string, unknown>;
+  recorrencia: Recorrencia | null;
   created_by: string | null;
   created_at: string;
   updated_at: string | null;
@@ -885,6 +892,7 @@ export function useSalvarTarefa() {
           etiquetas: t.etiquetas ?? [],
           subtarefas: t.subtarefas ?? [],
           campos: t.campos ?? {},
+          recorrencia: t.recorrencia ?? null,
           created_at: now,
           updated_at: now,
         } as never);

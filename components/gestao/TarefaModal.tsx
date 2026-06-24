@@ -73,6 +73,8 @@ export default function TarefaModal({
   const [prazo, setPrazo] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [status, setStatus] = useState<StatusTarefa>(statusInicial);
+  const [recTipo, setRecTipo] = useState<"" | "diaria" | "semanal" | "mensal">("");
+  const [recInt, setRecInt] = useState(1);
   const [etiquetas, setEtiquetas] = useState<string[]>([]);
   const [subtarefas, setSubtarefas] = useState<Subtarefa[]>([]);
   const [novaSub, setNovaSub] = useState("");
@@ -87,6 +89,8 @@ export default function TarefaModal({
     setPrazo(tarefa?.prazo ?? "");
     setDataInicio(tarefa?.data_inicio ?? "");
     setStatus(tarefa?.status ?? statusInicial);
+    setRecTipo(tarefa?.recorrencia?.tipo ?? "");
+    setRecInt(tarefa?.recorrencia?.intervalo ?? 1);
     setEtiquetas(tarefa?.etiquetas ?? []);
     setSubtarefas(tarefa?.subtarefas ?? []);
     setNovaSub("");
@@ -130,6 +134,9 @@ export default function TarefaModal({
       etiquetas,
       subtarefas: subtarefas.filter((s) => s.texto.trim()),
       campos: valoresCampos,
+      recorrencia: recTipo
+        ? { tipo: recTipo, intervalo: Math.max(1, recInt || 1), proxima_geracao: tarefa?.recorrencia?.proxima_geracao || prazo || new Date().toISOString().slice(0, 10) }
+        : null,
     });
 
     // Notificações (best-effort)
@@ -240,6 +247,25 @@ export default function TarefaModal({
               {statuses.map((s) => <option key={s.slug} value={s.slug}>{s.nome}</option>)}
             </select>
           </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-600">Recorrência</label>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={recTipo} disabled={ro} onChange={(e) => setRecTipo(e.target.value as "" | "diaria" | "semanal" | "mensal")} className={`${inputCls} max-w-[10rem]`}>
+              <option value="">Não repete</option>
+              <option value="diaria">Diária</option>
+              <option value="semanal">Semanal</option>
+              <option value="mensal">Mensal</option>
+            </select>
+            {recTipo && (
+              <span className="flex items-center gap-1 text-sm text-gray-600">a cada
+                <input type="number" min="1" value={recInt} disabled={ro} onChange={(e) => setRecInt(parseInt(e.target.value || "1", 10))} className="w-16 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-verde-primary focus:outline-none" />
+                {recTipo === "diaria" ? "dia(s)" : recTipo === "semanal" ? "semana(s)" : "mês(es)"}
+              </span>
+            )}
+          </div>
+          {recTipo && <p className="mt-1 text-[11px] text-gray-400">Uma nova tarefa é criada automaticamente a cada período (a partir do prazo).</p>}
         </div>
 
         <div>
