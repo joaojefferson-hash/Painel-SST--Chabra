@@ -9,6 +9,8 @@ import {
   useSalvarInvestigacao,
 } from "@/lib/hooks/useInvestigacaoAcidente";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
+import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
+import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import type { TestemunhaAcidente } from "@/lib/supabase/types";
 
 interface FormState {
@@ -317,6 +319,29 @@ export default function EditorInvestigacaoPage() {
             opcoes={[["RASCUNHO", "Rascunho"], ["CONCLUIDA", "Concluída"]]} />
           <Campo label="Validade do documento" type="date" value={form.data_validade} onChange={(v) => set("data_validade", v)} ro={ro} />
         </Grid>
+      </Secao>
+
+      {/* Laudo */}
+      <Secao titulo="Laudo (PDF)">
+        {dirty ? (
+          <p className="text-sm text-amber-600">Salve as alterações para gerar o laudo atualizado.</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <BotaoGerarPdf
+              label="Gerar laudo"
+              apiPdfUrl={`/api/pdf/investigacao-acidente/${id}`}
+              tabelaNome="investigacoes_acidente"
+              docId={id}
+              className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-verde-accent"
+            />
+            <BotaoAssinarPdf
+              apiPdfUrl={`/api/pdf/investigacao-acidente/${id}`}
+              tabelaNome="investigacoes_acidente"
+              docId={id}
+              defaultSignatoryName={form.responsavel_tecnico || undefined}
+            />
+          </div>
+        )}
       </Secao>
     </div>
   );
