@@ -10,6 +10,7 @@ import {
   useSalvarTarefa, useExcluirTarefa, useUsuariosLista,
   useComentarios, useAddComentario, useExcluirComentario,
   useDependencias, useAddDependencia, useExcluirDependencia,
+  useUsuarios, useCriarNotificacao, detectarMencoes,
   iniciais, corAvatar,
   PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa, type GestaoStatus, type GestaoCampo,
@@ -48,6 +49,10 @@ export default function TarefaModal({
   const excluir = useExcluirTarefa();
   const { data: usuarios = [] } = useUsuariosLista();
   const userNome = useUserStore((s) => s.user?.nome ?? null);
+  const userEmail = useUserStore((s) => s.user?.email ?? null);
+  const { data: usuariosFull = [] } = useUsuarios();
+  const criarNotif = useCriarNotificacao();
+  const emailDe = (nome: string | null) => (nome ? usuariosFull.find((u) => u.nome === nome)?.email ?? null : null);
   const { data: comentarios = [] } = useComentarios(tarefa?.id_tarefa);
   const addComentario = useAddComentario();
   const excluirComentario = useExcluirComentario();
@@ -109,7 +114,7 @@ export default function TarefaModal({
         return;
       }
     }
-    await salvar.mutateAsync({
+    const idSalvo = await salvar.mutateAsync({
       id_tarefa: tarefa?.id_tarefa,
       id_quadro: idQuadro,
       titulo: titulo.trim(),
@@ -123,6 +128,19 @@ export default function TarefaModal({
       subtarefas: subtarefas.filter((s) => s.texto.trim()),
       campos: valoresCampos,
     });
+
+    // Notificações (best-effort)
+    const respNome = responsavel.trim() || null;
+    const respEmail = emailDe(respNome);
+    const respMudou = respNome !== (tarefa?.responsavel ?? null);
+    const statusNome = statuses.find((s) => s.slug === status)?.nome ?? status;
+    if (respMudou && respEmail && respEmail !== userEmail) {
+      criarNotif.mutate({ destinatario: respEmail, tipo: "atribuicao", titulo: `Você foi atribuído à tarefa: ${titulo.trim()}`, id_tarefa: idSalvo, id_quadro: idQuadro });
+    }
+    if (tarefa && !respMudou && status !== tarefa.status && respEmail && respEmail !== userEmail) {
+      criarNotif.mutate({ destinatario: respEmail, tipo: "status", titulo: `"${titulo.trim()}" mudou para ${statusNome}`, id_tarefa: idSalvo, id_quadro: idQuadro });
+    }
+
     toast.success(tarefa ? "Tarefa atualizada" : "Tarefa criada");
     onClose();
   }
@@ -134,9 +152,22 @@ export default function TarefaModal({
 
   function enviarComentario() {
     if (!tarefa || !novoComentario.trim()) return;
+    const t = tarefa;
+    const texto = novoComentario.trim();
     addComentario.mutate(
-      { id_tarefa: tarefa.id_tarefa, texto: novoComentario.trim(), autor: userNome },
-      { onSuccess: () => setNovoComentario("") },
+      { id_tarefa: t.id_tarefa, texto, autor: userNome },
+      { onSuccess: () => {
+        setNovoComentario("");
+        const respEmail = emailDe(t.responsavel);
+        if (respEmail && respEmail !== userEmail) {
+          criarNotif.mutate({ destinatario: respEmail, tipo: "comentario", titulo: `Novo comentário em "${t.titulo}"`, id_tarefa: t.id_tarefa, id_quadro: idQuadro });
+        }
+        for (const em of detectarMencoes(texto, usuariosFull)) {
+          if (em !== userEmail && em !== respEmail) {
+            criarNotif.mutate({ destinatario: em, tipo: "mencao", titulo: `Você foi mencionado em "${t.titulo}"`, id_tarefa: t.id_tarefa, id_quadro: idQuadro });
+          }
+        }
+      } },
     );
   }
 

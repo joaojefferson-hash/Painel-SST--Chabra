@@ -13,9 +13,10 @@ import {
   useEspacos, usePastas, useTodasDependencias,
   iniciais, corAvatar,
   PRIORIDADES,
-  type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus,
+  type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus, type GestaoNotificacao,
 } from "@/lib/hooks/useGestao";
 import GestaoSidebar from "@/components/gestao/GestaoSidebar";
+import NotificacoesSino from "@/components/gestao/NotificacoesSino";
 import TarefaModal from "@/components/gestao/TarefaModal";
 import StatusManagerModal from "@/components/gestao/StatusManagerModal";
 import CamposManagerModal from "@/components/gestao/CamposManagerModal";
@@ -154,6 +155,14 @@ export default function GestaoChabraPage() {
     setModalOpen(true);
   }
 
+  function abrirNotif(n: GestaoNotificacao) {
+    if (n.id_quadro) setQuadroId(n.id_quadro);
+    if (n.id_tarefa) {
+      const t = items.find((x) => x.id_tarefa === n.id_tarefa);
+      if (t) { setEditando(t); setModalOpen(true); }
+    }
+  }
+
   function soltar(targetStatus: StatusTarefa, beforeId?: string) {
     setColHover(null);
     setDropAlvo(null);
@@ -199,11 +208,14 @@ export default function GestaoChabraPage() {
               <p className="text-sm text-gray-500">{items.length} tarefa(s) nesta lista</p>
             </div>
           </div>
-          {podeEditar && (
-            <button type="button" onClick={() => novaTarefa(statusInicialSlug)} className="inline-flex items-center gap-2 rounded-xl bg-verde-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-verde-accent active:scale-95">
-              <Plus className="size-4" /> Nova tarefa
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            <NotificacoesSino onAbrir={abrirNotif} />
+            {podeEditar && (
+              <button type="button" onClick={() => novaTarefa(statusInicialSlug)} className="inline-flex items-center gap-2 rounded-xl bg-verde-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-verde-accent active:scale-95">
+                <Plus className="size-4" /> Nova tarefa
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Seletor de lista (mobile, já que a árvore fica oculta em telas pequenas) */}

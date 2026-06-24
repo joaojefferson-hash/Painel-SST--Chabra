@@ -513,6 +513,88 @@ export function useExcluirDependencia() {
   });
 }
 
+export interface GestaoNotificacao {
+  id: string;
+  destinatario: string;
+  tipo: string;
+  titulo: string;
+  id_tarefa: string | null;
+  id_quadro: string | null;
+  lida: boolean;
+  created_at: string;
+}
+
+/** Usuários internos com nome + email (resolução de responsável → e-mail e menções). */
+export function useUsuarios() {
+  return useQuery({
+    queryKey: ["gestao-usuarios-emails"],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("usuarios").select("nome,email").neq("perfil", "Cliente").order("nome", { ascending: true });
+      if (error) throw error;
+      return ((data ?? []) as { nome: string | null; email: string | null }[])
+        .filter((u) => u.nome && u.email)
+        .map((u) => ({ nome: u.nome as string, email: u.email as string }));
+    },
+  });
+}
+
+/** E-mails mencionados (@nome ou @primeiroNome) num texto. */
+export function detectarMencoes(texto: string, usuarios: { nome: string; email: string }[]): string[] {
+  const t = texto.toLowerCase();
+  const emails = new Set<string>();
+  for (const u of usuarios) {
+    const primeiro = u.nome.trim().split(/\s+/)[0]?.toLowerCase();
+    if (primeiro && (t.includes("@" + u.nome.toLowerCase()) || t.includes("@" + primeiro))) emails.add(u.email);
+  }
+  return [...emails];
+}
+
+/** Notificações do usuário logado (polling a cada 60s; RLS já filtra ao destinatário). */
+export function useNotificacoes() {
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useQuery({
+    queryKey: ["gestao-notificacoes", email],
+    enabled: !!email,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_notificacoes").select("*").order("created_at", { ascending: false }).limit(50);
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoNotificacao[];
+    },
+  });
+}
+
+export function useMarcarLida() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id?: string; todas?: boolean }) => {
+      const sb = createSupabaseBrowserClient();
+      const base = sb.from("gestao_notificacoes").update({ lida: true } as never);
+      const { error } = p.id ? await base.eq("id", p.id) : await base.eq("lida", false);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-notificacoes"] }),
+  });
+}
+
+export function useCriarNotificacao() {
+  return useMutation({
+    mutationFn: async (p: { destinatario: string; tipo: string; titulo: string; id_tarefa?: string | null; id_quadro?: string | null }) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_notificacoes").insert({
+        id: crypto.randomUUID(),
+        destinatario: p.destinatario, tipo: p.tipo, titulo: p.titulo,
+        id_tarefa: p.id_tarefa ?? null, id_quadro: p.id_quadro ?? null,
+      } as never);
+      if (error) throw error;
+    },
+    // Falha de notificação é silenciosa (não interrompe a ação principal).
+  });
+}
+
 export function useTarefas(idQuadro: string | null | undefined) {
   return useQuery({
     queryKey: ["gestao-tarefas", idQuadro],
