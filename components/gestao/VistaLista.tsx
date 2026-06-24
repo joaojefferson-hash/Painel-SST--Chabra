@@ -1,15 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, ArrowUpDown } from "lucide-react";
 import {
   useSalvarTarefa, useUsuariosLista,
   iniciais, corAvatar,
-  STATUS_TAREFA, PRIORIDADES,
-  type GestaoTarefa, type AgruparPor, type PrioridadeTarefa,
+  PRIORIDADES,
+  type GestaoTarefa, type AgruparPor, type PrioridadeTarefa, type GestaoStatus,
 } from "@/lib/hooks/useGestao";
 
-const ordemStatus = (s: string) => STATUS_TAREFA.findIndex((x) => x.value === s);
 const ordemPrio = (p: string) => PRIORIDADES.findIndex((x) => x.value === p);
 const fmtData = (iso: string | null) => {
   if (!iso) return "—";
@@ -29,12 +28,14 @@ const AGRUPAMENTOS: { value: AgruparPor | ""; label: string }[] = [
 
 export default function VistaLista({
   tarefas,
+  statuses,
   agruparPor,
   onAgruparPor,
   podeEditar,
   onAbrir,
 }: {
   tarefas: GestaoTarefa[];
+  statuses: GestaoStatus[];
   agruparPor: AgruparPor | null;
   onAgruparPor: (a: AgruparPor | null) => void;
   podeEditar: boolean;
@@ -42,6 +43,8 @@ export default function VistaLista({
 }) {
   const salvar = useSalvarTarefa();
   const { data: usuarios = [] } = useUsuariosLista();
+  const statusMap = useMemo(() => new Map(statuses.map((s) => [s.slug, s])), [statuses]);
+  const ordemStatus = useCallback((slug: string) => { const i = statuses.findIndex((s) => s.slug === slug); return i < 0 ? 999 : i; }, [statuses]);
   const [sortBy, setSortBy] = useState<Coluna>("prazo");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [recolhidos, setRecolhidos] = useState<Set<string>>(new Set());
@@ -70,7 +73,7 @@ export default function VistaLista({
       return sortDir === "asc" ? r : -r;
     };
     return arr.sort(cmp);
-  }, [tarefas, sortBy, sortDir]);
+  }, [tarefas, sortBy, sortDir, ordemStatus]);
 
   const grupos = useMemo(() => {
     if (!agruparPor) return [{ chave: "__all__", label: "", cor: undefined as string | undefined, itens: ordenadas }];
@@ -81,8 +84,8 @@ export default function VistaLista({
     };
     for (const t of ordenadas) {
       if (agruparPor === "status") {
-        const s = STATUS_TAREFA.find((x) => x.value === t.status);
-        add(t.status, s?.label ?? t.status, t, s?.cor);
+        const s = statusMap.get(t.status);
+        add(t.status, s?.nome ?? t.status, t, s?.cor);
       } else if (agruparPor === "prioridade") {
         const p = PRIORIDADES.find((x) => x.value === t.prioridade);
         add(t.prioridade, p?.label ?? t.prioridade, t, p?.cor);
@@ -100,7 +103,7 @@ export default function VistaLista({
     else if (agruparPor === "prioridade") arr.sort((a, b) => ordemPrio(a.chave) - ordemPrio(b.chave));
     else arr.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
     return arr;
-  }, [ordenadas, agruparPor]);
+  }, [ordenadas, agruparPor, statusMap, ordemStatus]);
 
   const Th = ({ col, children, className = "" }: { col: Coluna; children: React.ReactNode; className?: string }) => (
     <th className={`px-3 py-2.5 ${className}`}>
@@ -146,9 +149,9 @@ export default function VistaLista({
                 <GrupoBloco key={g.chave} grupo={g} recolhido={recolhido} agrupar={!!agruparPor}
                   onToggle={() => setRecolhidos((s) => { const n = new Set(s); if (n.has(g.chave)) n.delete(g.chave); else n.add(g.chave); return n; })}>
                   {!recolhido && g.itens.map((t) => {
-                    const st = STATUS_TAREFA.find((s) => s.value === t.status);
+                    const st = statusMap.get(t.status);
                     const dias = t.prazo ? Math.round((new Date(t.prazo + "T00:00:00").getTime() - new Date().setHours(0, 0, 0, 0)) / 86_400_000) : null;
-                    const atrasada = dias != null && dias < 0 && t.status !== "CONCLUIDO";
+                    const atrasada = dias != null && dias < 0 && st?.tipo !== "concluido";
                     return (
                       <tr key={t.id_tarefa} className="border-t border-gray-100 hover:bg-gray-50/60">
                         <td className="px-3 py-2">
@@ -158,11 +161,11 @@ export default function VistaLista({
                         </td>
                         <td className="px-3 py-2">
                           {podeEditar ? (
-                            <select value={t.status} onChange={(e) => patch(t, { status: e.target.value as GestaoTarefa["status"] })}
+                            <select value={t.status} onChange={(e) => patch(t, { status: e.target.value })}
                               className="rounded-md border border-transparent bg-transparent px-1 py-0.5 text-xs font-medium hover:border-gray-200 focus:border-verde-primary focus:outline-none" style={{ color: st?.cor }}>
-                              {STATUS_TAREFA.map((s) => <option key={s.value} value={s.value} style={{ color: "#374151" }}>{s.label}</option>)}
+                              {statuses.map((s) => <option key={s.slug} value={s.slug} style={{ color: "#374151" }}>{s.nome}</option>)}
                             </select>
-                          ) : <span className="text-xs font-medium" style={{ color: st?.cor }}>{st?.label}</span>}
+                          ) : <span className="text-xs font-medium" style={{ color: st?.cor }}>{st?.nome}</span>}
                         </td>
                         <td className="px-3 py-2">
                           {podeEditar ? (

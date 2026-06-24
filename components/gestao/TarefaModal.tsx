@@ -10,8 +10,8 @@ import {
   useSalvarTarefa, useExcluirTarefa, useUsuariosLista,
   useComentarios, useAddComentario, useExcluirComentario,
   iniciais, corAvatar,
-  STATUS_TAREFA, PRIORIDADES,
-  type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa,
+  PRIORIDADES,
+  type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa, type GestaoStatus,
 } from "@/lib/hooks/useGestao";
 
 function quando(iso: string): string {
@@ -25,6 +25,7 @@ export default function TarefaModal({
   idQuadro,
   tarefa,
   statusInicial = "A_FAZER",
+  statuses,
   podeEditar,
   etiquetasSugeridas = [],
 }: {
@@ -33,6 +34,7 @@ export default function TarefaModal({
   idQuadro: string;
   tarefa: GestaoTarefa | null;
   statusInicial?: StatusTarefa;
+  statuses: GestaoStatus[];
   podeEditar: boolean;
   etiquetasSugeridas?: string[];
 }) {
@@ -171,8 +173,8 @@ export default function TarefaModal({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">Status</label>
-            <select value={status} disabled={ro} onChange={(e) => setStatus(e.target.value as StatusTarefa)} className={inputCls}>
-              {STATUS_TAREFA.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            <select value={status} disabled={ro} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
+              {statuses.map((s) => <option key={s.slug} value={s.slug}>{s.nome}</option>)}
             </select>
           </div>
         </div>

@@ -6,7 +6,7 @@ import {
   addDays, subDays, format, isWeekend, isToday, isSameMonth,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { PRIORIDADES, type GestaoTarefa } from "@/lib/hooks/useGestao";
+import { PRIORIDADES, type GestaoTarefa, type GestaoStatus } from "@/lib/hooks/useGestao";
 
 const corPrioridade = (p: string) => PRIORIDADES.find((x) => x.value === p)?.cor ?? "#94a3b8";
 const COLW = 30;       // largura por dia (px)
@@ -15,11 +15,14 @@ const ROWH = 38;       // altura de linha (px)
 
 export default function VistaTimeline({
   tarefas,
+  statuses,
   onAbrir,
 }: {
   tarefas: GestaoTarefa[];
+  statuses: GestaoStatus[];
   onAbrir: (t: GestaoTarefa) => void;
 }) {
+  const concluidoSet = useMemo(() => new Set(statuses.filter((s) => s.tipo === "concluido").map((s) => s.slug)), [statuses]);
   const dated = useMemo(() => tarefas.filter((t) => t.prazo || t.data_inicio), [tarefas]);
   const semData = tarefas.length - dated.length;
 
@@ -74,7 +77,7 @@ export default function VistaTimeline({
           const startIdx = Math.max(0, differenceInCalendarDays(parseISO(s), inicio!));
           const span = Math.max(1, differenceInCalendarDays(parseISO(e), parseISO(s)) + 1);
           const cor = corPrioridade(t.prioridade);
-          const concluido = t.status === "CONCLUIDO";
+          const concluido = concluidoSet.has(t.status);
           return (
             <div key={t.id_tarefa} className="flex border-b border-gray-100 hover:bg-gray-50/60" style={{ height: ROWH }}>
               <button type="button" onClick={() => onAbrir(t)} className="shrink-0 truncate px-3 text-left text-sm text-gray-700 hover:text-verde-primary" style={{ width: LABELW }} title={t.titulo}>

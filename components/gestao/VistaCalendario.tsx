@@ -7,21 +7,24 @@ import {
   addDays, addMonths, subMonths, format, isSameMonth, isToday,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useSalvarTarefa, PRIORIDADES, type GestaoTarefa } from "@/lib/hooks/useGestao";
+import { useSalvarTarefa, PRIORIDADES, type GestaoTarefa, type GestaoStatus } from "@/lib/hooks/useGestao";
 
 const corPrioridade = (p: string) => PRIORIDADES.find((x) => x.value === p)?.cor ?? "#94a3b8";
 const SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
 export default function VistaCalendario({
   tarefas,
+  statuses,
   podeEditar,
   onAbrir,
 }: {
   tarefas: GestaoTarefa[];
+  statuses: GestaoStatus[];
   podeEditar: boolean;
   onAbrir: (t: GestaoTarefa) => void;
 }) {
   const salvar = useSalvarTarefa();
+  const concluidoSet = useMemo(() => new Set(statuses.filter((s) => s.tipo === "concluido").map((s) => s.slug)), [statuses]);
   const [mes, setMes] = useState(() => startOfMonth(new Date()));
   const [dragId, setDragId] = useState<string | null>(null);
   const [diaHover, setDiaHover] = useState<string | null>(null);
@@ -94,7 +97,7 @@ export default function VistaCalendario({
                     onDragEnd={() => { setDragId(null); setDiaHover(null); }}
                     onClick={() => onAbrir(t)}
                     title={t.titulo}
-                    className={`flex w-full items-center gap-1 rounded px-1.5 py-0.5 text-left text-[11px] hover:bg-gray-100 ${dragId === t.id_tarefa ? "opacity-40" : ""} ${t.status === "CONCLUIDO" ? "text-gray-400 line-through" : "text-gray-700"}`}
+                    className={`flex w-full items-center gap-1 rounded px-1.5 py-0.5 text-left text-[11px] hover:bg-gray-100 ${dragId === t.id_tarefa ? "opacity-40" : ""} ${concluidoSet.has(t.status) ? "text-gray-400 line-through" : "text-gray-700"}`}
                   >
                     <span className="size-1.5 shrink-0 rounded-full" style={{ background: corPrioridade(t.prioridade) }} />
                     <span className="truncate">{t.titulo}</span>

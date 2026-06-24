@@ -3,17 +3,19 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
   useQuadros, useCriarQuadro, useTarefas, useReordenar, useUsuariosLista,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
+  useStatusQuadro, statusPadrao,
   iniciais, corAvatar,
-  STATUS_TAREFA, PRIORIDADES,
-  type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor,
+  PRIORIDADES,
+  type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus,
 } from "@/lib/hooks/useGestao";
 import TarefaModal from "@/components/gestao/TarefaModal";
+import StatusManagerModal from "@/components/gestao/StatusManagerModal";
 import VistaLista from "@/components/gestao/VistaLista";
 import VistaCalendario from "@/components/gestao/VistaCalendario";
 import VistaTimeline from "@/components/gestao/VistaTimeline";
@@ -54,6 +56,7 @@ export default function GestaoChabraPage() {
   const { data: tarefas = [], isLoading: loadingTarefas } = useTarefas(quadro?.id_quadro);
   const { data: pref } = usePreferenciaVisao(quadro?.id_quadro);
   const salvarPref = useSalvarPreferenciaVisao();
+  const { data: statusList = [], isLoading: loadingStatus } = useStatusQuadro(quadro?.id_quadro);
 
   const [items, setItems] = useState<GestaoTarefa[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -73,6 +76,7 @@ export default function GestaoChabraPage() {
 
   const [criandoQuadro, setCriandoQuadro] = useState(false);
   const [nomeQuadro, setNomeQuadro] = useState("");
+  const [managerOpen, setManagerOpen] = useState(false);
 
   useEffect(() => {
     if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
@@ -109,13 +113,30 @@ export default function GestaoChabraPage() {
     return true;
   };
 
+  const statuses = useMemo<GestaoStatus[]>(
+    () => (statusList.length ? statusList : quadro ? statusPadrao(quadro.id_quadro) : []),
+    [statusList, quadro],
+  );
+  const statusMap = useMemo(() => new Map(statuses.map((s) => [s.slug, s])), [statuses]);
+  const statusInicialSlug = statuses.find((s) => s.tipo === "nao_iniciado")?.slug ?? statuses[0]?.slug ?? "A_FAZER";
+
+  // Colunas do Kanban = status do quadro + quaisquer slugs órfãos presentes nas tarefas (nada some).
+  const colunasDef = useMemo<GestaoStatus[]>(() => {
+    const conhecidos = new Set(statuses.map((s) => s.slug));
+    const extras = [...new Set(items.map((t) => t.status))].filter((slug) => !conhecidos.has(slug));
+    return [
+      ...statuses,
+      ...extras.map((slug, i) => ({ id: slug, id_quadro: quadro?.id_quadro ?? "", slug, nome: slug, cor: "#cbd5e1", ordem: 9990 + i, tipo: "ativo" as const })),
+    ];
+  }, [statuses, items, quadro]);
+
   const colunas = useMemo(() => {
     const m: Record<string, GestaoTarefa[]> = {};
-    for (const s of STATUS_TAREFA) m[s.value] = [];
+    for (const s of colunasDef) m[s.slug] = [];
     for (const t of items) (m[t.status] ??= []).push(t);
     for (const k of Object.keys(m)) m[k].sort((a, b) => a.ordem - b.ordem || a.created_at.localeCompare(b.created_at));
     return m;
-  }, [items]);
+  }, [items, colunasDef]);
 
   function novaTarefa(status: StatusTarefa) {
     setEditando(null);
@@ -170,7 +191,7 @@ export default function GestaoChabraPage() {
             </div>
           </div>
           {podeEditar && (
-            <button type="button" onClick={() => novaTarefa("A_FAZER")} className="inline-flex items-center gap-2 rounded-xl bg-verde-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-verde-accent active:scale-95">
+            <button type="button" onClick={() => novaTarefa(statusInicialSlug)} className="inline-flex items-center gap-2 rounded-xl bg-verde-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-verde-accent active:scale-95">
               <Plus className="size-4" /> Nova tarefa
             </button>
           )}
@@ -235,33 +256,38 @@ export default function GestaoChabraPage() {
               );
             })}
           </div>
+          {podeEditar && (
+            <button type="button" onClick={() => setManagerOpen(true)} title="Gerenciar status do quadro" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <SlidersHorizontal className="size-4" /> Status
+            </button>
+          )}
         </div>
 
-        {(loadingQuadros || loadingTarefas) ? (
+        {(loadingQuadros || loadingTarefas || loadingStatus) ? (
           <div className="flex items-center gap-2 py-20 text-sm text-gray-400">
             <Loader2 className="size-4 animate-spin" /> Carregando…
           </div>
         ) : vista === "quadro" ? (
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {STATUS_TAREFA.map((col) => {
-              const todas = colunas[col.value] ?? [];
+          <div className="mt-5 flex gap-3 overflow-x-auto pb-2">
+            {colunasDef.map((col) => {
+              const todas = colunas[col.slug] ?? [];
               const lista = todas.filter(passaFiltro);
               return (
                 <div
-                  key={col.value}
-                  onDragOver={(e) => { if (dragId) { e.preventDefault(); setColHover(col.value); setDropAlvo({ col: col.value, beforeId: null }); } }}
-                  onDragLeave={(e) => { if (dragId && !e.currentTarget.contains(e.relatedTarget as Node)) setColHover((c) => (c === col.value ? null : c)); }}
-                  onDrop={() => soltar(col.value)}
-                  className={`rounded-xl border bg-gray-50/60 p-2.5 transition ${colHover === col.value ? "border-verde-primary ring-2 ring-verde-primary/20" : "border-gray-200"}`}
+                  key={col.slug}
+                  onDragOver={(e) => { if (dragId) { e.preventDefault(); setColHover(col.slug); setDropAlvo({ col: col.slug, beforeId: null }); } }}
+                  onDragLeave={(e) => { if (dragId && !e.currentTarget.contains(e.relatedTarget as Node)) setColHover((c) => (c === col.slug ? null : c)); }}
+                  onDrop={() => soltar(col.slug)}
+                  className={`w-72 shrink-0 rounded-xl border bg-gray-50/60 p-2.5 transition ${colHover === col.slug ? "border-verde-primary ring-2 ring-verde-primary/20" : "border-gray-200"}`}
                 >
                   <div className="mb-2 flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
                       <span className="size-2.5 rounded-full" style={{ background: col.cor }} />
-                      <p className="text-sm font-semibold text-gray-700">{col.label}</p>
+                      <p className="text-sm font-semibold text-gray-700">{col.nome}</p>
                       <span className="rounded-full bg-gray-200 px-1.5 text-[11px] font-semibold text-gray-600">{temFiltro ? `${lista.length}/${todas.length}` : todas.length}</span>
                     </div>
                     {podeEditar && (
-                      <button type="button" onClick={() => novaTarefa(col.value)} className="rounded-md p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700" title="Nova tarefa aqui">
+                      <button type="button" onClick={() => novaTarefa(col.slug)} className="rounded-md p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700" title="Nova tarefa aqui">
                         <Plus className="size-4" />
                       </button>
                     )}
@@ -270,21 +296,21 @@ export default function GestaoChabraPage() {
                   <div className="min-h-[40px] space-y-2">
                     {lista.map((t) => {
                       const dias = t.prazo ? diasAte(t.prazo) : null;
-                      const atrasada = dias != null && dias < 0 && t.status !== "CONCLUIDO";
+                      const concluido = statusMap.get(t.status)?.tipo === "concluido";
+                      const atrasada = dias != null && dias < 0 && !concluido;
                       const subs = t.subtarefas ?? [];
                       const subFeitas = subs.filter((s) => s.feito).length;
-                      const concluido = t.status === "CONCLUIDO";
                       return (
                         <div key={t.id_tarefa}>
-                          {dropAlvo?.col === col.value && dropAlvo.beforeId === t.id_tarefa && dragId !== t.id_tarefa && (
+                          {dropAlvo?.col === col.slug && dropAlvo.beforeId === t.id_tarefa && dragId !== t.id_tarefa && (
                             <div className="mb-2 h-1 rounded-full bg-verde-primary/70" />
                           )}
                           <div
                             draggable={podeEditar}
                             onDragStart={() => setDragId(t.id_tarefa)}
                             onDragEnd={() => { setDragId(null); setColHover(null); setDropAlvo(null); }}
-                            onDragOver={(e) => { if (dragId) { e.preventDefault(); e.stopPropagation(); setColHover(col.value); setDropAlvo({ col: col.value, beforeId: t.id_tarefa }); } }}
-                            onDrop={(e) => { e.stopPropagation(); soltar(col.value, t.id_tarefa); }}
+                            onDragOver={(e) => { if (dragId) { e.preventDefault(); e.stopPropagation(); setColHover(col.slug); setDropAlvo({ col: col.slug, beforeId: t.id_tarefa }); } }}
+                            onDrop={(e) => { e.stopPropagation(); soltar(col.slug, t.id_tarefa); }}
                             onClick={() => { setEditando(t); setModalOpen(true); }}
                             style={{ borderLeftColor: corPrioridade(t.prioridade) }}
                             className={`cursor-pointer rounded-lg border border-l-4 border-gray-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${dragId === t.id_tarefa ? "opacity-40" : ""}`}
@@ -318,7 +344,7 @@ export default function GestaoChabraPage() {
                         </div>
                       );
                     })}
-                    {dropAlvo?.col === col.value && dropAlvo.beforeId === null && dragId && (
+                    {dropAlvo?.col === col.slug && dropAlvo.beforeId === null && dragId && (
                       <div className="h-1 rounded-full bg-verde-primary/70" />
                     )}
                     {lista.length === 0 && (
@@ -332,6 +358,7 @@ export default function GestaoChabraPage() {
         ) : vista === "lista" ? (
           <VistaLista
             tarefas={items.filter(passaFiltro)}
+            statuses={statuses}
             agruparPor={agruparPor}
             onAgruparPor={mudarAgrupar}
             podeEditar={podeEditar}
@@ -340,12 +367,14 @@ export default function GestaoChabraPage() {
         ) : vista === "calendario" ? (
           <VistaCalendario
             tarefas={items.filter(passaFiltro)}
+            statuses={statuses}
             podeEditar={podeEditar}
             onAbrir={(t) => { setEditando(t); setModalOpen(true); }}
           />
         ) : (
           <VistaTimeline
             tarefas={items.filter(passaFiltro)}
+            statuses={statuses}
             onAbrir={(t) => { setEditando(t); setModalOpen(true); }}
           />
         )}
@@ -362,8 +391,19 @@ export default function GestaoChabraPage() {
           idQuadro={quadro.id_quadro}
           tarefa={editando}
           statusInicial={statusNovo}
+          statuses={statuses}
           podeEditar={podeEditar}
           etiquetasSugeridas={etiquetasSugeridas}
+        />
+      )}
+
+      {quadro && (
+        <StatusManagerModal
+          open={managerOpen}
+          onClose={() => setManagerOpen(false)}
+          idQuadro={quadro.id_quadro}
+          statuses={statuses}
+          podeEditar={podeEditar}
         />
       )}
     </div>

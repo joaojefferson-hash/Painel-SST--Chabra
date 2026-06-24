@@ -7,7 +7,9 @@ import { gerarId } from "@/lib/utils";
 import { mensagemErro } from "@/lib/errors";
 import { useUserStore } from "@/lib/store";
 
-export type StatusTarefa = "A_FAZER" | "EM_ANDAMENTO" | "EM_REVISAO" | "CONCLUIDO";
+/** Slug de status. Os 4 defaults existem em todo quadro; quadros podem ter status customizados. */
+export type StatusTarefa = string;
+export type TipoStatus = "nao_iniciado" | "ativo" | "concluido";
 export type VistaGestao = "quadro" | "lista" | "calendario" | "timeline";
 export type AgruparPor = "status" | "responsavel" | "prioridade" | "etiqueta";
 export type PrioridadeTarefa = "Baixa" | "Media" | "Alta" | "Urgente";
@@ -16,6 +18,16 @@ export interface GestaoQuadro {
   id_quadro: string;
   nome: string;
   descricao: string | null;
+}
+
+export interface GestaoStatus {
+  id: string;
+  id_quadro: string;
+  slug: string;
+  nome: string;
+  cor: string;
+  ordem: number;
+  tipo: TipoStatus;
 }
 
 export interface Subtarefa {
@@ -117,6 +129,83 @@ export function useCriarQuadro() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-quadros"] }),
     onError: (e) => toast.error(mensagemErro(e, "Não foi possível criar o quadro.")),
+  });
+}
+
+/** Fallback: os 4 status default como GestaoStatus (enquanto o quadro carrega seus status). */
+export function statusPadrao(idQuadro: string): GestaoStatus[] {
+  const tipos: TipoStatus[] = ["nao_iniciado", "ativo", "ativo", "concluido"];
+  return STATUS_TAREFA.map((s, i) => ({
+    id: s.value, id_quadro: idQuadro, slug: s.value, nome: s.label, cor: s.cor, ordem: i, tipo: tipos[i],
+  }));
+}
+
+/** Status configuráveis de um quadro (ordenados). */
+export function useStatusQuadro(idQuadro: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gestao-status", idQuadro],
+    enabled: !!idQuadro,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb
+        .from("gestao_status")
+        .select("*")
+        .eq("id_quadro", idQuadro!)
+        .order("ordem", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoStatus[];
+    },
+  });
+}
+
+export function useSalvarStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (s: Partial<GestaoStatus> & { id_quadro: string }) => {
+      const sb = createSupabaseBrowserClient();
+      if (!s.id) {
+        const id = crypto.randomUUID();
+        const slug = s.slug ?? `S_${id.slice(0, 8).toUpperCase()}`;
+        const { error } = await sb.from("gestao_status").insert({
+          id, id_quadro: s.id_quadro, slug,
+          nome: s.nome ?? "Novo status", cor: s.cor ?? "#94a3b8",
+          ordem: s.ordem ?? 0, tipo: s.tipo ?? "ativo",
+        } as never);
+        if (error) throw error;
+        return id;
+      }
+      // slug não muda no update (tarefas referenciam o slug)
+      const patch: Record<string, unknown> = {};
+      if (s.nome !== undefined) patch.nome = s.nome;
+      if (s.cor !== undefined) patch.cor = s.cor;
+      if (s.ordem !== undefined) patch.ordem = s.ordem;
+      if (s.tipo !== undefined) patch.tipo = s.tipo;
+      const { error } = await sb.from("gestao_status").update(patch as never).eq("id", s.id);
+      if (error) throw error;
+      return s.id;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-status"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível salvar o status.")),
+  });
+}
+
+export function useExcluirStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id: string; id_quadro: string; slug: string }) => {
+      const sb = createSupabaseBrowserClient();
+      const { count, error: ce } = await sb
+        .from("gestao_tarefas")
+        .select("id_tarefa", { count: "exact", head: true })
+        .eq("id_quadro", p.id_quadro)
+        .eq("status", p.slug);
+      if (ce) throw ce;
+      if ((count ?? 0) > 0) throw new Error(`Há ${count} tarefa(s) neste status. Mova-as antes de excluir.`);
+      const { error } = await sb.from("gestao_status").delete().eq("id", p.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-status"] }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : mensagemErro(e)),
   });
 }
 
