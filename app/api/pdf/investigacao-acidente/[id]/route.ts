@@ -55,14 +55,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     const shortId = String(id).replace(/-/g, "").slice(0, 8);
     const identificadorDocumento = `INV-${new Date().getFullYear()}-${shortId}`;
 
-    // Silhueta embutida em base64 (Puppeteer não resolve caminho relativo).
-    let silhuetaSrc: string | undefined;
-    try {
-      const b64 = readFileSync(join(process.cwd(), "public", "silhueta-frente.png")).toString("base64");
-      silhuetaSrc = `data:image/png;base64,${b64}`;
-    } catch {
-      silhuetaSrc = undefined;
-    }
+    // Silhuetas embutidas em base64 (Puppeteer não resolve caminho relativo).
+    const lerSilhueta = (arquivo: string): string | undefined => {
+      try {
+        const b64 = readFileSync(join(process.cwd(), "public", arquivo)).toString("base64");
+        return `data:image/png;base64,${b64}`;
+      } catch {
+        return undefined;
+      }
+    };
+    const silhuetaFrente = lerSilhueta("silhueta-frente.png");
+    const silhuetaCostas = lerSilhueta("silhueta-costas.png");
 
     const [{ default: React }, { renderToStaticMarkup }, { default: Template }] =
       await Promise.all([
@@ -79,7 +82,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         folhaEmpresa,
         dataHoraAssinatura,
         identificadorDocumento,
-        silhuetaSrc,
+        silhuetaFrente,
+        silhuetaCostas,
       }),
     );
 
