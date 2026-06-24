@@ -16,6 +16,7 @@ import {
   type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa, type GestaoStatus, type GestaoCampo,
 } from "@/lib/hooks/useGestao";
 import CampoInput from "@/components/gestao/CampoInput";
+import TempoTracker from "@/components/gestao/TempoTracker";
 
 function quando(iso: string): string {
   const d = new Date(iso);
@@ -290,6 +291,8 @@ export default function TarefaModal({
             </div>
           </div>
         )}
+
+        {tarefa && <TempoTracker idTarefa={tarefa.id_tarefa} podeEditar={podeEditar} />}
 
         {tarefa && (
           <div className="space-y-2">

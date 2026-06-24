@@ -595,6 +595,140 @@ export function useCriarNotificacao() {
   });
 }
 
+export interface GestaoTempo {
+  id: string;
+  id_tarefa: string;
+  usuario_email: string;
+  inicio: string;
+  fim: string | null;
+  segundos: number | null;
+  manual: boolean;
+  descricao: string | null;
+  created_at: string;
+}
+
+/** "1h 23m" / "12m" / "45s" a partir de segundos. */
+export function formatarDuracao(seg: number): string {
+  if (!seg || seg < 0) return "0m";
+  const h = Math.floor(seg / 3600);
+  const m = Math.floor((seg % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m`;
+  return `${seg}s`;
+}
+
+/** Total (em segundos) de uma lista de apontamentos; o que está rodando conta até agora. */
+export function totalSegundos(entries: GestaoTempo[], agoraMs = Date.now()): number {
+  return entries.reduce((acc, e) => {
+    if (e.fim) return acc + (e.segundos ?? 0);
+    return acc + Math.max(0, Math.round((agoraMs - new Date(e.inicio).getTime()) / 1000));
+  }, 0);
+}
+
+async function registrarAtividade(sb: ReturnType<typeof createSupabaseBrowserClient>, ator: string | null, acao: string, idTarefa: string, payload: Record<string, unknown>) {
+  await sb.from("gestao_atividades").insert({ id: crypto.randomUUID(), ator, acao, id_tarefa: idTarefa, payload } as never);
+}
+
+export function useTempoTarefa(idTarefa: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gestao-tempo", idTarefa],
+    enabled: !!idTarefa,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_tempo").select("*").eq("id_tarefa", idTarefa!).order("inicio", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoTempo[];
+    },
+  });
+}
+
+/** Apontamento em andamento (fim null) do usuário logado, se houver. */
+export function useTimerAtivo() {
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useQuery({
+    queryKey: ["gestao-timer-ativo", email],
+    enabled: !!email,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_tempo").select("*").eq("usuario_email", email!).is("fim", null).order("inicio", { ascending: false }).limit(1);
+      if (error) throw error;
+      return ((data ?? [])[0] ?? null) as GestaoTempo | null;
+    },
+  });
+}
+
+export function useIniciarTempo() {
+  const qc = useQueryClient();
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useMutation({
+    mutationFn: async (p: { id_tarefa: string }) => {
+      if (!email) throw new Error("Sessão sem e-mail.");
+      const sb = createSupabaseBrowserClient();
+      const nowMs = Date.now();
+      const nowIso = new Date(nowMs).toISOString();
+      // Para qualquer timer rodando do usuário (um por vez).
+      const { data: rodando } = await sb.from("gestao_tempo").select("id,inicio").eq("usuario_email", email).is("fim", null);
+      for (const r of (rodando ?? []) as { id: string; inicio: string }[]) {
+        const seg = Math.max(1, Math.round((nowMs - new Date(r.inicio).getTime()) / 1000));
+        await sb.from("gestao_tempo").update({ fim: nowIso, segundos: seg } as never).eq("id", r.id);
+      }
+      const id = crypto.randomUUID();
+      const { error } = await sb.from("gestao_tempo").insert({ id, id_tarefa: p.id_tarefa, usuario_email: email, inicio: nowIso } as never);
+      if (error) throw error;
+      await registrarAtividade(sb, email, "tempo_iniciado", p.id_tarefa, {});
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-tempo"] }); qc.invalidateQueries({ queryKey: ["gestao-timer-ativo"] }); },
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível iniciar o cronômetro.")),
+  });
+}
+
+export function usePararTempo() {
+  const qc = useQueryClient();
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useMutation({
+    mutationFn: async (p: { id: string; id_tarefa: string; inicio: string }) => {
+      const sb = createSupabaseBrowserClient();
+      const seg = Math.max(1, Math.round((Date.now() - new Date(p.inicio).getTime()) / 1000));
+      const { error } = await sb.from("gestao_tempo").update({ fim: new Date().toISOString(), segundos: seg } as never).eq("id", p.id);
+      if (error) throw error;
+      await registrarAtividade(sb, email, "tempo_parado", p.id_tarefa, { segundos: seg });
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-tempo"] }); qc.invalidateQueries({ queryKey: ["gestao-timer-ativo"] }); },
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível parar o cronômetro.")),
+  });
+}
+
+export function useAddTempoManual() {
+  const qc = useQueryClient();
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useMutation({
+    mutationFn: async (p: { id_tarefa: string; segundos: number; descricao?: string | null }) => {
+      if (!email) throw new Error("Sessão sem e-mail.");
+      const sb = createSupabaseBrowserClient();
+      const now = new Date().toISOString();
+      const { error } = await sb.from("gestao_tempo").insert({ id: crypto.randomUUID(), id_tarefa: p.id_tarefa, usuario_email: email, inicio: now, fim: now, segundos: p.segundos, manual: true, descricao: p.descricao ?? null } as never);
+      if (error) throw error;
+      await registrarAtividade(sb, email, "tempo_manual", p.id_tarefa, { segundos: p.segundos });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-tempo"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível lançar o tempo.")),
+  });
+}
+
+export function useExcluirTempo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_tempo").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-tempo"] }); qc.invalidateQueries({ queryKey: ["gestao-timer-ativo"] }); },
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir o apontamento.")),
+  });
+}
+
 export function useTarefas(idQuadro: string | null | undefined) {
   return useQuery({
     queryKey: ["gestao-tarefas", idQuadro],
