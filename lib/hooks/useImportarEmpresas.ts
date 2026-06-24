@@ -3,16 +3,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { gerarId } from "@/lib/utils";
-import type { ModuloEmpresa } from "@/lib/supabase/types";
+import { MODULOS_EMPRESA, type ModuloEmpresa } from "@/lib/supabase/types";
 import type { LinhaClassificada } from "@/lib/empresas/importar-empresas";
 
-// Mesmos defaults do formulário "Nova empresa" (EmpresaForm).
-const DEFAULT_MODULOS: ModuloEmpresa[] = [
-  "sst",
-  "psicossocial",
-  "conformidade",
-  "analise_quimicos",
-];
+// Toda empresa é habilitada em todos os quadros (filtro por módulo removido).
+const TODOS_MODULOS: ModuloEmpresa[] = MODULOS_EMPRESA.map((m) => m.value);
 
 const LOTE = 100;
 
@@ -40,7 +35,7 @@ export function useImportarEmpresas() {
         numero: l.numero,
         bairro: l.bairro,
         status: "Ativo",
-        modulos_habilitados: DEFAULT_MODULOS,
+        modulos_habilitados: TODOS_MODULOS,
         created_at: now,
         updated_at: now,
       }));

@@ -13,12 +13,8 @@ import {
 } from "@/lib/supabase/types";
 import { useUnidades } from "@/lib/hooks/useUnidades";
 
-const DEFAULT_MODULOS: ModuloEmpresa[] = [
-  "sst",
-  "psicossocial",
-  "conformidade",
-  "analise_quimicos",
-];
+// Toda empresa é habilitada em todos os quadros (filtro por módulo removido).
+const TODOS_MODULOS: ModuloEmpresa[] = MODULOS_EMPRESA.map((m) => m.value);
 
 /** Aplica a máscara 00.000.000/0000-00 conforme o usuário digita/cola (só dígitos, máx. 14). */
 function formatarCnpj(v: string): string {
@@ -74,7 +70,7 @@ export default function EmpresaForm({
     porte: "",
     status: "Ativo" as "Ativo" | "Inativa",
     observacao: "",
-    modulos_habilitados: [...DEFAULT_MODULOS] as ModuloEmpresa[],
+    modulos_habilitados: [...TODOS_MODULOS] as ModuloEmpresa[],
   });
 
   useEffect(() => {
@@ -103,10 +99,7 @@ export default function EmpresaForm({
         porte: empresa?.porte ?? "",
         status: (empresa?.status as "Ativo" | "Inativa") ?? "Ativo",
         observacao: empresa?.observacao ?? "",
-        modulos_habilitados:
-          empresa?.modulos_habilitados && empresa.modulos_habilitados.length > 0
-            ? [...empresa.modulos_habilitados]
-            : [...DEFAULT_MODULOS],
+        modulos_habilitados: [...TODOS_MODULOS],
       });
     }
   }, [open, empresa]);
@@ -169,17 +162,6 @@ export default function EmpresaForm({
     }
   }
 
-  function toggleModulo(m: ModuloEmpresa) {
-    setForm((f) => {
-      const existe = f.modulos_habilitados.includes(m);
-      return {
-        ...f,
-        modulos_habilitados: existe
-          ? f.modulos_habilitados.filter((x) => x !== m)
-          : [...f.modulos_habilitados, m],
-      };
-    });
-  }
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -527,40 +509,6 @@ export default function EmpresaForm({
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
               />
             </div>
-          </div>
-        </div>
-
-        {/* Módulos habilitados — controla em quais quadros a empresa aparece */}
-        <div className="rounded-lg border border-teal-200 bg-teal-50/40 p-3">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-teal-700">
-            Módulos habilitados
-          </p>
-          <p className="mb-2 text-xs text-gray-600">
-            Selecione em quais quadros esta empresa deve aparecer no seletor.
-            Por padrão, novas empresas aparecem em todos.
-          </p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {MODULOS_EMPRESA.map((m) => {
-              const checked = form.modulos_habilitados.includes(m.value);
-              return (
-                <label
-                  key={m.value}
-                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
-                    checked
-                      ? "border-teal-300 bg-white text-teal-900"
-                      : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleModulo(m.value)}
-                    className="size-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-                  />
-                  {m.label}
-                </label>
-              );
-            })}
           </div>
         </div>
 

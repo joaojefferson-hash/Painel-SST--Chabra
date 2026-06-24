@@ -127,15 +127,6 @@ export default function EmpresaDetalhePage({ params }: Props) {
                   </span>
                 )}
               </div>
-              {empresa.modulos_habilitados?.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {empresa.modulos_habilitados.map((m) => (
-                    <span key={m} className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
-                      {moduloLabel(m)}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
           <div className="flex gap-1.5">
