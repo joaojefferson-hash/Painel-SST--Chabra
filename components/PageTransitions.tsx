@@ -7,6 +7,9 @@ type DocWithVT = Document & {
   startViewTransition?: (cb: () => void | Promise<void>) => { finished: Promise<void> };
 };
 
+/** Página principal (hub). Ir PARA ela = "voltar"; sair DELA = "avançar". */
+const HUB = "/visao-geral";
+
 /**
  * Transição suave entre páginas via View Transitions API (Chromium/Electron).
  *
@@ -60,8 +63,16 @@ export default function PageTransitions() {
 
       e.preventDefault();
       const destino = url.pathname + url.search + url.hash;
+
+      // Direção hierárquica: voltar ao hub, ou avançar para uma sub-página.
+      const root = document.documentElement;
+      const direcao =
+        url.pathname === HUB ? "back" : window.location.pathname === HUB ? "forward" : "";
+      if (direcao) root.dataset.vt = direcao;
+      else delete root.dataset.vt;
+
       try {
-        doc.startViewTransition!(
+        const transicao = doc.startViewTransition!(
           () =>
             new Promise<void>((resolve) => {
               finishRef.current = resolve;
@@ -75,7 +86,11 @@ export default function PageTransitions() {
               }, 700);
             }),
         );
+        transicao.finished.finally(() => {
+          if (root.dataset.vt === direcao) delete root.dataset.vt;
+        });
       } catch {
+        delete root.dataset.vt;
         router.push(destino); // fallback duro
       }
     }
