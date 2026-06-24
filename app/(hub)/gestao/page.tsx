@@ -3,16 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare, LayoutList } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
   useQuadros, useCriarQuadro, useTarefas, useReordenar, useUsuariosLista,
+  usePreferenciaVisao, useSalvarPreferenciaVisao,
   iniciais, corAvatar,
   STATUS_TAREFA, PRIORIDADES,
-  type GestaoTarefa, type StatusTarefa,
+  type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor,
 } from "@/lib/hooks/useGestao";
 import TarefaModal from "@/components/gestao/TarefaModal";
+import VistaLista from "@/components/gestao/VistaLista";
+import VistaCalendario from "@/components/gestao/VistaCalendario";
+import VistaTimeline from "@/components/gestao/VistaTimeline";
 
 const corPrioridade = (p: string) => PRIORIDADES.find((x) => x.value === p)?.cor ?? "#94a3b8";
 function diasAte(iso: string): number {
@@ -24,7 +28,13 @@ function fmtPrazo(iso: string): string {
   const [, m, d] = iso.split("-");
   return `${d}/${m}`;
 }
-const ordemStatus = (s: StatusTarefa) => STATUS_TAREFA.findIndex((x) => x.value === s);
+
+const VISTAS: { value: VistaGestao; label: string; icon: typeof KanbanSquare }[] = [
+  { value: "quadro", label: "Quadro", icon: KanbanSquare },
+  { value: "lista", label: "Lista", icon: LayoutList },
+  { value: "calendario", label: "Calendário", icon: CalendarDays },
+  { value: "timeline", label: "Timeline", icon: GanttChartSquare },
+];
 
 export default function GestaoChabraPage() {
   const router = useRouter();
@@ -42,6 +52,8 @@ export default function GestaoChabraPage() {
   }, [quadros, quadroId]);
 
   const { data: tarefas = [], isLoading: loadingTarefas } = useTarefas(quadro?.id_quadro);
+  const { data: pref } = usePreferenciaVisao(quadro?.id_quadro);
+  const salvarPref = useSalvarPreferenciaVisao();
 
   const [items, setItems] = useState<GestaoTarefa[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -54,7 +66,8 @@ export default function GestaoChabraPage() {
   const [busca, setBusca] = useState("");
   const [filtroResp, setFiltroResp] = useState("");
   const [filtroPrio, setFiltroPrio] = useState("");
-  const [vista, setVista] = useState<"quadro" | "lista">("quadro");
+  const [vista, setVista] = useState<VistaGestao>("quadro");
+  const [agruparPor, setAgruparPor] = useState<AgruparPor | null>(null);
   const [soMinhas, setSoMinhas] = useState(false);
   const [dropAlvo, setDropAlvo] = useState<{ col: StatusTarefa; beforeId: string | null } | null>(null);
 
@@ -66,6 +79,20 @@ export default function GestaoChabraPage() {
   }, [user?.perfil, router]);
 
   useEffect(() => setItems(tarefas), [tarefas]);
+
+  // Aplica a preferência de visão salva (por usuário/quadro).
+  useEffect(() => {
+    if (pref) { setVista(pref.vista); setAgruparPor(pref.agrupar_por); }
+  }, [pref]);
+
+  function mudarVista(v: VistaGestao) {
+    setVista(v);
+    if (quadro) salvarPref.mutate({ id_quadro: quadro.id_quadro, vista: v, agrupar_por: agruparPor });
+  }
+  function mudarAgrupar(a: AgruparPor | null) {
+    setAgruparPor(a);
+    if (quadro) salvarPref.mutate({ id_quadro: quadro.id_quadro, vista, agrupar_por: a });
+  }
 
   const etiquetasSugeridas = useMemo(
     () => [...new Set(items.flatMap((t) => t.etiquetas ?? []))].sort((a, b) => a.localeCompare(b, "pt-BR")),
@@ -198,13 +225,15 @@ export default function GestaoChabraPage() {
               <X className="size-4" /> Limpar
             </button>
           )}
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 text-sm font-medium sm:ml-auto">
-            <button type="button" onClick={() => setVista("quadro")} className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 ${vista === "quadro" ? "bg-verde-primary text-white" : "text-gray-500 hover:bg-gray-100"}`}>
-              <KanbanSquare className="size-4" /> Quadro
-            </button>
-            <button type="button" onClick={() => setVista("lista")} className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 ${vista === "lista" ? "bg-verde-primary text-white" : "text-gray-500 hover:bg-gray-100"}`}>
-              <LayoutList className="size-4" /> Lista
-            </button>
+          <div className="inline-flex flex-wrap rounded-lg border border-gray-200 bg-white p-0.5 text-sm font-medium sm:ml-auto">
+            {VISTAS.map((v) => {
+              const Icon = v.icon;
+              return (
+                <button key={v.value} type="button" onClick={() => mudarVista(v.value)} className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 ${vista === v.value ? "bg-verde-primary text-white" : "text-gray-500 hover:bg-gray-100"}`}>
+                  <Icon className="size-4" /> {v.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -300,47 +329,25 @@ export default function GestaoChabraPage() {
               );
             })}
           </div>
+        ) : vista === "lista" ? (
+          <VistaLista
+            tarefas={items.filter(passaFiltro)}
+            agruparPor={agruparPor}
+            onAgruparPor={mudarAgrupar}
+            podeEditar={podeEditar}
+            onAbrir={(t) => { setEditando(t); setModalOpen(true); }}
+          />
+        ) : vista === "calendario" ? (
+          <VistaCalendario
+            tarefas={items.filter(passaFiltro)}
+            podeEditar={podeEditar}
+            onAbrir={(t) => { setEditando(t); setModalOpen(true); }}
+          />
         ) : (
-          <div className="mt-5 overflow-x-auto rounded-xl border border-gray-200 bg-white">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-                <tr>
-                  <th className="px-3 py-2.5">Tarefa</th>
-                  <th className="px-3 py-2.5">Status</th>
-                  <th className="px-3 py-2.5">Prioridade</th>
-                  <th className="px-3 py-2.5">Responsável</th>
-                  <th className="px-3 py-2.5">Prazo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items
-                  .filter(passaFiltro)
-                  .sort((a, b) => ordemStatus(a.status) - ordemStatus(b.status) || a.ordem - b.ordem)
-                  .map((t) => {
-                    const st = STATUS_TAREFA.find((s) => s.value === t.status);
-                    const dias = t.prazo ? diasAte(t.prazo) : null;
-                    const atrasada = dias != null && dias < 0 && t.status !== "CONCLUIDO";
-                    return (
-                      <tr key={t.id_tarefa} onClick={() => { setEditando(t); setModalOpen(true); }} className="cursor-pointer border-t border-gray-100 hover:bg-gray-50">
-                        <td className="px-3 py-2 font-medium text-gray-800">
-                          <span className="mr-2 inline-block size-2 rounded-full align-middle" style={{ background: corPrioridade(t.prioridade) }} />
-                          {t.titulo}
-                        </td>
-                        <td className="px-3 py-2">
-                          <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: (st?.cor ?? "#999") + "22", color: st?.cor }}>{st?.label}</span>
-                        </td>
-                        <td className="px-3 py-2 text-gray-600">{PRIORIDADES.find((p) => p.value === t.prioridade)?.label}</td>
-                        <td className="px-3 py-2 text-gray-600">{t.responsavel ?? "—"}</td>
-                        <td className="px-3 py-2"><span className={atrasada ? "font-medium text-red-600" : "text-gray-600"}>{t.prazo ? fmtPrazo(t.prazo) : "—"}</span></td>
-                      </tr>
-                    );
-                  })}
-                {items.filter(passaFiltro).length === 0 && (
-                  <tr><td colSpan={5} className="px-3 py-8 text-center text-gray-300">Nenhuma tarefa</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <VistaTimeline
+            tarefas={items.filter(passaFiltro)}
+            onAbrir={(t) => { setEditando(t); setModalOpen(true); }}
+          />
         )}
 
         {podeEditar && vista === "quadro" && (

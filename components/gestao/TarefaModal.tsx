@@ -50,6 +50,7 @@ export default function TarefaModal({
   const [responsavel, setResponsavel] = useState("");
   const [prioridade, setPrioridade] = useState<PrioridadeTarefa>("Media");
   const [prazo, setPrazo] = useState("");
+  const [dataInicio, setDataInicio] = useState("");
   const [status, setStatus] = useState<StatusTarefa>(statusInicial);
   const [etiquetas, setEtiquetas] = useState<string[]>([]);
   const [subtarefas, setSubtarefas] = useState<Subtarefa[]>([]);
@@ -62,6 +63,7 @@ export default function TarefaModal({
     setResponsavel(tarefa?.responsavel ?? "");
     setPrioridade(tarefa?.prioridade ?? "Media");
     setPrazo(tarefa?.prazo ?? "");
+    setDataInicio(tarefa?.data_inicio ?? "");
     setStatus(tarefa?.status ?? statusInicial);
     setEtiquetas(tarefa?.etiquetas ?? []);
     setSubtarefas(tarefa?.subtarefas ?? []);
@@ -90,6 +92,7 @@ export default function TarefaModal({
       responsavel: responsavel.trim() || null,
       prioridade,
       prazo: prazo || null,
+      data_inicio: dataInicio || null,
       status,
       etiquetas,
       subtarefas: subtarefas.filter((s) => s.texto.trim()),
@@ -153,8 +156,12 @@ export default function TarefaModal({
             <datalist id="gestao-usuarios">{usuarios.map((u) => <option key={u} value={u} />)}</datalist>
           </div>
           <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">Data de início</label>
+            <input type="date" value={dataInicio} disabled={ro} max={prazo || undefined} onChange={(e) => setDataInicio(e.target.value)} className={inputCls} />
+          </div>
+          <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">Prazo</label>
-            <input type="date" value={prazo} disabled={ro} onChange={(e) => setPrazo(e.target.value)} className={inputCls} />
+            <input type="date" value={prazo} disabled={ro} min={dataInicio || undefined} onChange={(e) => setPrazo(e.target.value)} className={inputCls} />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">Prioridade</label>

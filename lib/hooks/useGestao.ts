@@ -5,8 +5,11 @@ import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { gerarId } from "@/lib/utils";
 import { mensagemErro } from "@/lib/errors";
+import { useUserStore } from "@/lib/store";
 
 export type StatusTarefa = "A_FAZER" | "EM_ANDAMENTO" | "EM_REVISAO" | "CONCLUIDO";
+export type VistaGestao = "quadro" | "lista" | "calendario" | "timeline";
+export type AgruparPor = "status" | "responsavel" | "prioridade" | "etiqueta";
 export type PrioridadeTarefa = "Baixa" | "Media" | "Alta" | "Urgente";
 
 export interface GestaoQuadro {
@@ -29,6 +32,7 @@ export interface GestaoTarefa {
   prioridade: PrioridadeTarefa;
   responsavel: string | null;
   prazo: string | null;
+  data_inicio: string | null;
   ordem: number;
   etiquetas: string[];
   subtarefas: Subtarefa[];
@@ -169,6 +173,7 @@ export function useSalvarTarefa() {
           prioridade: t.prioridade ?? "Media",
           responsavel: t.responsavel ?? null,
           prazo: t.prazo ?? null,
+          data_inicio: t.data_inicio ?? null,
           ordem: t.ordem ?? 0,
           etiquetas: t.etiquetas ?? [],
           subtarefas: t.subtarefas ?? [],
@@ -295,5 +300,65 @@ export function useExcluirComentario() {
     },
     onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["gestao-comentarios", v.id_tarefa] }),
     onError: (e) => toast.error(mensagemErro(e)),
+  });
+}
+
+export interface PreferenciaVisao {
+  vista: VistaGestao;
+  agrupar_por: AgruparPor | null;
+  config: Record<string, unknown>;
+}
+
+/** Preferência de visão (Quadro/Lista/Calendário/Timeline) do usuário para um quadro. */
+export function usePreferenciaVisao(idQuadro: string | null | undefined) {
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useQuery({
+    queryKey: ["gestao-pref-visao", idQuadro, email],
+    enabled: !!idQuadro && !!email,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb
+        .from("gestao_preferencias_visao")
+        .select("vista,agrupar_por,config")
+        .eq("usuario_email", email!)
+        .eq("id_quadro", idQuadro!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as PreferenciaVisao | null;
+    },
+  });
+}
+
+export function useSalvarPreferenciaVisao() {
+  const qc = useQueryClient();
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useMutation({
+    mutationFn: async (p: { id_quadro: string; vista: VistaGestao; agrupar_por?: AgruparPor | null; config?: Record<string, unknown> }) => {
+      if (!email) return;
+      const sb = createSupabaseBrowserClient();
+      const row = {
+        usuario_email: email,
+        id_quadro: p.id_quadro,
+        vista: p.vista,
+        agrupar_por: p.agrupar_por ?? null,
+        config: p.config ?? {},
+        updated_at: new Date().toISOString(),
+      };
+      // Atualiza a linha existente; se não houver, insere com UUID client-generated.
+      const upd = await sb
+        .from("gestao_preferencias_visao")
+        .update(row as never)
+        .eq("usuario_email", email)
+        .eq("id_quadro", p.id_quadro)
+        .select("id");
+      if (upd.error) throw upd.error;
+      if (upd.data && upd.data.length > 0) return;
+      const ins = await sb.from("gestao_preferencias_visao").insert({ id: crypto.randomUUID(), ...row } as never);
+      if (ins.error) throw ins.error;
+    },
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["gestao-pref-visao", v.id_quadro] }),
+    onError: () => {
+      // Preferência é best-effort; não interrompe o uso se falhar.
+    },
   });
 }
