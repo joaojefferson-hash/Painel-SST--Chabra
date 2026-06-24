@@ -3,19 +3,21 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
   useQuadros, useCriarQuadro, useTarefas, useReordenar, useUsuariosLista,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
-  useStatusQuadro, statusPadrao,
+  useStatusQuadro, statusPadrao, useCamposQuadro,
   iniciais, corAvatar,
   PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus,
 } from "@/lib/hooks/useGestao";
 import TarefaModal from "@/components/gestao/TarefaModal";
 import StatusManagerModal from "@/components/gestao/StatusManagerModal";
+import CamposManagerModal from "@/components/gestao/CamposManagerModal";
+import { formatarCampoValor } from "@/components/gestao/CampoInput";
 import VistaLista from "@/components/gestao/VistaLista";
 import VistaCalendario from "@/components/gestao/VistaCalendario";
 import VistaTimeline from "@/components/gestao/VistaTimeline";
@@ -57,6 +59,7 @@ export default function GestaoChabraPage() {
   const { data: pref } = usePreferenciaVisao(quadro?.id_quadro);
   const salvarPref = useSalvarPreferenciaVisao();
   const { data: statusList = [], isLoading: loadingStatus } = useStatusQuadro(quadro?.id_quadro);
+  const { data: campos = [] } = useCamposQuadro(quadro?.id_quadro);
 
   const [items, setItems] = useState<GestaoTarefa[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -77,6 +80,7 @@ export default function GestaoChabraPage() {
   const [criandoQuadro, setCriandoQuadro] = useState(false);
   const [nomeQuadro, setNomeQuadro] = useState("");
   const [managerOpen, setManagerOpen] = useState(false);
+  const [camposOpen, setCamposOpen] = useState(false);
 
   useEffect(() => {
     if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
@@ -109,7 +113,11 @@ export default function GestaoChabraPage() {
     if (filtroResp && (t.responsavel ?? "") !== filtroResp) return false;
     if (filtroPrio && t.prioridade !== filtroPrio) return false;
     const q = busca.trim().toLowerCase();
-    if (q && !(`${t.titulo} ${t.descricao ?? ""} ${t.responsavel ?? ""} ${(t.etiquetas ?? []).join(" ")}`.toLowerCase().includes(q))) return false;
+    if (q) {
+      const valoresCampos = Object.values(t.campos ?? {}).map((v) => (Array.isArray(v) ? v.join(" ") : v ?? "")).join(" ");
+      const hay = `${t.titulo} ${t.descricao ?? ""} ${t.responsavel ?? ""} ${(t.etiquetas ?? []).join(" ")} ${valoresCampos}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     return true;
   };
 
@@ -261,6 +269,11 @@ export default function GestaoChabraPage() {
               <SlidersHorizontal className="size-4" /> Status
             </button>
           )}
+          {podeEditar && (
+            <button type="button" onClick={() => setCamposOpen(true)} title="Campos personalizados do quadro" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <Tags className="size-4" /> Campos
+            </button>
+          )}
         </div>
 
         {(loadingQuadros || loadingTarefas || loadingStatus) ? (
@@ -323,6 +336,21 @@ export default function GestaoChabraPage() {
                                 ))}
                               </div>
                             )}
+                            {(() => {
+                              const chips = campos
+                                .filter((c) => c.tipo === "checkbox" || c.tipo === "selecao" || c.tipo === "moeda")
+                                .map((c) => ({ c, v: (t.campos ?? {})[c.id] }))
+                                .filter(({ c, v }) => (c.tipo === "checkbox" ? v === true : v != null && v !== ""));
+                              return chips.length > 0 ? (
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                  {chips.map(({ c, v }) => (
+                                    <span key={c.id} className="rounded bg-verde-light/60 px-1.5 py-0.5 text-[10px] font-medium text-verde-primary" title={c.nome}>
+                                      {c.tipo === "checkbox" ? c.nome : formatarCampoValor(c, v)}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : null;
+                            })()}
                             <div className="mt-2 flex items-center gap-2">
                               {t.prazo && (
                                 <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${atrasada ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
@@ -359,6 +387,7 @@ export default function GestaoChabraPage() {
           <VistaLista
             tarefas={items.filter(passaFiltro)}
             statuses={statuses}
+            campos={campos}
             agruparPor={agruparPor}
             onAgruparPor={mudarAgrupar}
             podeEditar={podeEditar}
@@ -392,6 +421,7 @@ export default function GestaoChabraPage() {
           tarefa={editando}
           statusInicial={statusNovo}
           statuses={statuses}
+          campos={campos}
           podeEditar={podeEditar}
           etiquetasSugeridas={etiquetasSugeridas}
         />
@@ -403,6 +433,16 @@ export default function GestaoChabraPage() {
           onClose={() => setManagerOpen(false)}
           idQuadro={quadro.id_quadro}
           statuses={statuses}
+          podeEditar={podeEditar}
+        />
+      )}
+
+      {quadro && (
+        <CamposManagerModal
+          open={camposOpen}
+          onClose={() => setCamposOpen(false)}
+          idQuadro={quadro.id_quadro}
+          campos={campos}
           podeEditar={podeEditar}
         />
       )}

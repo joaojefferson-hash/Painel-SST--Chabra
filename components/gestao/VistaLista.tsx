@@ -6,8 +6,9 @@ import {
   useSalvarTarefa, useUsuariosLista,
   iniciais, corAvatar,
   PRIORIDADES,
-  type GestaoTarefa, type AgruparPor, type PrioridadeTarefa, type GestaoStatus,
+  type GestaoTarefa, type AgruparPor, type PrioridadeTarefa, type GestaoStatus, type GestaoCampo,
 } from "@/lib/hooks/useGestao";
+import { formatarCampoValor } from "@/components/gestao/CampoInput";
 
 const ordemPrio = (p: string) => PRIORIDADES.findIndex((x) => x.value === p);
 const fmtData = (iso: string | null) => {
@@ -29,6 +30,7 @@ const AGRUPAMENTOS: { value: AgruparPor | ""; label: string }[] = [
 export default function VistaLista({
   tarefas,
   statuses,
+  campos,
   agruparPor,
   onAgruparPor,
   podeEditar,
@@ -36,11 +38,13 @@ export default function VistaLista({
 }: {
   tarefas: GestaoTarefa[];
   statuses: GestaoStatus[];
+  campos: GestaoCampo[];
   agruparPor: AgruparPor | null;
   onAgruparPor: (a: AgruparPor | null) => void;
   podeEditar: boolean;
   onAbrir: (t: GestaoTarefa) => void;
 }) {
+  const totalCols = 6 + campos.length;
   const salvar = useSalvarTarefa();
   const { data: usuarios = [] } = useUsuariosLista();
   const statusMap = useMemo(() => new Map(statuses.map((s) => [s.slug, s])), [statuses]);
@@ -140,13 +144,14 @@ export default function VistaLista({
               <Th col="responsavel">Responsável</Th>
               <Th col="data_inicio">Início</Th>
               <Th col="prazo">Prazo</Th>
+              {campos.map((c) => <th key={c.id} className="px-3 py-2.5">{c.nome}</th>)}
             </tr>
           </thead>
           <tbody>
             {grupos.map((g) => {
               const recolhido = recolhidos.has(g.chave);
               return (
-                <GrupoBloco key={g.chave} grupo={g} recolhido={recolhido} agrupar={!!agruparPor}
+                <GrupoBloco key={g.chave} grupo={g} recolhido={recolhido} agrupar={!!agruparPor} cols={totalCols}
                   onToggle={() => setRecolhidos((s) => { const n = new Set(s); if (n.has(g.chave)) n.delete(g.chave); else n.add(g.chave); return n; })}>
                   {!recolhido && g.itens.map((t) => {
                     const st = statusMap.get(t.status);
@@ -198,6 +203,9 @@ export default function VistaLista({
                               className={`rounded-md border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-gray-200 focus:border-verde-primary focus:outline-none ${atrasada ? "font-medium text-red-600" : "text-gray-600"}`} />
                           ) : <span className={`text-sm ${atrasada ? "font-medium text-red-600" : "text-gray-600"}`}>{fmtData(t.prazo)}</span>}
                         </td>
+                        {campos.map((c) => (
+                          <td key={c.id} className="px-3 py-2 text-gray-600">{formatarCampoValor(c, (t.campos ?? {})[c.id])}</td>
+                        ))}
                       </tr>
                     );
                   })}
@@ -205,7 +213,7 @@ export default function VistaLista({
               );
             })}
             {tarefas.length === 0 && (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-gray-300">Nenhuma tarefa</td></tr>
+              <tr><td colSpan={totalCols} className="px-3 py-8 text-center text-gray-300">Nenhuma tarefa</td></tr>
             )}
           </tbody>
         </table>
@@ -215,10 +223,11 @@ export default function VistaLista({
   );
 }
 
-function GrupoBloco({ grupo, recolhido, agrupar, onToggle, children }: {
+function GrupoBloco({ grupo, recolhido, agrupar, cols, onToggle, children }: {
   grupo: { chave: string; label: string; cor?: string; itens: GestaoTarefa[] };
   recolhido: boolean;
   agrupar: boolean;
+  cols: number;
   onToggle: () => void;
   children: React.ReactNode;
 }) {
@@ -226,7 +235,7 @@ function GrupoBloco({ grupo, recolhido, agrupar, onToggle, children }: {
     <>
       {agrupar && (
         <tr className="bg-gray-50/80">
-          <td colSpan={6} className="px-3 py-1.5">
+          <td colSpan={cols} className="px-3 py-1.5">
             <button type="button" onClick={onToggle} className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700">
               {recolhido ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
               {grupo.cor && <span className="size-2.5 rounded-full" style={{ background: grupo.cor }} />}

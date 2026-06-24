@@ -35,6 +35,18 @@ export interface Subtarefa {
   feito: boolean;
 }
 
+export type TipoCampo = "texto" | "numero" | "data" | "selecao" | "multi" | "checkbox" | "moeda" | "url";
+
+export interface GestaoCampo {
+  id: string;
+  id_quadro: string;
+  nome: string;
+  tipo: TipoCampo;
+  opcoes: string[];
+  ordem: number;
+  visivel_cliente: boolean;
+}
+
 export interface GestaoTarefa {
   id_tarefa: string;
   id_quadro: string;
@@ -48,6 +60,7 @@ export interface GestaoTarefa {
   ordem: number;
   etiquetas: string[];
   subtarefas: Subtarefa[];
+  campos: Record<string, unknown>;
   created_by: string | null;
   created_at: string;
   updated_at: string | null;
@@ -209,6 +222,67 @@ export function useExcluirStatus() {
   });
 }
 
+/** Definições de campos personalizados de um quadro (ordenados). */
+export function useCamposQuadro(idQuadro: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gestao-campos", idQuadro],
+    enabled: !!idQuadro,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb
+        .from("gestao_campos")
+        .select("*")
+        .eq("id_quadro", idQuadro!)
+        .order("ordem", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoCampo[];
+    },
+  });
+}
+
+export function useSalvarCampo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (c: Partial<GestaoCampo> & { id_quadro: string }) => {
+      const sb = createSupabaseBrowserClient();
+      if (!c.id) {
+        const id = crypto.randomUUID();
+        const { error } = await sb.from("gestao_campos").insert({
+          id, id_quadro: c.id_quadro,
+          nome: c.nome ?? "Novo campo", tipo: c.tipo ?? "texto",
+          opcoes: c.opcoes ?? [], ordem: c.ordem ?? 0, visivel_cliente: c.visivel_cliente ?? false,
+        } as never);
+        if (error) throw error;
+        return id;
+      }
+      const patch: Record<string, unknown> = {};
+      if (c.nome !== undefined) patch.nome = c.nome;
+      if (c.tipo !== undefined) patch.tipo = c.tipo;
+      if (c.opcoes !== undefined) patch.opcoes = c.opcoes;
+      if (c.ordem !== undefined) patch.ordem = c.ordem;
+      if (c.visivel_cliente !== undefined) patch.visivel_cliente = c.visivel_cliente;
+      const { error } = await sb.from("gestao_campos").update(patch as never).eq("id", c.id);
+      if (error) throw error;
+      return c.id;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-campos"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível salvar o campo.")),
+  });
+}
+
+export function useExcluirCampo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_campos").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-campos"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir o campo.")),
+  });
+}
+
 export function useTarefas(idQuadro: string | null | undefined) {
   return useQuery({
     queryKey: ["gestao-tarefas", idQuadro],
@@ -266,6 +340,7 @@ export function useSalvarTarefa() {
           ordem: t.ordem ?? 0,
           etiquetas: t.etiquetas ?? [],
           subtarefas: t.subtarefas ?? [],
+          campos: t.campos ?? {},
           created_at: now,
           updated_at: now,
         } as never);

@@ -11,8 +11,9 @@ import {
   useComentarios, useAddComentario, useExcluirComentario,
   iniciais, corAvatar,
   PRIORIDADES,
-  type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa, type GestaoStatus,
+  type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa, type GestaoStatus, type GestaoCampo,
 } from "@/lib/hooks/useGestao";
+import CampoInput from "@/components/gestao/CampoInput";
 
 function quando(iso: string): string {
   const d = new Date(iso);
@@ -26,6 +27,7 @@ export default function TarefaModal({
   tarefa,
   statusInicial = "A_FAZER",
   statuses,
+  campos,
   podeEditar,
   etiquetasSugeridas = [],
 }: {
@@ -35,6 +37,7 @@ export default function TarefaModal({
   tarefa: GestaoTarefa | null;
   statusInicial?: StatusTarefa;
   statuses: GestaoStatus[];
+  campos: GestaoCampo[];
   podeEditar: boolean;
   etiquetasSugeridas?: string[];
 }) {
@@ -57,6 +60,7 @@ export default function TarefaModal({
   const [etiquetas, setEtiquetas] = useState<string[]>([]);
   const [subtarefas, setSubtarefas] = useState<Subtarefa[]>([]);
   const [novaSub, setNovaSub] = useState("");
+  const [valoresCampos, setValoresCampos] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -70,6 +74,7 @@ export default function TarefaModal({
     setEtiquetas(tarefa?.etiquetas ?? []);
     setSubtarefas(tarefa?.subtarefas ?? []);
     setNovaSub("");
+    setValoresCampos((tarefa?.campos as Record<string, unknown>) ?? {});
   }, [open, tarefa, statusInicial]);
 
   const ro = !podeEditar;
@@ -98,6 +103,7 @@ export default function TarefaModal({
       status,
       etiquetas,
       subtarefas: subtarefas.filter((s) => s.texto.trim()),
+      campos: valoresCampos,
     });
     toast.success(tarefa ? "Tarefa atualizada" : "Tarefa criada");
     onClose();
@@ -221,6 +227,20 @@ export default function TarefaModal({
             )}
           </div>
         </div>
+
+        {campos.length > 0 && (
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-600">Campos personalizados</label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {campos.map((c) => (
+                <div key={c.id}>
+                  <label className="mb-1 block text-[11px] text-gray-500">{c.nome}</label>
+                  <CampoInput campo={c} value={valoresCampos[c.id]} onChange={(v) => setValoresCampos((s) => ({ ...s, [c.id]: v }))} disabled={ro} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {tarefa && (
           <div>
