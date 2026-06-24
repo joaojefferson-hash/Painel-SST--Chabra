@@ -7,13 +7,15 @@ import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, Check
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
-  useQuadros, useCriarQuadro, useTarefas, useReordenar, useUsuariosLista,
+  useQuadros, useTarefas, useReordenar, useUsuariosLista,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
   useStatusQuadro, statusPadrao, useCamposQuadro,
+  useEspacos, usePastas,
   iniciais, corAvatar,
   PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus,
 } from "@/lib/hooks/useGestao";
+import GestaoSidebar from "@/components/gestao/GestaoSidebar";
 import TarefaModal from "@/components/gestao/TarefaModal";
 import StatusManagerModal from "@/components/gestao/StatusManagerModal";
 import CamposManagerModal from "@/components/gestao/CamposManagerModal";
@@ -45,7 +47,8 @@ export default function GestaoChabraPage() {
   const user = useUserStore((s) => s.user);
   const podeEditar = useCanEdit();
   const { data: quadros = [], isLoading: loadingQuadros } = useQuadros();
-  const criarQuadro = useCriarQuadro();
+  const { data: espacos = [] } = useEspacos();
+  const { data: pastas = [] } = usePastas();
   const { data: usuarios = [] } = useUsuariosLista();
   const reordenar = useReordenar();
 
@@ -77,8 +80,6 @@ export default function GestaoChabraPage() {
   const [soMinhas, setSoMinhas] = useState(false);
   const [dropAlvo, setDropAlvo] = useState<{ col: StatusTarefa; beforeId: string | null } | null>(null);
 
-  const [criandoQuadro, setCriandoQuadro] = useState(false);
-  const [nomeQuadro, setNomeQuadro] = useState("");
   const [managerOpen, setManagerOpen] = useState(false);
   const [camposOpen, setCamposOpen] = useState(false);
 
@@ -152,15 +153,6 @@ export default function GestaoChabraPage() {
     setModalOpen(true);
   }
 
-  async function handleCriarQuadro(e: React.FormEvent) {
-    e.preventDefault();
-    if (!nomeQuadro.trim()) return;
-    const id = await criarQuadro.mutateAsync(nomeQuadro.trim());
-    setQuadroId(id);
-    setNomeQuadro("");
-    setCriandoQuadro(false);
-  }
-
   function soltar(targetStatus: StatusTarefa, beforeId?: string) {
     setColHover(null);
     setDropAlvo(null);
@@ -188,14 +180,22 @@ export default function GestaoChabraPage() {
           <ArrowLeft className="size-4" /> Visão geral
         </Link>
 
+        <div className="flex gap-5">
+          <aside className="hidden w-60 shrink-0 lg:block">
+            <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-gray-200 bg-white p-2">
+              <GestaoSidebar espacos={espacos} pastas={pastas} quadros={quadros} quadroId={quadro?.id_quadro ?? null} onSelect={setQuadroId} podeEditar={podeEditar} />
+            </div>
+          </aside>
+
+          <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="flex size-11 items-center justify-center rounded-xl bg-verde-light text-verde-primary">
               <KanbanSquare className="size-6" />
             </span>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Gestão Chabra</h1>
-              <p className="text-sm text-gray-500">Gestão de projetos e tarefas · {items.length} tarefa(s) neste quadro</p>
+              <h1 className="text-2xl font-bold text-gray-900">{quadro?.nome ?? "Gestão Chabra"}</h1>
+              <p className="text-sm text-gray-500">{items.length} tarefa(s) nesta lista</p>
             </div>
           </div>
           {podeEditar && (
@@ -205,29 +205,11 @@ export default function GestaoChabraPage() {
           )}
         </div>
 
-        {/* Seletor de quadros */}
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          {quadros.map((q) => (
-            <button
-              key={q.id_quadro}
-              type="button"
-              onClick={() => setQuadroId(q.id_quadro)}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${q.id_quadro === quadro?.id_quadro ? "bg-verde-primary text-white shadow-sm" : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"}`}
-            >
-              {q.nome}
-            </button>
-          ))}
-          {podeEditar && (criandoQuadro ? (
-            <form onSubmit={handleCriarQuadro} className="flex items-center gap-1">
-              <input autoFocus value={nomeQuadro} onChange={(e) => setNomeQuadro(e.target.value)} placeholder="Nome do quadro" className="w-40 rounded-full border border-gray-300 px-3 py-1.5 text-sm focus:border-verde-primary focus:outline-none" />
-              <button type="submit" className="rounded-full bg-verde-primary px-3 py-1.5 text-sm font-semibold text-white">OK</button>
-              <button type="button" onClick={() => { setCriandoQuadro(false); setNomeQuadro(""); }} className="p-1 text-gray-400 hover:text-gray-700"><X className="size-4" /></button>
-            </form>
-          ) : (
-            <button type="button" onClick={() => setCriandoQuadro(true)} className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-gray-500 ring-1 ring-dashed ring-gray-300 hover:bg-gray-50">
-              <Plus className="size-4" /> Novo quadro
-            </button>
-          ))}
+        {/* Seletor de lista (mobile, já que a árvore fica oculta em telas pequenas) */}
+        <div className="mt-4 lg:hidden">
+          <select value={quadro?.id_quadro ?? ""} onChange={(e) => setQuadroId(e.target.value)} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
+            {quadros.map((q) => <option key={q.id_quadro} value={q.id_quadro}>{q.nome}</option>)}
+          </select>
         </div>
 
         {/* Filtros */}
@@ -411,6 +393,8 @@ export default function GestaoChabraPage() {
         {podeEditar && vista === "quadro" && (
           <p className="mt-3 text-center text-xs text-gray-400">Arraste os cards entre as colunas para mudar o status.</p>
         )}
+          </div>
+        </div>
       </div>
 
       {quadro && (

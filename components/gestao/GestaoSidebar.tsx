@@ -1,0 +1,168 @@
+"use client";
+
+import { useState } from "react";
+import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Folder, List, Layers } from "lucide-react";
+import {
+  useSalvarEspaco, useExcluirEspaco, useSalvarPasta, useExcluirPasta,
+  useCriarQuadro, useRenomearQuadro, useExcluirQuadro,
+  type GestaoEspaco, type GestaoPasta, type GestaoQuadro,
+} from "@/lib/hooks/useGestao";
+
+export default function GestaoSidebar({
+  espacos,
+  pastas,
+  quadros,
+  quadroId,
+  onSelect,
+  podeEditar,
+}: {
+  espacos: GestaoEspaco[];
+  pastas: GestaoPasta[];
+  quadros: GestaoQuadro[];
+  quadroId: string | null;
+  onSelect: (id: string) => void;
+  podeEditar: boolean;
+}) {
+  const salvarEspaco = useSalvarEspaco();
+  const excluirEspaco = useExcluirEspaco();
+  const salvarPasta = useSalvarPasta();
+  const excluirPasta = useExcluirPasta();
+  const criarQuadro = useCriarQuadro();
+  const renomearQuadro = useRenomearQuadro();
+  const excluirQuadro = useExcluirQuadro();
+
+  const [fechados, setFechados] = useState<Set<string>>(new Set());
+  const [editando, setEditando] = useState<string | null>(null);
+
+  const toggle = (id: string) => setFechados((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const aberto = (id: string) => !fechados.has(id);
+
+  async function novaLista(id_espaco: string, id_pasta: string | null) {
+    const id = await criarQuadro.mutateAsync({ nome: "Nova lista", id_espaco, id_pasta });
+    onSelect(id);
+    setEditando(`q:${id}`);
+  }
+
+  const Nome = ({ chave, nome, onSalvar, className }: { chave: string; nome: string; onSalvar: (v: string) => void; className?: string }) =>
+    editando === chave ? (
+      <input
+        autoFocus
+        defaultValue={nome}
+        onBlur={(e) => { onSalvar(e.target.value); setEditando(null); }}
+        onKeyDown={(e) => { if (e.key === "Enter") { onSalvar((e.target as HTMLInputElement).value); setEditando(null); } if (e.key === "Escape") setEditando(null); }}
+        onClick={(e) => e.stopPropagation()}
+        className="min-w-0 flex-1 rounded border border-verde-primary px-1 py-0.5 text-sm focus:outline-none"
+      />
+    ) : <span className={`min-w-0 flex-1 truncate ${className ?? ""}`}>{nome}</span>;
+
+  const AcoesBtn = ({ children }: { children: React.ReactNode }) => (
+    <div className="ml-auto flex shrink-0 items-center opacity-0 transition group-hover:opacity-100">{children}</div>
+  );
+
+  return (
+    <nav className="space-y-1 text-sm">
+      {espacos.map((esp) => {
+        const pastasDoEspaco = pastas.filter((p) => p.id_espaco === esp.id);
+        const listasSoltas = quadros.filter((q) => q.id_espaco === esp.id && !q.id_pasta);
+        return (
+          <div key={esp.id}>
+            <div className="group flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-gray-100" onClick={() => toggle(`e:${esp.id}`)} role="button">
+              {aberto(`e:${esp.id}`) ? <ChevronDown className="size-3.5 shrink-0 text-gray-400" /> : <ChevronRight className="size-3.5 shrink-0 text-gray-400" />}
+              <Layers className="size-4 shrink-0" style={{ color: esp.cor }} />
+              <Nome chave={`e:${esp.id}`} nome={esp.nome} onSalvar={(v) => salvarEspaco.mutate({ id: esp.id, nome: v })} className="font-semibold text-gray-800" />
+              {podeEditar && (
+                <AcoesBtn>
+                  <button type="button" title="Nova pasta" onClick={(e) => { e.stopPropagation(); salvarPasta.mutate({ id_espaco: esp.id, nome: "Nova pasta" }); }} className="rounded p-0.5 text-gray-400 hover:text-verde-primary"><Plus className="size-3.5" /></button>
+                  <button type="button" title="Renomear" onClick={(e) => { e.stopPropagation(); setEditando(`e:${esp.id}`); }} className="rounded p-0.5 text-gray-400 hover:text-gray-700"><Pencil className="size-3.5" /></button>
+                  <button type="button" title="Excluir espaço" onClick={(e) => { e.stopPropagation(); excluirEspaco.mutate(esp.id); }} className="rounded p-0.5 text-gray-300 hover:text-red-600"><Trash2 className="size-3.5" /></button>
+                </AcoesBtn>
+              )}
+            </div>
+
+            {aberto(`e:${esp.id}`) && (
+              <div className="ml-3 space-y-0.5 border-l border-gray-200 pl-2">
+                {/* Listas soltas (direto no espaço) */}
+                {listasSoltas.map((q) => (
+                  <ItemLista key={q.id_quadro} q={q} ativo={q.id_quadro === quadroId} editando={editando === `q:${q.id_quadro}`}
+                    onSelect={onSelect} podeEditar={podeEditar} onRenomearStart={() => setEditando(`q:${q.id_quadro}`)}
+                    onRenomear={(v) => { renomearQuadro.mutate({ id_quadro: q.id_quadro, nome: v }); setEditando(null); }} onExcluir={() => excluirQuadro.mutate(q.id_quadro)} />
+                ))}
+                {podeEditar && (
+                  <button type="button" onClick={() => novaLista(esp.id, null)} className="flex w-full items-center gap-1 rounded px-1.5 py-0.5 text-xs text-gray-400 hover:bg-gray-100 hover:text-verde-primary">
+                    <Plus className="size-3" /> Lista
+                  </button>
+                )}
+
+                {/* Pastas */}
+                {pastasDoEspaco.map((pa) => {
+                  const listas = quadros.filter((q) => q.id_pasta === pa.id);
+                  return (
+                    <div key={pa.id}>
+                      <div className="group flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-gray-100" onClick={() => toggle(`p:${pa.id}`)} role="button">
+                        {aberto(`p:${pa.id}`) ? <ChevronDown className="size-3.5 shrink-0 text-gray-400" /> : <ChevronRight className="size-3.5 shrink-0 text-gray-400" />}
+                        <Folder className="size-4 shrink-0 text-gray-400" />
+                        <Nome chave={`p:${pa.id}`} nome={pa.nome} onSalvar={(v) => salvarPasta.mutate({ id: pa.id, nome: v })} className="font-medium text-gray-700" />
+                        {podeEditar && (
+                          <AcoesBtn>
+                            <button type="button" title="Nova lista" onClick={(e) => { e.stopPropagation(); novaLista(esp.id, pa.id); }} className="rounded p-0.5 text-gray-400 hover:text-verde-primary"><Plus className="size-3.5" /></button>
+                            <button type="button" title="Renomear" onClick={(e) => { e.stopPropagation(); setEditando(`p:${pa.id}`); }} className="rounded p-0.5 text-gray-400 hover:text-gray-700"><Pencil className="size-3.5" /></button>
+                            <button type="button" title="Excluir pasta" onClick={(e) => { e.stopPropagation(); excluirPasta.mutate(pa.id); }} className="rounded p-0.5 text-gray-300 hover:text-red-600"><Trash2 className="size-3.5" /></button>
+                          </AcoesBtn>
+                        )}
+                      </div>
+                      {aberto(`p:${pa.id}`) && (
+                        <div className="ml-3 space-y-0.5 border-l border-gray-200 pl-2">
+                          {listas.map((q) => (
+                            <ItemLista key={q.id_quadro} q={q} ativo={q.id_quadro === quadroId} editando={editando === `q:${q.id_quadro}`}
+                              onSelect={onSelect} podeEditar={podeEditar} onRenomearStart={() => setEditando(`q:${q.id_quadro}`)}
+                              onRenomear={(v) => { renomearQuadro.mutate({ id_quadro: q.id_quadro, nome: v }); setEditando(null); }} onExcluir={() => excluirQuadro.mutate(q.id_quadro)} />
+                          ))}
+                          {listas.length === 0 && <p className="px-1.5 py-0.5 text-xs text-gray-300">Vazia</p>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {podeEditar && (
+        <button type="button" onClick={() => salvarEspaco.mutate({ nome: "Novo espaço" })} className="mt-2 flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-verde-primary">
+          <Plus className="size-3.5" /> Novo espaço
+        </button>
+      )}
+    </nav>
+  );
+}
+
+function ItemLista({ q, ativo, editando, onSelect, podeEditar, onRenomearStart, onRenomear, onExcluir }: {
+  q: GestaoQuadro;
+  ativo: boolean;
+  editando: boolean;
+  onSelect: (id: string) => void;
+  podeEditar: boolean;
+  onRenomearStart: () => void;
+  onRenomear: (v: string) => void;
+  onExcluir: () => void;
+}) {
+  return (
+    <div className={`group flex items-center gap-1.5 rounded-md px-1.5 py-1 ${ativo ? "bg-verde-light text-verde-primary" : "text-gray-600 hover:bg-gray-100"}`} onClick={() => onSelect(q.id_quadro)} role="button">
+      <List className="size-3.5 shrink-0" />
+      {editando ? (
+        <input autoFocus defaultValue={q.nome} onClick={(e) => e.stopPropagation()}
+          onBlur={(e) => onRenomear(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") onRenomear((e.target as HTMLInputElement).value); }}
+          className="min-w-0 flex-1 rounded border border-verde-primary px-1 py-0.5 text-sm focus:outline-none" />
+      ) : <span className="min-w-0 flex-1 truncate">{q.nome}</span>}
+      {podeEditar && !editando && (
+        <div className="ml-auto flex shrink-0 items-center opacity-0 transition group-hover:opacity-100">
+          <button type="button" title="Renomear" onClick={(e) => { e.stopPropagation(); onRenomearStart(); }} className="rounded p-0.5 text-gray-400 hover:text-gray-700"><Pencil className="size-3" /></button>
+          <button type="button" title="Excluir lista" onClick={(e) => { e.stopPropagation(); onExcluir(); }} className="rounded p-0.5 text-gray-300 hover:text-red-600"><Trash2 className="size-3" /></button>
+        </div>
+      )}
+    </div>
+  );
+}

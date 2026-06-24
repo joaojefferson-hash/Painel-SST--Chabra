@@ -14,10 +14,27 @@ export type VistaGestao = "quadro" | "lista" | "calendario" | "timeline";
 export type AgruparPor = "status" | "responsavel" | "prioridade" | "etiqueta";
 export type PrioridadeTarefa = "Baixa" | "Media" | "Alta" | "Urgente";
 
+export interface GestaoEspaco {
+  id: string;
+  nome: string;
+  cor: string;
+  ordem: number;
+}
+
+export interface GestaoPasta {
+  id: string;
+  id_espaco: string;
+  nome: string;
+  ordem: number;
+}
+
 export interface GestaoQuadro {
   id_quadro: string;
   nome: string;
   descricao: string | null;
+  id_espaco: string | null;
+  id_pasta: string | null;
+  ordem: number;
 }
 
 export interface GestaoStatus {
@@ -102,7 +119,7 @@ export function useQuadroPadrao() {
       const sb = createSupabaseBrowserClient();
       const { data, error } = await sb
         .from("gestao_quadros")
-        .select("id_quadro,nome,descricao")
+        .select("id_quadro,nome,descricao,id_espaco,id_pasta,ordem")
         .order("created_at", { ascending: true })
         .limit(1);
       if (error) throw error;
@@ -118,7 +135,8 @@ export function useQuadros() {
       const sb = createSupabaseBrowserClient();
       const { data, error } = await sb
         .from("gestao_quadros")
-        .select("id_quadro,nome,descricao")
+        .select("id_quadro,nome,descricao,id_espaco,id_pasta,ordem")
+        .order("ordem", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as GestaoQuadro[];
@@ -129,19 +147,157 @@ export function useQuadros() {
 export function useCriarQuadro() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (nome: string) => {
+    mutationFn: async (p: { nome: string; id_espaco: string | null; id_pasta: string | null; ordem?: number }) => {
       const sb = createSupabaseBrowserClient();
       const id = gerarId("QDR");
       const { error } = await sb.from("gestao_quadros").insert({
         id_quadro: id,
-        nome: nome.trim() || "Novo quadro",
+        nome: p.nome.trim() || "Nova lista",
+        id_espaco: p.id_espaco,
+        id_pasta: p.id_pasta,
+        ordem: p.ordem ?? 0,
         created_at: new Date().toISOString(),
       } as never);
       if (error) throw error;
       return id;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-quadros"] }),
-    onError: (e) => toast.error(mensagemErro(e, "Não foi possível criar o quadro.")),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível criar a lista.")),
+  });
+}
+
+export function useRenomearQuadro() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id_quadro: string; nome: string }) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_quadros").update({ nome: p.nome.trim() || "Lista", updated_at: new Date().toISOString() } as never).eq("id_quadro", p.id_quadro);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-quadros"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível renomear a lista.")),
+  });
+}
+
+export function useExcluirQuadro() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id_quadro: string) => {
+      const sb = createSupabaseBrowserClient();
+      const { count, error: ce } = await sb.from("gestao_tarefas").select("id_tarefa", { count: "exact", head: true }).eq("id_quadro", id_quadro);
+      if (ce) throw ce;
+      if ((count ?? 0) > 0) throw new Error(`Há ${count} tarefa(s) nesta lista. Mova ou exclua antes.`);
+      const { error } = await sb.from("gestao_quadros").delete().eq("id_quadro", id_quadro);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-quadros"] }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : mensagemErro(e)),
+  });
+}
+
+/** Espaços (nível 1 da hierarquia). */
+export function useEspacos() {
+  return useQuery({
+    queryKey: ["gestao-espacos"],
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_espacos").select("id,nome,cor,ordem").order("ordem", { ascending: true }).order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoEspaco[];
+    },
+  });
+}
+
+export function useSalvarEspaco() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (e: { id?: string; nome?: string; cor?: string; ordem?: number }) => {
+      const sb = createSupabaseBrowserClient();
+      if (!e.id) {
+        const id = crypto.randomUUID();
+        const { error } = await sb.from("gestao_espacos").insert({ id, nome: e.nome?.trim() || "Novo espaço", cor: e.cor ?? "#006B54", ordem: e.ordem ?? 0 } as never);
+        if (error) throw error;
+        return id;
+      }
+      const patch: Record<string, unknown> = {};
+      if (e.nome !== undefined) patch.nome = e.nome.trim() || "Espaço";
+      if (e.cor !== undefined) patch.cor = e.cor;
+      if (e.ordem !== undefined) patch.ordem = e.ordem;
+      const { error } = await sb.from("gestao_espacos").update(patch as never).eq("id", e.id);
+      if (error) throw error;
+      return e.id;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-espacos"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível salvar o espaço.")),
+  });
+}
+
+export function useExcluirEspaco() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const sb = createSupabaseBrowserClient();
+      const [{ count: nPastas }, { count: nQuadros }] = await Promise.all([
+        sb.from("gestao_pastas").select("id", { count: "exact", head: true }).eq("id_espaco", id),
+        sb.from("gestao_quadros").select("id_quadro", { count: "exact", head: true }).eq("id_espaco", id),
+      ]);
+      if ((nPastas ?? 0) > 0 || (nQuadros ?? 0) > 0) throw new Error("Esvazie o espaço (pastas e listas) antes de excluir.");
+      const { error } = await sb.from("gestao_espacos").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-espacos"] }); qc.invalidateQueries({ queryKey: ["gestao-pastas"] }); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : mensagemErro(e)),
+  });
+}
+
+/** Pastas (nível 2 da hierarquia). */
+export function usePastas() {
+  return useQuery({
+    queryKey: ["gestao-pastas"],
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_pastas").select("id,id_espaco,nome,ordem").order("ordem", { ascending: true }).order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoPasta[];
+    },
+  });
+}
+
+export function useSalvarPasta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id?: string; id_espaco?: string; nome?: string; ordem?: number }) => {
+      const sb = createSupabaseBrowserClient();
+      if (!p.id) {
+        const id = crypto.randomUUID();
+        const { error } = await sb.from("gestao_pastas").insert({ id, id_espaco: p.id_espaco, nome: p.nome?.trim() || "Nova pasta", ordem: p.ordem ?? 0 } as never);
+        if (error) throw error;
+        return id;
+      }
+      const patch: Record<string, unknown> = {};
+      if (p.nome !== undefined) patch.nome = p.nome.trim() || "Pasta";
+      if (p.ordem !== undefined) patch.ordem = p.ordem;
+      const { error } = await sb.from("gestao_pastas").update(patch as never).eq("id", p.id);
+      if (error) throw error;
+      return p.id;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-pastas"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível salvar a pasta.")),
+  });
+}
+
+export function useExcluirPasta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const sb = createSupabaseBrowserClient();
+      const { count } = await sb.from("gestao_quadros").select("id_quadro", { count: "exact", head: true }).eq("id_pasta", id);
+      if ((count ?? 0) > 0) throw new Error("Mova ou exclua as listas desta pasta antes.");
+      const { error } = await sb.from("gestao_pastas").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-pastas"] }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : mensagemErro(e)),
   });
 }
 
