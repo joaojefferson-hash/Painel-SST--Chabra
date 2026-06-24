@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Loader2,
   Settings,
+  KanbanSquare,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -143,6 +144,9 @@ export default function VisaoGeralView({
           </Link>
           <Link href="/validades">
             <NavItem icon={<FileClock className="size-[15px]" />} label="Validades" />
+          </Link>
+          <Link href="/gestao">
+            <NavItem icon={<KanbanSquare className="size-[15px]" />} label="Gestão Chabra" />
           </Link>
         </nav>
 
