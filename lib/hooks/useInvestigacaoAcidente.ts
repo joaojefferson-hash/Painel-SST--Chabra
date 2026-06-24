@@ -121,6 +121,39 @@ export function useSalvarInvestigacao() {
   });
 }
 
+/** Cria uma ação 5W2H no Plano de Ação central a partir das medidas da investigação. */
+export function useEnviarMedidasParaPlano() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (inv: InvestigacaoAcidente) => {
+      if (!inv.medidas?.trim()) throw new Error("Não há medidas para enviar.");
+      const sb = createSupabaseBrowserClient();
+      const prioridade =
+        inv.gravidade === "FATAL" ? "Critica" : inv.gravidade === "GRAVE" ? "Alta" : "Media";
+      const now = new Date().toISOString();
+      const { error } = await sb.from("acoes_5w2h").insert({
+        id_acao: gerarId("ACA"),
+        id_empresa: inv.id_empresa,
+        what_acao: inv.medidas,
+        why_justificativa: `Medida corretiva da investigação de acidente${inv.acidentado_nome ? ` — ${inv.acidentado_nome}` : ""}`,
+        where_local: inv.local_acidente,
+        who_responsavel: inv.responsavel_tecnico,
+        status: "Pendente",
+        prioridade,
+        observacoes: `Origem: Investigação de Acidente de Trabalho (${inv.id_investigacao})`,
+        created_at: now,
+        updated_at: now,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["acoes-5w2h"] });
+      toast.success("Ação criada no Plano de Ação");
+    },
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível enviar ao Plano de Ação.")),
+  });
+}
+
 export function useExcluirInvestigacao() {
   const qc = useQueryClient();
   return useMutation({
