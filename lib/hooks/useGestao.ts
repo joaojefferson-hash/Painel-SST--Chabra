@@ -15,6 +15,11 @@ export interface GestaoQuadro {
   descricao: string | null;
 }
 
+export interface Subtarefa {
+  texto: string;
+  feito: boolean;
+}
+
 export interface GestaoTarefa {
   id_tarefa: string;
   id_quadro: string;
@@ -25,6 +30,8 @@ export interface GestaoTarefa {
   responsavel: string | null;
   prazo: string | null;
   ordem: number;
+  etiquetas: string[];
+  subtarefas: Subtarefa[];
   created_by: string | null;
   created_at: string;
   updated_at: string | null;
@@ -57,6 +64,40 @@ export function useQuadroPadrao() {
       if (error) throw error;
       return ((data ?? [])[0] ?? null) as GestaoQuadro | null;
     },
+  });
+}
+
+export function useQuadros() {
+  return useQuery({
+    queryKey: ["gestao-quadros"],
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb
+        .from("gestao_quadros")
+        .select("id_quadro,nome,descricao")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoQuadro[];
+    },
+  });
+}
+
+export function useCriarQuadro() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (nome: string) => {
+      const sb = createSupabaseBrowserClient();
+      const id = gerarId("QDR");
+      const { error } = await sb.from("gestao_quadros").insert({
+        id_quadro: id,
+        nome: nome.trim() || "Novo quadro",
+        created_at: new Date().toISOString(),
+      } as never);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-quadros"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível criar o quadro.")),
   });
 }
 
@@ -114,6 +155,8 @@ export function useSalvarTarefa() {
           responsavel: t.responsavel ?? null,
           prazo: t.prazo ?? null,
           ordem: t.ordem ?? 0,
+          etiquetas: t.etiquetas ?? [],
+          subtarefas: t.subtarefas ?? [],
           created_at: now,
           updated_at: now,
         } as never);

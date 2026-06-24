@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, Plus, Square, CheckSquare, X } from "lucide-react";
 import Modal from "@/components/ui/Modal";
+import MultiChipInput from "@/components/ui/MultiChipInput";
 import {
   useSalvarTarefa, useExcluirTarefa, useUsuariosLista,
   STATUS_TAREFA, PRIORIDADES,
-  type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa,
+  type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa,
 } from "@/lib/hooks/useGestao";
 
 export default function TarefaModal({
@@ -17,6 +18,7 @@ export default function TarefaModal({
   tarefa,
   statusInicial = "A_FAZER",
   podeEditar,
+  etiquetasSugeridas = [],
 }: {
   open: boolean;
   onClose: () => void;
@@ -24,6 +26,7 @@ export default function TarefaModal({
   tarefa: GestaoTarefa | null;
   statusInicial?: StatusTarefa;
   podeEditar: boolean;
+  etiquetasSugeridas?: string[];
 }) {
   const salvar = useSalvarTarefa();
   const excluir = useExcluirTarefa();
@@ -35,6 +38,9 @@ export default function TarefaModal({
   const [prioridade, setPrioridade] = useState<PrioridadeTarefa>("Media");
   const [prazo, setPrazo] = useState("");
   const [status, setStatus] = useState<StatusTarefa>(statusInicial);
+  const [etiquetas, setEtiquetas] = useState<string[]>([]);
+  const [subtarefas, setSubtarefas] = useState<Subtarefa[]>([]);
+  const [novaSub, setNovaSub] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -44,9 +50,19 @@ export default function TarefaModal({
     setPrioridade(tarefa?.prioridade ?? "Media");
     setPrazo(tarefa?.prazo ?? "");
     setStatus(tarefa?.status ?? statusInicial);
+    setEtiquetas(tarefa?.etiquetas ?? []);
+    setSubtarefas(tarefa?.subtarefas ?? []);
+    setNovaSub("");
   }, [open, tarefa, statusInicial]);
 
   const ro = !podeEditar;
+
+  function addSub() {
+    const t = novaSub.trim();
+    if (!t) return;
+    setSubtarefas((s) => [...s, { texto: t, feito: false }]);
+    setNovaSub("");
+  }
 
   async function handleSalvar() {
     if (!titulo.trim()) {
@@ -62,6 +78,8 @@ export default function TarefaModal({
       prioridade,
       prazo: prazo || null,
       status,
+      etiquetas,
+      subtarefas: subtarefas.filter((s) => s.texto.trim()),
     });
     toast.success(tarefa ? "Tarefa atualizada" : "Tarefa criada");
     onClose();
@@ -74,6 +92,7 @@ export default function TarefaModal({
 
   const inputCls =
     "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30 disabled:bg-gray-50";
+  const feitas = subtarefas.filter((s) => s.feito).length;
 
   return (
     <Modal
@@ -85,21 +104,11 @@ export default function TarefaModal({
         !ro ? (
           <div className="flex items-center justify-between">
             {tarefa ? (
-              <button
-                type="button"
-                onClick={handleExcluir}
-                disabled={excluir.isPending}
-                className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-              >
+              <button type="button" onClick={handleExcluir} disabled={excluir.isPending} className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
                 <Trash2 className="size-4" /> Excluir
               </button>
             ) : <span />}
-            <button
-              type="button"
-              onClick={handleSalvar}
-              disabled={salvar.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-verde-primary px-5 py-2 text-sm font-semibold text-white hover:bg-verde-accent disabled:opacity-50"
-            >
+            <button type="button" onClick={handleSalvar} disabled={salvar.isPending} className="inline-flex items-center gap-2 rounded-lg bg-verde-primary px-5 py-2 text-sm font-semibold text-white hover:bg-verde-accent disabled:opacity-50">
               {salvar.isPending && <Loader2 className="size-4 animate-spin" />}
               {tarefa ? "Salvar" : "Criar tarefa"}
             </button>
@@ -120,9 +129,7 @@ export default function TarefaModal({
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">Responsável</label>
             <input list="gestao-usuarios" value={responsavel} disabled={ro} onChange={(e) => setResponsavel(e.target.value)} placeholder="Quem vai fazer" className={inputCls} />
-            <datalist id="gestao-usuarios">
-              {usuarios.map((u) => <option key={u} value={u} />)}
-            </datalist>
+            <datalist id="gestao-usuarios">{usuarios.map((u) => <option key={u} value={u} />)}</datalist>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">Prazo</label>
@@ -139,6 +146,49 @@ export default function TarefaModal({
             <select value={status} disabled={ro} onChange={(e) => setStatus(e.target.value as StatusTarefa)} className={inputCls}>
               {STATUS_TAREFA.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-600">Etiquetas</label>
+          <MultiChipInput value={etiquetas} onChange={setEtiquetas} sugestoes={etiquetasSugeridas} placeholder="Adicionar etiqueta…" ro={ro} />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-600">
+            Subtarefas {subtarefas.length > 0 && <span className="text-gray-400">({feitas}/{subtarefas.length})</span>}
+          </label>
+          <div className="space-y-1.5">
+            {subtarefas.map((s, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <button type="button" disabled={ro} onClick={() => setSubtarefas((arr) => arr.map((x, j) => j === i ? { ...x, feito: !x.feito } : x))} className="text-gray-400 hover:text-verde-primary">
+                  {s.feito ? <CheckSquare className="size-4 text-verde-primary" /> : <Square className="size-4" />}
+                </button>
+                <input
+                  value={s.texto}
+                  disabled={ro}
+                  onChange={(e) => setSubtarefas((arr) => arr.map((x, j) => j === i ? { ...x, texto: e.target.value } : x))}
+                  className={`flex-1 rounded border border-transparent px-1.5 py-1 text-sm hover:border-gray-200 focus:border-verde-primary focus:outline-none ${s.feito ? "text-gray-400 line-through" : "text-gray-700"}`}
+                />
+                {!ro && (
+                  <button type="button" onClick={() => setSubtarefas((arr) => arr.filter((_, j) => j !== i))} className="text-gray-300 hover:text-red-600">
+                    <X className="size-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+            {!ro && (
+              <div className="flex items-center gap-2">
+                <Plus className="size-4 text-gray-300" />
+                <input
+                  value={novaSub}
+                  onChange={(e) => setNovaSub(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }}
+                  placeholder="Adicionar subtarefa e Enter…"
+                  className="flex-1 rounded border border-gray-200 px-1.5 py-1 text-sm focus:border-verde-primary focus:outline-none"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

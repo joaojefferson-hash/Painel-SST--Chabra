@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
-  useQuadroPadrao, useTarefas, useReordenar, useUsuariosLista,
+  useQuadros, useCriarQuadro, useTarefas, useReordenar, useUsuariosLista,
   STATUS_TAREFA, PRIORIDADES,
   type GestaoTarefa, type StatusTarefa,
 } from "@/lib/hooks/useGestao";
@@ -32,10 +32,18 @@ export default function GestaoChabraPage() {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
   const podeEditar = useCanEdit();
-  const { data: quadro, isLoading: loadingQuadro } = useQuadroPadrao();
-  const { data: tarefas = [], isLoading: loadingTarefas } = useTarefas(quadro?.id_quadro);
+  const { data: quadros = [], isLoading: loadingQuadros } = useQuadros();
+  const criarQuadro = useCriarQuadro();
   const { data: usuarios = [] } = useUsuariosLista();
   const reordenar = useReordenar();
+
+  const [quadroId, setQuadroId] = useState<string | null>(null);
+  const quadro = quadros.find((q) => q.id_quadro === quadroId) ?? quadros[0] ?? null;
+  useEffect(() => {
+    if (!quadroId && quadros.length) setQuadroId(quadros[0].id_quadro);
+  }, [quadros, quadroId]);
+
+  const { data: tarefas = [], isLoading: loadingTarefas } = useTarefas(quadro?.id_quadro);
 
   const [items, setItems] = useState<GestaoTarefa[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -49,19 +57,26 @@ export default function GestaoChabraPage() {
   const [filtroResp, setFiltroResp] = useState("");
   const [filtroPrio, setFiltroPrio] = useState("");
 
+  const [criandoQuadro, setCriandoQuadro] = useState(false);
+  const [nomeQuadro, setNomeQuadro] = useState("");
+
   useEffect(() => {
     if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
   }, [user?.perfil, router]);
 
-  // Estado local (otimista) sincronizado com o servidor.
   useEffect(() => setItems(tarefas), [tarefas]);
+
+  const etiquetasSugeridas = useMemo(
+    () => [...new Set(items.flatMap((t) => t.etiquetas ?? []))].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [items],
+  );
 
   const temFiltro = !!(busca.trim() || filtroResp || filtroPrio);
   const passaFiltro = (t: GestaoTarefa) => {
     if (filtroResp && (t.responsavel ?? "") !== filtroResp) return false;
     if (filtroPrio && t.prioridade !== filtroPrio) return false;
     const q = busca.trim().toLowerCase();
-    if (q && !(`${t.titulo} ${t.descricao ?? ""} ${t.responsavel ?? ""}`.toLowerCase().includes(q))) return false;
+    if (q && !(`${t.titulo} ${t.descricao ?? ""} ${t.responsavel ?? ""} ${(t.etiquetas ?? []).join(" ")}`.toLowerCase().includes(q))) return false;
     return true;
   };
 
@@ -79,17 +94,23 @@ export default function GestaoChabraPage() {
     setModalOpen(true);
   }
 
-  // Drag-and-drop: solta a tarefa numa coluna (antes de `beforeId`, ou no fim).
+  async function handleCriarQuadro(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nomeQuadro.trim()) return;
+    const id = await criarQuadro.mutateAsync(nomeQuadro.trim());
+    setQuadroId(id);
+    setNomeQuadro("");
+    setCriandoQuadro(false);
+  }
+
   function soltar(targetStatus: StatusTarefa, beforeId?: string) {
     setColHover(null);
     const dragged = items.find((t) => t.id_tarefa === dragId);
     setDragId(null);
     if (!dragged || !podeEditar) return;
-
     const rest = items.filter((t) => t.id_tarefa !== dragId);
     const col = rest.filter((t) => t.status === targetStatus).sort((a, b) => a.ordem - b.ordem);
     const fora = rest.filter((t) => t.status !== targetStatus);
-
     let idx = col.length;
     if (beforeId && beforeId !== dragId) {
       const i = col.findIndex((t) => t.id_tarefa === beforeId);
@@ -115,32 +136,46 @@ export default function GestaoChabraPage() {
             </span>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Gestão Chabra</h1>
-              <p className="text-sm text-gray-500">
-                {quadro?.nome ? `Quadro ${quadro.nome}` : "Gestão de tarefas"} · {items.length} tarefa(s)
-              </p>
+              <p className="text-sm text-gray-500">Gestão de projetos e tarefas · {items.length} tarefa(s) neste quadro</p>
             </div>
           </div>
           {podeEditar && (
-            <button
-              type="button"
-              onClick={() => novaTarefa("A_FAZER")}
-              className="inline-flex items-center gap-2 rounded-xl bg-verde-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-verde-accent active:scale-95"
-            >
+            <button type="button" onClick={() => novaTarefa("A_FAZER")} className="inline-flex items-center gap-2 rounded-xl bg-verde-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-verde-accent active:scale-95">
               <Plus className="size-4" /> Nova tarefa
             </button>
           )}
         </div>
 
+        {/* Seletor de quadros */}
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {quadros.map((q) => (
+            <button
+              key={q.id_quadro}
+              type="button"
+              onClick={() => setQuadroId(q.id_quadro)}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${q.id_quadro === quadro?.id_quadro ? "bg-verde-primary text-white shadow-sm" : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"}`}
+            >
+              {q.nome}
+            </button>
+          ))}
+          {podeEditar && (criandoQuadro ? (
+            <form onSubmit={handleCriarQuadro} className="flex items-center gap-1">
+              <input autoFocus value={nomeQuadro} onChange={(e) => setNomeQuadro(e.target.value)} placeholder="Nome do quadro" className="w-40 rounded-full border border-gray-300 px-3 py-1.5 text-sm focus:border-verde-primary focus:outline-none" />
+              <button type="submit" className="rounded-full bg-verde-primary px-3 py-1.5 text-sm font-semibold text-white">OK</button>
+              <button type="button" onClick={() => { setCriandoQuadro(false); setNomeQuadro(""); }} className="p-1 text-gray-400 hover:text-gray-700"><X className="size-4" /></button>
+            </form>
+          ) : (
+            <button type="button" onClick={() => setCriandoQuadro(true)} className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-gray-500 ring-1 ring-dashed ring-gray-300 hover:bg-gray-50">
+              <Plus className="size-4" /> Novo quadro
+            </button>
+          ))}
+        </div>
+
         {/* Filtros */}
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative max-w-xs flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
-            <input
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar tarefa…"
-              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-verde-primary focus:outline-none"
-            />
+            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar tarefa…" className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-verde-primary focus:outline-none" />
           </div>
           <select value={filtroResp} onChange={(e) => setFiltroResp(e.target.value)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-verde-primary focus:outline-none">
             <option value="">Todos os responsáveis</option>
@@ -157,7 +192,7 @@ export default function GestaoChabraPage() {
           )}
         </div>
 
-        {(loadingQuadro || loadingTarefas) ? (
+        {(loadingQuadros || loadingTarefas) ? (
           <div className="flex items-center gap-2 py-20 text-sm text-gray-400">
             <Loader2 className="size-4 animate-spin" /> Carregando…
           </div>
@@ -177,9 +212,7 @@ export default function GestaoChabraPage() {
                     <div className="flex items-center gap-2">
                       <span className="size-2.5 rounded-full" style={{ background: col.cor }} />
                       <p className="text-sm font-semibold text-gray-700">{col.label}</p>
-                      <span className="rounded-full bg-gray-200 px-1.5 text-[11px] font-semibold text-gray-600">
-                        {temFiltro ? `${lista.length}/${todas.length}` : todas.length}
-                      </span>
+                      <span className="rounded-full bg-gray-200 px-1.5 text-[11px] font-semibold text-gray-600">{temFiltro ? `${lista.length}/${todas.length}` : todas.length}</span>
                     </div>
                     {podeEditar && (
                       <button type="button" onClick={() => novaTarefa(col.value)} className="rounded-md p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700" title="Nova tarefa aqui">
@@ -192,6 +225,8 @@ export default function GestaoChabraPage() {
                     {lista.map((t) => {
                       const dias = t.prazo ? diasAte(t.prazo) : null;
                       const atrasada = dias != null && dias < 0 && t.status !== "CONCLUIDO";
+                      const subs = t.subtarefas ?? [];
+                      const subFeitas = subs.filter((s) => s.feito).length;
                       return (
                         <div
                           key={t.id_tarefa}
@@ -207,10 +242,22 @@ export default function GestaoChabraPage() {
                             <span className="mt-1 size-2 shrink-0 rounded-full" style={{ background: corPrioridade(t.prioridade) }} title={`Prioridade: ${t.prioridade}`} />
                             <p className="flex-1 text-sm font-medium text-gray-800">{t.titulo}</p>
                           </div>
+                          {(t.etiquetas ?? []).length > 0 && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {(t.etiquetas ?? []).map((e) => (
+                                <span key={e} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">{e}</span>
+                              ))}
+                            </div>
+                          )}
                           <div className="mt-2 flex items-center gap-2">
                             {t.prazo && (
                               <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${atrasada ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
                                 <CalendarClock className="size-3" /> {fmtPrazo(t.prazo)}
+                              </span>
+                            )}
+                            {subs.length > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500" title="Subtarefas">
+                                <CheckSquare className="size-3" /> {subFeitas}/{subs.length}
                               </span>
                             )}
                             {t.responsavel && (
@@ -223,9 +270,7 @@ export default function GestaoChabraPage() {
                       );
                     })}
                     {lista.length === 0 && (
-                      <p className="px-1 py-3 text-center text-xs text-gray-300">
-                        {todas.length > 0 ? "Nada no filtro" : "Solte aqui"}
-                      </p>
+                      <p className="px-1 py-3 text-center text-xs text-gray-300">{todas.length > 0 ? "Nada no filtro" : "Solte aqui"}</p>
                     )}
                   </div>
                 </div>
@@ -247,6 +292,7 @@ export default function GestaoChabraPage() {
           tarefa={editando}
           statusInicial={statusNovo}
           podeEditar={podeEditar}
+          etiquetasSugeridas={etiquetasSugeridas}
         />
       )}
     </div>
