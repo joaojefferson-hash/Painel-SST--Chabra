@@ -12,6 +12,8 @@ export interface InvestigacaoTemplateProps {
   folhaEmpresa: { razaoSocial: string; cnpj: string } | null;
   dataHoraAssinatura: string;
   identificadorDocumento: string;
+  /** URL absoluta ou data URI da silhueta (para o Puppeteer). */
+  silhuetaSrc?: string;
 }
 
 const VERDE = "#006B54";
@@ -112,6 +114,7 @@ export default function InvestigacaoAcidenteTemplate({
   folhaEmpresa,
   dataHoraAssinatura,
   identificadorDocumento,
+  silhuetaSrc,
 }: InvestigacaoTemplateProps) {
   const afast = inv.houve_afastamento
     ? `Sim${inv.dias_afastamento != null ? ` — ${inv.dias_afastamento} dia(s)` : ""}`
@@ -166,7 +169,7 @@ export default function InvestigacaoAcidenteTemplate({
         </div>
         {(inv.partes_corpo ?? []).length > 0 && (
           <div style={{ marginTop: 10, display: "flex", gap: 16, alignItems: "center" }}>
-            <BodyMapStatic value={inv.partes_corpo} />
+            {silhuetaSrc && <BodyMapStatic value={inv.partes_corpo} imgSrc={silhuetaSrc} />}
             <div>
               <p style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em", color: "#6b7280", margin: "0 0 2px" }}>
                 Partes do corpo atingidas

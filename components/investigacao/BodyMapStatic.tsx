@@ -1,23 +1,23 @@
 import React from "react";
-import { regioesDaVista, VIEWBOX, COR_SEL, COR_OFF, COR_STROKE, type Regiao } from "@/lib/investigacao/corpo";
+import { MARCAS, VIEWBOX, IMG_W, IMG_H, COR_SEL } from "@/lib/investigacao/corpo";
 
-/** Silhueta estática (frente + costas) com as partes selecionadas em destaque.
- *  Pura — usável no laudo PDF via renderToStaticMarkup. */
-export default function BodyMapStatic({ value }: { value: string[] }) {
-  const has = (p: string) => value.includes(p);
-  function shape(r: Regiao) {
-    const c = { fill: has(r.parte) ? COR_SEL : COR_OFF, stroke: COR_STROKE, strokeWidth: 1 };
-    return r.t === "ellipse"
-      ? <ellipse key={r.parte} cx={r.cx} cy={r.cy} rx={r.rx} ry={r.ry} {...c} />
-      : <path key={r.parte} d={r.d} {...c} />;
-  }
-  const fig = (v: "frente" | "costas") => (
-    <div style={{ textAlign: "center" }}>
-      <svg viewBox={VIEWBOX} width={104} height={236} role="img" aria-label={`Silhueta ${v}`}>
-        {regioesDaVista(v).map(shape)}
-      </svg>
-      <div style={{ fontSize: 8, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".06em" }}>{v}</div>
-    </div>
+/** Silhueta (imagem) com as marcas vermelhas das partes selecionadas.
+ *  `imgSrc` deve ser uma URL absoluta ou data URI (o Puppeteer não resolve
+ *  caminho relativo). Pura — usável no laudo PDF via renderToStaticMarkup. */
+export default function BodyMapStatic({ value, imgSrc }: { value: string[]; imgSrc: string }) {
+  const w = 132;
+  const h = Math.round((w * IMG_H) / IMG_W);
+  const marcas = MARCAS.filter((m) => value.includes(m.parte));
+  return (
+    <svg viewBox={VIEWBOX} width={w} height={h} role="img" aria-label="Partes do corpo atingidas">
+      <image href={imgSrc} x={0} y={0} width={IMG_W} height={IMG_H} preserveAspectRatio="xMidYMid meet" />
+      {marcas.map((m) => (
+        <g key={m.parte}>
+          <circle cx={m.cx} cy={m.cy} r={20} fill="none" stroke={COR_SEL} strokeWidth={2} opacity={0.4} />
+          <circle cx={m.cx} cy={m.cy} r={14} fill="none" stroke={COR_SEL} strokeWidth={2.5} opacity={0.85} />
+          <circle cx={m.cx} cy={m.cy} r={8} fill={COR_SEL} />
+        </g>
+      ))}
+    </svg>
   );
-  return <div style={{ display: "flex", gap: 18 }}>{fig("frente")}{fig("costas")}</div>;
 }
