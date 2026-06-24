@@ -22,6 +22,7 @@ import {
   BookOpen,
   FileClock,
   TrendingUp,
+  Siren,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useUserStore } from "@/lib/store";
@@ -109,6 +110,17 @@ const CARDS: HubCardCfg[] = [
     icon: <ClipboardCheck className="size-12" />,
     accent: "#059669",
     categoria: "seguranca",
+  },
+  {
+    modulo: "investigacao_acidente",
+    href: "/investigacao-acidente",
+    title: "Investigação de Acidente",
+    description: "Investigação de acidentes de trabalho: CAT, análise de causas (5 porquês) e medidas",
+    icon: <Siren className="size-12" />,
+    accent: "#B91C1C",
+    categoria: "seguranca",
+    skipStats: true,
+    staticLabel: "Investigação de acidentes do trabalho",
   },
   // ── NR — Fatores Psicossocial ──────────────────────────────────────
   {

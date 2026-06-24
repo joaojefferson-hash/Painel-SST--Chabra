@@ -20,7 +20,8 @@ export type ModuloPermitido =
   | "aet"
   | "aep"
   | "questionarios_psicossociais"
-  | "produtividade";
+  | "produtividade"
+  | "investigacao_acidente";
 
 export const TODOS_MODULOS: ModuloPermitido[] = [
   "painel",
@@ -34,9 +35,11 @@ export const TODOS_MODULOS: ModuloPermitido[] = [
   "aep",
   "questionarios_psicossociais",
   "produtividade",
+  "investigacao_acidente",
 ];
 
 export const ROTULO_MODULO: Record<ModuloPermitido, string> = {
+  investigacao_acidente: "Investigação de Acidente de Trabalho",
   painel: "Painel SST",
   psicossocial: "DRPS – Diagnóstico de Riscos Psicossociais",
   conformidade: "Relatório de Conformidade",
@@ -49,6 +52,63 @@ export const ROTULO_MODULO: Record<ModuloPermitido, string> = {
   questionarios_psicossociais: "Questionários Psicossociais / DRPS",
   produtividade: "Projeção de Produtividade CHABRA",
 };
+
+// ─── Investigação de Acidente de Trabalho ────────────────────────────────────
+
+export type TipoAcidente = "TIPICO" | "TRAJETO" | "DOENCA";
+export type GravidadeAcidente = "LEVE" | "GRAVE" | "FATAL";
+export type StatusInvestigacao = "RASCUNHO" | "CONCLUIDA" | "DELETADA";
+
+export interface TestemunhaAcidente {
+  nome: string;
+  depoimento: string;
+}
+
+export interface InvestigacaoAcidente {
+  id_investigacao: string;
+  id_empresa: string;
+  // Dados gerais
+  data_acidente: string | null;
+  hora_acidente: string | null;
+  local_acidente: string | null;
+  setor: string | null;
+  data_investigacao: string | null;
+  responsavel_tecnico: string | null;
+  numero_cat: string | null;
+  data_cat: string | null;
+  // Acidentado
+  acidentado_nome: string | null;
+  acidentado_cargo: string | null;
+  acidentado_admissao: string | null;
+  tipo_acidente: TipoAcidente | null;
+  houve_afastamento: boolean;
+  dias_afastamento: number | null;
+  gravidade: GravidadeAcidente | null;
+  // Descrição
+  descricao: string | null;
+  agente_causador: string | null;
+  parte_corpo: string | null;
+  natureza_lesao: string | null;
+  cid: string | null;
+  // Testemunhas (JSONB)
+  testemunhas: TestemunhaAcidente[];
+  // Análise de causas
+  causas_imediatas: string | null;
+  causas_basicas: string | null;
+  /** 5 Porquês — respostas em ordem (até 5). */
+  cinco_porques: string[];
+  // Medidas + conclusão
+  medidas: string | null;
+  conclusao: string | null;
+  // Evidências
+  foto_urls: string[];
+  foto_legendas: string[];
+  // Controle
+  status: StatusInvestigacao;
+  data_validade: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
 
 // ─── QPS — Questionários Psicossociais ───────────────────────────────────────
 
