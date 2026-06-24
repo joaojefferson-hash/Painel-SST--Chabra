@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { useRequireAdmin } from "@/lib/hooks/useRequireAdmin";
 import { useUserStore } from "@/lib/store";
 import {
@@ -162,7 +163,7 @@ export default function BaseReferenciaPage() {
           const total = await inicializar.mutateAsync();
           toast.success(`${total} agentes carregados na base.`);
         } catch (e) {
-          toast.error(e instanceof Error ? e.message : "Falha ao inicializar a base");
+          toast.error(mensagemErro(e, "Falha ao inicializar a base"));
         }
       },
     });
@@ -177,7 +178,7 @@ export default function BaseReferenciaPage() {
           await deletar.mutateAsync(row.id);
           toast.success("Agente removido");
         } catch (e) {
-          toast.error(e instanceof Error ? e.message : "Falha ao remover agente");
+          toast.error(mensagemErro(e, "Falha ao remover agente"));
         }
       },
     });
@@ -508,7 +509,7 @@ function EditModal({ row, onClose }: EditModalProps) {
       onClose();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Falha ao salvar"
+        mensagemErro(err, "Falha ao salvar")
       );
     }
   }

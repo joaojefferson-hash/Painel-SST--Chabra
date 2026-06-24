@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { Save, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import {
   useAetOwasConfig,
   useAetOwasSelects,
@@ -116,7 +117,7 @@ export default function AetAnalisePage({
       { id: idRelatorio, patch: { setores } },
       {
         onSuccess: () => toast.success("Análise salva"),
-        onError: (e: Error) => toast.error(e.message),
+        onError: (e: Error) => toast.error(mensagemErro(e)),
       }
     );
   }

@@ -10,6 +10,7 @@ import AnexosManager from "@/components/anexos/AnexosManager";
 import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DrpsFiltro from "@/components/drps/DrpsFiltro";
 import DrpsSumarioPrint from "@/components/drps/DrpsSumarioPrint";

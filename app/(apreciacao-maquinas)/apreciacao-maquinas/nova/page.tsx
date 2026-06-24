@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Cog, Download, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
 import {
   useInventarioMaquinas,

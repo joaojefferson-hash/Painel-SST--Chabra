@@ -9,6 +9,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { useQueryClient } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
@@ -207,7 +208,7 @@ export default function ConclusaoGeralPage({
     } catch (err) {
       console.error(err);
       toast.error(
-        err instanceof Error ? err.message : "Falha ao gerar conclusão"
+        mensagemErro(err, "Falha ao gerar conclusão")
       );
     } finally {
       setGerandoIA(false);

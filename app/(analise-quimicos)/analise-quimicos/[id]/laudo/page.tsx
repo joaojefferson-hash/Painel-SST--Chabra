@@ -10,6 +10,7 @@ import AnexosManager from "@/components/anexos/AnexosManager";
 import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";

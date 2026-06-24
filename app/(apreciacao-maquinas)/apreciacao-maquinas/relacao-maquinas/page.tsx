@@ -15,6 +15,7 @@ import {
   Download,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import {
   useInventarioMaquinas,
   useCriarMaquina,

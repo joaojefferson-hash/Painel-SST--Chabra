@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { useAetRelatorio, useSalvarAet } from "@/lib/hooks/useAet";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
@@ -107,7 +108,7 @@ export default function AetDadosPage({
       { id: idRelatorio, patch: { textos_secoes } },
       {
         onSuccess: () => toast.success("Texto salvo"),
-        onError: (e: Error) => toast.error(e.message),
+        onError: (e: Error) => toast.error(mensagemErro(e)),
       }
     );
   }
@@ -125,7 +126,7 @@ export default function AetDadosPage({
       { id: idRelatorio, patch: { ...patch, data_validade: patch.data_validade || null } },
       {
         onSuccess: () => toast.success("Dados salvos"),
-        onError: (e: Error) => toast.error(e.message),
+        onError: (e: Error) => toast.error(mensagemErro(e)),
       }
     );
   }

@@ -22,6 +22,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import StorageImg from "@/components/ui/StorageImg";
@@ -131,7 +132,7 @@ export default function DetalheConformidadePage({
           toast.success("Relatório apagado");
           router.push("/relatorio-conformidade");
         },
-        onError: (e: Error) => toast.error(e.message || "Falha ao apagar"),
+        onError: (e: Error) => toast.error(mensagemErro(e, "Falha ao apagar")),
       }),
     });
   }
@@ -142,7 +143,7 @@ export default function DetalheConformidadePage({
       { id_relatorio: id, status: "FINALIZADO" },
       {
         onSuccess: () => toast.success("Relatório finalizado"),
-        onError: (e: Error) => toast.error(e.message || "Falha"),
+        onError: (e: Error) => toast.error(mensagemErro(e, "Falha")),
       }
     );
     if (pendentes > 0) {
@@ -161,7 +162,7 @@ export default function DetalheConformidadePage({
       { id_relatorio: id, status: "RASCUNHO" },
       {
         onSuccess: () => toast.success("Relatório reaberto pra edição"),
-        onError: (e: Error) => toast.error(e.message || "Falha"),
+        onError: (e: Error) => toast.error(mensagemErro(e, "Falha")),
       }
     );
   }
@@ -171,7 +172,7 @@ export default function DetalheConformidadePage({
       { id_relatorio: id, ordem: itens.length + 1, tipo: "LIVRE" },
       {
         onSuccess: () => toast.success("Item livre adicionado — edite o título"),
-        onError: (e: Error) => toast.error(e.message || "Falha"),
+        onError: (e: Error) => toast.error(mensagemErro(e, "Falha")),
       }
     );
   }
@@ -187,7 +188,7 @@ export default function DetalheConformidadePage({
       },
       {
         onSuccess: () => toast.success(`${nrOrigem} ${itemCodigo} inserido`),
-        onError: (e: Error) => toast.error(e.message || "Falha"),
+        onError: (e: Error) => toast.error(mensagemErro(e, "Falha")),
       }
     );
   }
@@ -200,7 +201,7 @@ export default function DetalheConformidadePage({
         { id_relatorio: id, id_item: idItem },
         {
           onSuccess: () => toast.success("Item removido"),
-          onError: (e: Error) => toast.error(e.message || "Falha"),
+          onError: (e: Error) => toast.error(mensagemErro(e, "Falha")),
         }
       ),
     });
@@ -432,7 +433,7 @@ export default function DetalheConformidadePage({
                   {
                     onSuccess: () => toast.success("Foto enviada"),
                     onError: (e: Error) =>
-                      toast.error(e.message || "Falha ao enviar foto"),
+                      toast.error(mensagemErro(e, "Falha ao enviar foto")),
                   }
                 );
               }}
@@ -448,7 +449,7 @@ export default function DetalheConformidadePage({
                     },
                     {
                       onSuccess: () => toast.success("Foto removida"),
-                      onError: (e: Error) => toast.error(e.message || "Falha ao remover"),
+                      onError: (e: Error) => toast.error(mensagemErro(e, "Falha ao remover")),
                     }
                   ),
                 });
@@ -709,7 +710,7 @@ function ItemRow({
         onChangeObservacao(texto);
       }
     } catch (e) {
-      toast.error((e as Error).message ?? "Falha ao gerar observação");
+      toast.error(mensagemErro(e, "Falha ao gerar observação"));
     } finally {
       setGerandoIAObs(false);
     }
@@ -1373,7 +1374,7 @@ function ObservacoesGerais({
         onSave(gerado);
       }
     } catch (e) {
-      toast.error((e as Error).message ?? "Falha ao gerar observações");
+      toast.error(mensagemErro(e, "Falha ao gerar observações"));
     } finally {
       setGerandoIA(false);
     }

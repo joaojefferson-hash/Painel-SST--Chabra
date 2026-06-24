@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, AlertTriangle, ListChecks } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import EmpresaSelect from "@/components/empresas/EmpresaSelect";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
 import { useCriarRelatorioNaoConformidade } from "@/lib/hooks/useRelatoriosNaoConformidade";
@@ -60,7 +61,7 @@ export default function NovoNaoConformidadePage() {
           router.push(`/relatorio-nao-conformidade/${r.id_relatorio}`);
         },
         onError: (e: Error) =>
-          toast.error(e.message || "Falha ao criar relatório"),
+          toast.error(mensagemErro(e, "Falha ao criar relatório")),
       }
     );
   }

@@ -12,6 +12,7 @@ import {
   Check,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DrpsFiltro from "@/components/drps/DrpsFiltro";
 import RichTextEditor from "@/components/drps/RichTextEditor";
@@ -1062,7 +1063,7 @@ function BlocoSetor({
       toast.success("Conclusão gerada pela IA — revise antes de assinar.");
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : "Erro ao gerar conclusão com IA"
+        mensagemErro(e, "Erro ao gerar conclusão com IA")
       );
     } finally {
       setGerandoIA(false);

@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { useAetRelatorios, useExcluirAet } from "@/lib/hooks/useAet";
 import { useCanCreate, useCanDelete } from "@/lib/hooks/useUsuario";
 import EmpresaSelect from "@/components/empresas/EmpresaSelect";
@@ -242,7 +243,7 @@ export default function AetListPage() {
                 toast.success("Laudo excluído");
                 setConfirmDel(null);
               },
-              onError: (e: Error) => toast.error(e.message),
+              onError: (e: Error) => toast.error(mensagemErro(e)),
             });
           }
         }}

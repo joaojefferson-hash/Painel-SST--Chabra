@@ -12,6 +12,7 @@ import {
   Pencil,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import AssinaturaRelatorio from "@/components/ui/AssinaturaRelatorio";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import {
@@ -293,7 +294,7 @@ export default function AnaliseDetalhePage({
               toast.success("Análise excluída");
               router.push("/analise-quimicos/historico");
             },
-            onError: (e: Error) => toast.error(e.message),
+            onError: (e: Error) => toast.error(mensagemErro(e)),
           });
           setConfirmExcluirOpen(false);
         }}

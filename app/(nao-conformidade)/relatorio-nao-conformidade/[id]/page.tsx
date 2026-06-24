@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import RelatorioPrintHeader from "@/components/layout/RelatorioPrintHeader";
 import StorageImg from "@/components/ui/StorageImg";
@@ -134,7 +135,7 @@ export default function DetalheNaoConformidadePage({
           toast.success("Relatório apagado");
           router.push("/relatorio-nao-conformidade");
         },
-        onError: (e: Error) => toast.error(e.message || "Falha ao apagar"),
+        onError: (e: Error) => toast.error(mensagemErro(e, "Falha ao apagar")),
       }),
     });
   }
@@ -144,7 +145,7 @@ export default function DetalheNaoConformidadePage({
       { id_relatorio: id, status: "FINALIZADO" },
       {
         onSuccess: () => toast.success("Relatório finalizado"),
-        onError: (e: Error) => toast.error(e.message || "Falha"),
+        onError: (e: Error) => toast.error(mensagemErro(e, "Falha")),
       }
     );
     if (itens.length === 0) {
@@ -163,7 +164,7 @@ export default function DetalheNaoConformidadePage({
       { id_relatorio: id, status: "RASCUNHO" },
       {
         onSuccess: () => toast.success("Relatório reaberto pra edição"),
-        onError: (e: Error) => toast.error(e.message || "Falha"),
+        onError: (e: Error) => toast.error(mensagemErro(e, "Falha")),
       }
     );
   }
@@ -174,7 +175,7 @@ export default function DetalheNaoConformidadePage({
       {
         onSuccess: () => toast.success("Nova NC adicionada"),
         onError: (e: Error) =>
-          toast.error(e.message || "Falha ao adicionar NC"),
+          toast.error(mensagemErro(e, "Falha ao adicionar NC")),
       }
     );
   }
@@ -203,7 +204,7 @@ export default function DetalheNaoConformidadePage({
         onSuccess: () =>
           toast.success(`NC inserida (${relatorio.nr_codigo} ${itemCodigo})`),
         onError: (e: Error) =>
-          toast.error(e.message || "Falha ao inserir NC"),
+          toast.error(mensagemErro(e, "Falha ao inserir NC")),
       }
     );
   }
@@ -421,7 +422,7 @@ export default function DetalheNaoConformidadePage({
                       { id_relatorio: id, id_item: item.id_item },
                       {
                         onSuccess: () => toast.success("NC apagada"),
-                        onError: (e: Error) => toast.error(e.message || "Falha ao apagar"),
+                        onError: (e: Error) => toast.error(mensagemErro(e, "Falha ao apagar")),
                       }
                     ),
                   });
@@ -440,7 +441,7 @@ export default function DetalheNaoConformidadePage({
                     {
                       onSuccess: () => toast.success("Foto enviada"),
                       onError: (e: Error) =>
-                        toast.error(e.message || "Falha ao enviar foto"),
+                        toast.error(mensagemErro(e, "Falha ao enviar foto")),
                     }
                   );
                 }}
@@ -456,7 +457,7 @@ export default function DetalheNaoConformidadePage({
                       },
                       {
                         onSuccess: () => toast.success("Foto removida"),
-                        onError: (e: Error) => toast.error(e.message || "Falha ao remover"),
+                        onError: (e: Error) => toast.error(mensagemErro(e, "Falha ao remover")),
                       }
                     ),
                   });

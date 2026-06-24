@@ -4,6 +4,7 @@ import { use, useState, useEffect } from "react";
 import { Brain, ChevronDown, ChevronUp, Loader2, Save, Sparkles } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import {
   useAetRelatorio,
   useAet13FatoresConfig,

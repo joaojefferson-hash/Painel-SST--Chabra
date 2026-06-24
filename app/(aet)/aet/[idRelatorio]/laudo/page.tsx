@@ -26,6 +26,7 @@ import TextosPadraoPrint from "@/components/textos-padrao/TextosPadraoPrint";
 import { useTextosPadrao } from "@/lib/hooks/useTextosPadrao";
 import type { TextoPadraoCapitulo } from "@/lib/textos-padrao/types";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { baixarPdfAssinado } from "@/lib/pdf/baixar-assinado";
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
@@ -238,7 +239,7 @@ export default function AetLaudoPage({
       },
       {
         onSuccess: () => toast.success("Dados salvos"),
-        onError: (e: Error) => toast.error(e.message),
+        onError: (e: Error) => toast.error(mensagemErro(e)),
       }
     );
   }

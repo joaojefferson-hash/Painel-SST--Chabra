@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import {
   useAetRelatorio,
   useSalvarAet,
@@ -408,7 +409,7 @@ export default function AetSetoresPage({
       updateSetor(setorId, { fotos: [...(setor.fotos ?? []), pub.publicUrl] });
       toast.success("Foto adicionada", { id: loadId });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha no upload", { id: loadId });
+      toast.error(mensagemErro(err, "Falha no upload"), { id: loadId });
     } finally {
       setUploadingFoto(null);
     }
@@ -462,7 +463,7 @@ export default function AetSetoresPage({
       if (!texto) { toast.error("IA não retornou texto"); return; }
       updateSetor(setorId, { [campo]: texto });
     } catch (err) {
-      toast.error(`IA: ${err instanceof Error ? err.message : String(err)}`);
+      toast.error(`IA: ${mensagemErro(err)}`);
     } finally {
       setGerandoIA(null);
     }
@@ -473,7 +474,7 @@ export default function AetSetoresPage({
       { id: idRelatorio, patch: { setores } },
       {
         onSuccess: () => toast.success("Salvo com sucesso"),
-        onError: (e: Error) => toast.error(e.message),
+        onError: (e: Error) => toast.error(mensagemErro(e)),
       }
     );
   }
@@ -550,7 +551,7 @@ export default function AetSetoresPage({
       { id: idRelatorio, patch: { consideracoes_finais: consideracoes } },
       {
         onSuccess: () => toast.success("Considerações salvas"),
-        onError: (e: Error) => toast.error(e.message),
+        onError: (e: Error) => toast.error(mensagemErro(e)),
       }
     );
   }

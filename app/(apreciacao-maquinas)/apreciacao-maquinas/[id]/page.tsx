@@ -23,6 +23,7 @@ import {
   X as IconX,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import {
   useApreciacaoMaquina,
   useAtualizarApreciacaoMaquina,
@@ -387,7 +388,7 @@ export default function DetalheApreciacaoPage() {
     } catch (err) {
       console.error(err);
       toast.error(
-        err instanceof Error ? err.message : "Falha ao gerar parecer"
+        mensagemErro(err, "Falha ao gerar parecer")
       );
     }
   }

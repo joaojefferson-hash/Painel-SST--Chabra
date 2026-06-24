@@ -27,6 +27,7 @@ import { useCanEdit } from "@/lib/hooks/useUsuario";
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import type {
   AepCargoSetor,
   AepSetor,
@@ -322,7 +323,7 @@ export default function AepSetoresPage({
           textoAtual: (setor[campo] as string) || null,
         },
       });
-      if (error) { toast.error(error.message ?? "Erro ao gerar texto"); return; }
+      if (error) { toast.error(mensagemErro(error, "Erro ao gerar texto")); return; }
       updateSetor(setorId, { [campo]: data.data.texto });
       toast.success("Texto gerado com sucesso");
     } catch {

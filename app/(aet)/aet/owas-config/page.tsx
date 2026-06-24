@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Image as ImageIcon, Loader2, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import {
   SLUG_TO_DEFAULT_IMAGE,
   CHECKLIST_PERGUNTAS_PADRAO,
@@ -275,7 +276,7 @@ function CategoriaCard({
         { onSuccess: () => toast.success("Imagem atualizada", { id: toastId }) }
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha no upload", { id: toastId });
+      toast.error(mensagemErro(err, "Falha no upload"), { id: toastId });
     } finally {
       setEnviandoImg(false);
     }

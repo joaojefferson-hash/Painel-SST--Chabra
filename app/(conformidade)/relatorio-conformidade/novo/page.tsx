@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import EmpresaSelect from "@/components/empresas/EmpresaSelect";
 import ProfissionalSelect from "@/components/ui/ProfissionalSelect";
 import { listarNRs, getChecklistNR } from "@/lib/conformidade/checklists";
@@ -69,7 +70,7 @@ function NovoConformidadeInner() {
           router.push(`/relatorio-conformidade/${r.id_relatorio}`);
         },
         onError: (e: Error) =>
-          toast.error(e.message || "Falha ao criar relatório"),
+          toast.error(mensagemErro(e, "Falha ao criar relatório")),
       }
     );
   }

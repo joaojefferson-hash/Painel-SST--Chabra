@@ -19,6 +19,7 @@ import { montarValoresAep } from "@/lib/textos-padrao/variaveis-aep";
 import { formatarDataBR, substituirVariaveis, substituirVariaveisTexto } from "@/lib/textos-padrao/variaveis";
 import type { AepSetor, AepChecklistFisica, AepChecklistCognitiva, AepChecklistOrganizacional } from "@/lib/supabase/types";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
