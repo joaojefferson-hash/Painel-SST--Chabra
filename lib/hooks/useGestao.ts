@@ -149,6 +149,27 @@ export function useMoverTarefa() {
   });
 }
 
+/** Persiste a nova ordem/status de uma coluna (drag-and-drop). */
+export function useReordenar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (updates: { id_tarefa: string; status: StatusTarefa; ordem: number }[]) => {
+      const sb = createSupabaseBrowserClient();
+      const now = new Date().toISOString();
+      await Promise.all(
+        updates.map((u) =>
+          sb
+            .from("gestao_tarefas")
+            .update({ status: u.status, ordem: u.ordem, updated_at: now } as never)
+            .eq("id_tarefa", u.id_tarefa),
+        ),
+      );
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-tarefas"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível reordenar.")),
+  });
+}
+
 export function useExcluirTarefa() {
   const qc = useQueryClient();
   return useMutation({
