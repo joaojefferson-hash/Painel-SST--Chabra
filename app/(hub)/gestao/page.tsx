@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare, LayoutList } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
@@ -27,6 +27,7 @@ function fmtPrazo(iso: string): string {
   const [, m, d] = iso.split("-");
   return `${d}/${m}`;
 }
+const ordemStatus = (s: StatusTarefa) => STATUS_TAREFA.findIndex((x) => x.value === s);
 
 export default function GestaoChabraPage() {
   const router = useRouter();
@@ -56,6 +57,7 @@ export default function GestaoChabraPage() {
   const [busca, setBusca] = useState("");
   const [filtroResp, setFiltroResp] = useState("");
   const [filtroPrio, setFiltroPrio] = useState("");
+  const [vista, setVista] = useState<"quadro" | "lista">("quadro");
 
   const [criandoQuadro, setCriandoQuadro] = useState(false);
   const [nomeQuadro, setNomeQuadro] = useState("");
@@ -190,13 +192,21 @@ export default function GestaoChabraPage() {
               <X className="size-4" /> Limpar
             </button>
           )}
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 text-sm font-medium sm:ml-auto">
+            <button type="button" onClick={() => setVista("quadro")} className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 ${vista === "quadro" ? "bg-verde-primary text-white" : "text-gray-500 hover:bg-gray-100"}`}>
+              <KanbanSquare className="size-4" /> Quadro
+            </button>
+            <button type="button" onClick={() => setVista("lista")} className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 ${vista === "lista" ? "bg-verde-primary text-white" : "text-gray-500 hover:bg-gray-100"}`}>
+              <LayoutList className="size-4" /> Lista
+            </button>
+          </div>
         </div>
 
         {(loadingQuadros || loadingTarefas) ? (
           <div className="flex items-center gap-2 py-20 text-sm text-gray-400">
             <Loader2 className="size-4 animate-spin" /> Carregando…
           </div>
-        ) : (
+        ) : vista === "quadro" ? (
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {STATUS_TAREFA.map((col) => {
               const todas = colunas[col.value] ?? [];
@@ -277,9 +287,50 @@ export default function GestaoChabraPage() {
               );
             })}
           </div>
+        ) : (
+          <div className="mt-5 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th className="px-3 py-2.5">Tarefa</th>
+                  <th className="px-3 py-2.5">Status</th>
+                  <th className="px-3 py-2.5">Prioridade</th>
+                  <th className="px-3 py-2.5">Responsável</th>
+                  <th className="px-3 py-2.5">Prazo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items
+                  .filter(passaFiltro)
+                  .sort((a, b) => ordemStatus(a.status) - ordemStatus(b.status) || a.ordem - b.ordem)
+                  .map((t) => {
+                    const st = STATUS_TAREFA.find((s) => s.value === t.status);
+                    const dias = t.prazo ? diasAte(t.prazo) : null;
+                    const atrasada = dias != null && dias < 0 && t.status !== "CONCLUIDO";
+                    return (
+                      <tr key={t.id_tarefa} onClick={() => { setEditando(t); setModalOpen(true); }} className="cursor-pointer border-t border-gray-100 hover:bg-gray-50">
+                        <td className="px-3 py-2 font-medium text-gray-800">
+                          <span className="mr-2 inline-block size-2 rounded-full align-middle" style={{ background: corPrioridade(t.prioridade) }} />
+                          {t.titulo}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: (st?.cor ?? "#999") + "22", color: st?.cor }}>{st?.label}</span>
+                        </td>
+                        <td className="px-3 py-2 text-gray-600">{PRIORIDADES.find((p) => p.value === t.prioridade)?.label}</td>
+                        <td className="px-3 py-2 text-gray-600">{t.responsavel ?? "—"}</td>
+                        <td className="px-3 py-2"><span className={atrasada ? "font-medium text-red-600" : "text-gray-600"}>{t.prazo ? fmtPrazo(t.prazo) : "—"}</span></td>
+                      </tr>
+                    );
+                  })}
+                {items.filter(passaFiltro).length === 0 && (
+                  <tr><td colSpan={5} className="px-3 py-8 text-center text-gray-300">Nenhuma tarefa</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
 
-        {podeEditar && (
+        {podeEditar && vista === "quadro" && (
           <p className="mt-3 text-center text-xs text-gray-400">Arraste os cards entre as colunas para mudar o status.</p>
         )}
       </div>

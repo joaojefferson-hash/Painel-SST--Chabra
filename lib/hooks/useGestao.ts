@@ -225,3 +225,60 @@ export function useExcluirTarefa() {
     onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir.")),
   });
 }
+
+export interface GestaoComentario {
+  id_comentario: string;
+  id_tarefa: string;
+  autor: string | null;
+  texto: string;
+  created_at: string;
+}
+
+export function useComentarios(idTarefa: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gestao-comentarios", idTarefa],
+    enabled: !!idTarefa,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb
+        .from("gestao_comentarios")
+        .select("*")
+        .eq("id_tarefa", idTarefa!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoComentario[];
+    },
+  });
+}
+
+export function useAddComentario() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id_tarefa: string; texto: string; autor: string | null }) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_comentarios").insert({
+        id_comentario: gerarId("CMT"),
+        id_tarefa: p.id_tarefa,
+        autor: p.autor,
+        texto: p.texto,
+        created_at: new Date().toISOString(),
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["gestao-comentarios", v.id_tarefa] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível comentar.")),
+  });
+}
+
+export function useExcluirComentario() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id_comentario: string; id_tarefa: string }) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_comentarios").delete().eq("id_comentario", p.id_comentario);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["gestao-comentarios", v.id_tarefa] }),
+    onError: (e) => toast.error(mensagemErro(e)),
+  });
+}

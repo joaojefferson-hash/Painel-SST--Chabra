@@ -2,14 +2,25 @@
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Trash2, Loader2, Plus, Square, CheckSquare, X } from "lucide-react";
+import { Trash2, Loader2, Plus, Square, CheckSquare, X, Send } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import MultiChipInput from "@/components/ui/MultiChipInput";
+import { useUserStore } from "@/lib/store";
 import {
   useSalvarTarefa, useExcluirTarefa, useUsuariosLista,
+  useComentarios, useAddComentario, useExcluirComentario,
   STATUS_TAREFA, PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa,
 } from "@/lib/hooks/useGestao";
+
+function iniciais(nome: string): string {
+  const p = nome.trim().split(/\s+/);
+  return ((p[0]?.[0] ?? "") + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
+}
+function quando(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
 
 export default function TarefaModal({
   open,
@@ -31,6 +42,11 @@ export default function TarefaModal({
   const salvar = useSalvarTarefa();
   const excluir = useExcluirTarefa();
   const { data: usuarios = [] } = useUsuariosLista();
+  const userNome = useUserStore((s) => s.user?.nome ?? null);
+  const { data: comentarios = [] } = useComentarios(tarefa?.id_tarefa);
+  const addComentario = useAddComentario();
+  const excluirComentario = useExcluirComentario();
+  const [novoComentario, setNovoComentario] = useState("");
 
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -88,6 +104,14 @@ export default function TarefaModal({
   function handleExcluir() {
     if (!tarefa) return;
     excluir.mutate(tarefa.id_tarefa, { onSuccess: () => { toast.success("Tarefa excluída"); onClose(); } });
+  }
+
+  function enviarComentario() {
+    if (!tarefa || !novoComentario.trim()) return;
+    addComentario.mutate(
+      { id_tarefa: tarefa.id_tarefa, texto: novoComentario.trim(), autor: userNome },
+      { onSuccess: () => setNovoComentario("") },
+    );
   }
 
   const inputCls =
@@ -191,6 +215,43 @@ export default function TarefaModal({
             )}
           </div>
         </div>
+
+        {tarefa && (
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">Comentários</label>
+            <div className="space-y-2">
+              {comentarios.map((c) => (
+                <div key={c.id_comentario} className="group flex gap-2">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-verde-light text-[10px] font-bold text-verde-primary">{iniciais(c.autor ?? "?")}</span>
+                  <div className="flex-1 rounded-lg bg-gray-50 px-3 py-1.5">
+                    <p className="text-[11px] text-gray-400">{c.autor ?? "—"} · {quando(c.created_at)}</p>
+                    <p className="whitespace-pre-wrap text-sm text-gray-700">{c.texto}</p>
+                  </div>
+                  {!ro && (
+                    <button type="button" onClick={() => excluirComentario.mutate({ id_comentario: c.id_comentario, id_tarefa: tarefa.id_tarefa })} className="self-start text-gray-300 opacity-0 transition group-hover:opacity-100 hover:text-red-600">
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {comentarios.length === 0 && <p className="text-xs text-gray-400">Sem comentários ainda.</p>}
+            </div>
+            {!ro && (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  value={novoComentario}
+                  onChange={(e) => setNovoComentario(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && novoComentario.trim()) { e.preventDefault(); enviarComentario(); } }}
+                  placeholder="Escrever um comentário…"
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none"
+                />
+                <button type="button" onClick={enviarComentario} disabled={!novoComentario.trim() || addComentario.isPending} className="rounded-lg bg-verde-primary px-3 py-2 text-white disabled:opacity-50">
+                  <Send className="size-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Modal>
   );
