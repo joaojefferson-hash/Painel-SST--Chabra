@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Zap, Repeat } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Zap, Repeat, Settings, ChevronDown } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
@@ -87,6 +87,7 @@ export default function GestaoChabraPage() {
   const [managerOpen, setManagerOpen] = useState(false);
   const [camposOpen, setCamposOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
 
   useEffect(() => {
     if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
@@ -199,6 +200,7 @@ export default function GestaoChabraPage() {
         <div className="flex gap-5">
           <aside className="hidden w-60 shrink-0 lg:block">
             <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-gray-200 bg-white p-2">
+              <p className="px-1.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Espaços</p>
               <GestaoSidebar espacos={espacos} pastas={pastas} quadros={quadros} quadroId={quadro?.id_quadro ?? null} onSelect={setQuadroId} podeEditar={podeEditar} />
             </div>
           </aside>
@@ -232,7 +234,7 @@ export default function GestaoChabraPage() {
         </div>
 
         {/* Filtros */}
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="relative max-w-xs flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar tarefa…" className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-verde-primary focus:outline-none" />
@@ -266,28 +268,39 @@ export default function GestaoChabraPage() {
             })}
           </div>
           {podeEditar && (
-            <button type="button" onClick={() => setManagerOpen(true)} title="Gerenciar status do quadro" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
-              <SlidersHorizontal className="size-4" /> Status
-            </button>
-          )}
-          {podeEditar && (
-            <button type="button" onClick={() => setCamposOpen(true)} title="Campos personalizados do quadro" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
-              <Tags className="size-4" /> Campos
-            </button>
-          )}
-          {podeEditar && (
-            <button type="button" onClick={() => setAutoOpen(true)} title="Automações do quadro" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
-              <Zap className="size-4" /> Automações
-            </button>
+            <div className="relative">
+              <button type="button" onClick={() => setConfigOpen((v) => !v)} title="Configurar quadro" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                <Settings className="size-4" /> Configurar <ChevronDown className="size-3.5 text-gray-400" />
+              </button>
+              {configOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setConfigOpen(false)} />
+                  <div className="absolute right-0 z-40 mt-1 w-44 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                    <button type="button" onClick={() => { setConfigOpen(false); setManagerOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><SlidersHorizontal className="size-4 text-gray-400" /> Status</button>
+                    <button type="button" onClick={() => { setConfigOpen(false); setCamposOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Tags className="size-4 text-gray-400" /> Campos personalizados</button>
+                    <button type="button" onClick={() => { setConfigOpen(false); setAutoOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Zap className="size-4 text-gray-400" /> Automações</button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
 
         {(loadingQuadros || loadingTarefas || loadingStatus) ? (
-          <div className="flex items-center gap-2 py-20 text-sm text-gray-400">
-            <Loader2 className="size-4 animate-spin" /> Carregando…
+          <div className="mt-5 flex gap-3 overflow-hidden">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="w-72 shrink-0 rounded-xl border border-gray-200 bg-gray-50/60 p-2.5">
+                <div className="mb-3 h-4 w-24 animate-pulse rounded bg-gray-200" />
+                <div className="space-y-2">
+                  <div className="h-16 animate-pulse rounded-lg bg-white" />
+                  <div className="h-16 animate-pulse rounded-lg bg-white" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : vista === "quadro" ? (
-          <div className="mt-5 flex gap-3 overflow-x-auto pb-2">
+          <div className="relative mt-5">
+          <div className="flex gap-3 overflow-x-auto pb-2">
             {colunasDef.map((col) => {
               const todas = colunas[col.slug] ?? [];
               const lista = todas.filter(passaFiltro);
@@ -332,7 +345,7 @@ export default function GestaoChabraPage() {
                             onDrop={(e) => { e.stopPropagation(); soltar(col.slug, t.id_tarefa); }}
                             onClick={() => { setEditando(t); setModalOpen(true); }}
                             style={{ borderLeftColor: corPrioridade(t.prioridade) }}
-                            className={`cursor-pointer rounded-lg border border-l-4 border-gray-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${dragId === t.id_tarefa ? "opacity-40" : ""}`}
+                            className={`cursor-pointer rounded-lg border border-l-4 border-gray-200 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md ${dragId === t.id_tarefa ? "rotate-1 opacity-40" : ""}`}
                           >
                             <p className={`text-sm font-medium ${concluido ? "text-gray-400 line-through" : "text-gray-800"}`}>{t.titulo}</p>
                             {(t.etiquetas ?? []).length > 0 && (
@@ -387,12 +400,14 @@ export default function GestaoChabraPage() {
                       <div className="h-1 rounded-full bg-verde-primary/70" />
                     )}
                     {lista.length === 0 && (
-                      <p className="px-1 py-3 text-center text-xs text-gray-300">{todas.length > 0 ? "Nada no filtro" : "Solte aqui"}</p>
+                      <div className="rounded-lg border border-dashed border-gray-200 px-2 py-6 text-center text-xs text-gray-300">{todas.length > 0 ? "Nada no filtro" : "Sem tarefas"}</div>
                     )}
                   </div>
                 </div>
               );
             })}
+          </div>
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[#f6f5f2] to-transparent" />
           </div>
         ) : vista === "lista" ? (
           <VistaLista

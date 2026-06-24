@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Trash2, Loader2, Plus, Square, CheckSquare, X, Send, ArrowRight } from "lucide-react";
+import { Trash2, Loader2, Plus, Square, CheckSquare, X, Send, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import MultiChipInput from "@/components/ui/MultiChipInput";
 import { useUserStore } from "@/lib/store";
@@ -21,6 +21,22 @@ import TempoTracker from "@/components/gestao/TempoTracker";
 function quando(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function Secao({ titulo, badge, defaultOpen = false, children }: { titulo: string; badge?: number; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-lg border border-gray-200">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <span className="flex items-center gap-2">
+          {titulo}
+          {badge != null && badge > 0 && <span className="rounded-full bg-gray-100 px-1.5 text-[11px] font-semibold text-gray-500">{badge}</span>}
+        </span>
+        {open ? <ChevronUp className="size-4 text-gray-400" /> : <ChevronDown className="size-4 text-gray-400" />}
+      </button>
+      {open && <div className="border-t border-gray-100 p-3">{children}</div>}
+    </div>
+  );
 }
 
 export default function TarefaModal({
@@ -312,8 +328,7 @@ export default function TarefaModal({
         </div>
 
         {campos.length > 0 && (
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-gray-600">Campos personalizados</label>
+          <Secao titulo="Campos personalizados">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {campos.map((c) => (
                 <div key={c.id}>
@@ -322,14 +337,18 @@ export default function TarefaModal({
                 </div>
               ))}
             </div>
-          </div>
+          </Secao>
         )}
 
-        {tarefa && <TempoTracker idTarefa={tarefa.id_tarefa} podeEditar={podeEditar} />}
+        {tarefa && (
+          <Secao titulo="Tempo">
+            <TempoTracker idTarefa={tarefa.id_tarefa} podeEditar={podeEditar} />
+          </Secao>
+        )}
 
         {tarefa && (
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-gray-600">Dependências</label>
+          <Secao titulo="Dependências">
+            <div className="space-y-2">
             <div>
               <p className="mb-1 text-[11px] text-gray-500">Depende de (precisa concluir antes)</p>
               <div className="space-y-1">
@@ -369,12 +388,12 @@ export default function TarefaModal({
                 </div>
               </div>
             )}
-          </div>
+            </div>
+          </Secao>
         )}
 
         {tarefa && (
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Comentários</label>
+          <Secao titulo="Comentários" badge={comentarios.length} defaultOpen>
             <div className="space-y-2">
               {comentarios.map((c) => (
                 <div key={c.id_comentario} className="group flex gap-2">
@@ -406,7 +425,7 @@ export default function TarefaModal({
                 </button>
               </div>
             )}
-          </div>
+          </Secao>
         )}
       </div>
     </Modal>
