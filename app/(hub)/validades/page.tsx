@@ -15,7 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const TIPOS: TipoLaudo[] = [
-  "Inspeção", "Conformidade", "Não Conformidade", "AET", "AEP", "DRPS", "Análise de Químicos", "Apreciação",
+  "Inspeção", "Conformidade", "Não Conformidade", "AET", "AEP", "DRPS", "Análise de Químicos", "Apreciação", "Investigação",
 ];
 
 type FiltroStatus = "todos" | "sem" | "a_vencer" | "vencido" | "em_dia";

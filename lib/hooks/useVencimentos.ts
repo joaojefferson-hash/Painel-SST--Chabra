@@ -42,6 +42,7 @@ const FONTES: Fonte[] = [
   { tabela: "drps_relatorios", idCol: "id_relatorio", tipo: "DRPS", href: (id) => `/psicossocial/${id}/metadados`, excluirStatus: "DELETADO" },
   { tabela: "analises_quimicos", idCol: "id_analise", tipo: "Análise de Químicos", href: (id) => `/analise-quimicos/${id}` },
   { tabela: "apreciacoes_maquinas", idCol: "id_apreciacao", tipo: "Apreciação NR-12", href: (id) => `/apreciacao-maquinas/${id}` },
+  { tabela: "investigacoes_acidente", idCol: "id_investigacao", tipo: "Investigação", href: (id) => `/investigacao-acidente/${id}`, excluirStatus: "DELETADA" },
 ];
 
 function diasAte(dataIso: string): number {

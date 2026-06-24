@@ -13,7 +13,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type TipoLaudo =
   | "Inspeção" | "Conformidade" | "Não Conformidade" | "AET" | "AEP" | "DRPS"
-  | "Análise de Químicos" | "Apreciação";
+  | "Análise de Químicos" | "Apreciação" | "Investigação";
 
 export interface LaudoValidadeItem {
   tipo: TipoLaudo;
@@ -46,6 +46,7 @@ const FONTES: Fonte[] = [
   { tabela: "drps_relatorios", idCol: "id_relatorio", dataCol: "data_elaboracao", tipo: "DRPS", href: (id) => `/psicossocial/${id}/metadados`, excluirStatus: "DELETADO" },
   { tabela: "analises_quimicos", idCol: "id_analise", dataCol: "created_at", tipo: "Análise de Químicos", href: (id) => `/analise-quimicos/${id}` },
   { tabela: "apreciacoes_maquinas", idCol: "id_apreciacao", dataCol: "data_apreciacao", tipo: "Apreciação", href: (id) => `/apreciacao-maquinas/${id}` },
+  { tabela: "investigacoes_acidente", idCol: "id_investigacao", dataCol: "data_acidente", tipo: "Investigação", href: (id) => `/investigacao-acidente/${id}`, excluirStatus: "DELETADA" },
 ];
 
 export function useLaudosValidade() {
