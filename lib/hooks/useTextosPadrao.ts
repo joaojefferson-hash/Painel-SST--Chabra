@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { gerarId } from "@/lib/utils";
 import { registrarAuditoria } from "@/lib/auditoria/registrar";
@@ -66,7 +67,7 @@ export function useCriarCapituloTexto(modulo: ModuloTextoPadrao) {
       qc.invalidateQueries({ queryKey: KEY(modulo) });
       toast.success("Capítulo criado");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -98,7 +99,7 @@ export function useSalvarCapituloTexto(modulo: ModuloTextoPadrao) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY(modulo) });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -135,7 +136,7 @@ export function useSeedCapitulosFixos(modulo: ModuloTextoPadrao) {
       qc.invalidateQueries({ queryKey: KEY(modulo) });
       toast.success("Seções do sistema adicionadas!");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -193,7 +194,7 @@ export function useRestaurarVersao(modulo: ModuloTextoPadrao) {
       });
       toast.success(`Versão ${versao.versao} restaurada`);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -214,6 +215,6 @@ export function useExcluirCapituloTexto(modulo: ModuloTextoPadrao) {
       qc.invalidateQueries({ queryKey: KEY(modulo) });
       toast.success("Capítulo excluído");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }

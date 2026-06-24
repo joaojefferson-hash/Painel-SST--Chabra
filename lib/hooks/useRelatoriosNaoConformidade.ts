@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import { useUserStore } from "@/lib/store";
@@ -209,7 +210,7 @@ export function useAtualizarRelatorioNaoConformidade() {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_relatorio) });
       qc.invalidateQueries({ queryKey: KEY_LISTA });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -277,7 +278,7 @@ export function useAdicionarItemNC() {
     onSuccess: (row) => {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(row.id_relatorio) });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -326,7 +327,7 @@ export function useAtualizarItemNC() {
     onSuccess: (params) => {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_relatorio) });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -360,7 +361,7 @@ export function useExcluirItemNC() {
     onSuccess: (params) => {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_relatorio) });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -437,7 +438,7 @@ export function useUploadFotoItemNC() {
     onSuccess: (_d, params) => {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_relatorio) });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -474,6 +475,6 @@ export function useRemoverFotoItemNC() {
     onSuccess: (_d, params) => {
       qc.invalidateQueries({ queryKey: KEY_DETALHE(params.id_relatorio) });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { classificarAnexo, type Anexo, type ModuloAnexo } from "@/lib/anexos/types";
 import { registrarAuditoria } from "@/lib/auditoria/registrar";
@@ -75,7 +76,7 @@ export function useEnviarAnexo(modulo: ModuloAnexo, idReferencia: string) {
       });
       toast.success("Anexo enviado");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -103,7 +104,7 @@ export function useAtualizarAnexo(modulo: ModuloAnexo, idReferencia: string) {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY(modulo, idReferencia) }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -126,6 +127,6 @@ export function useExcluirAnexo(modulo: ModuloAnexo, idReferencia: string) {
       qc.invalidateQueries({ queryKey: KEY(modulo, idReferencia) });
       toast.success("Anexo removido");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }

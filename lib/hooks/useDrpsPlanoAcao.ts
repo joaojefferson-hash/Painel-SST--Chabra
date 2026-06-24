@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type StatusPlanoAcao = "PENDENTE" | "EM_ANDAMENTO" | "CONCLUIDA";
@@ -90,7 +91,7 @@ export function useSalvarLinhaPlanoAcao() {
       qc.invalidateQueries({ queryKey: KEY(vars.id_relatorio) });
       if (!vars._silent) toast.success("Ação salva");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -109,6 +110,6 @@ export function useRemoverLinhaPlanoAcao() {
       qc.invalidateQueries({ queryKey: KEY(vars.id_relatorio) });
       toast.success("Ação removida");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }

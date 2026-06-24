@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import type {
@@ -69,7 +70,7 @@ export function useSaveTipoRisco() {
       qc.invalidateQueries({ queryKey: ["tipos-risco"] });
       toast.success("Tipo salvo");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -127,7 +128,7 @@ export function useDeleteTipoRisco() {
       qc.invalidateQueries({ queryKey: ["tipos-risco"] });
       toast.success(acao === "desativado" ? "Tipo desativado" : "Tipo removido");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -214,7 +215,7 @@ export function useSaveItemCatalogo() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["catalogo-tipo", vars.id_tipo] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -232,7 +233,7 @@ export function useDeleteItemCatalogo() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["catalogo-tipo"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -296,7 +297,7 @@ export function useSavePergunta() {
       });
       toast.success("Pergunta salva");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -316,7 +317,7 @@ export function useDeletePergunta() {
       qc.invalidateQueries({ queryKey: ["perguntas-tipo-todas"] });
       toast.success("Pergunta removida");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -378,7 +379,7 @@ export function useSaveMatriz() {
       qc.invalidateQueries({ queryKey: ["matriz-ativa"] });
       toast.success("Matriz salva");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -405,7 +406,7 @@ export function useAtivarMatriz() {
       qc.invalidateQueries({ queryKey: ["matriz-ativa"] });
       toast.success("Matriz ativada");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -426,7 +427,7 @@ export function useDeleteMatriz() {
       qc.invalidateQueries({ queryKey: ["matriz-ativa"] });
       toast.success("Matriz removida");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -490,7 +491,7 @@ export function useSaveModeloRisco() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["modelos-tipo", vars.id_tipo] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -510,7 +511,7 @@ export function useDeleteModeloRisco() {
       qc.invalidateQueries({ queryKey: ["modelos-tipo"] });
       toast.success("Modelo removido");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -572,7 +573,7 @@ export function useSaveItemModelo() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["itens-modelo", vars.id_modelo] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -590,7 +591,7 @@ export function useDeleteItemModelo() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["itens-modelo"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -635,7 +636,7 @@ export function useSavePerguntaModelo() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["perguntas-modelo", vars.id_modelo] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -654,7 +655,7 @@ export function useDeletePerguntaModelo() {
       qc.invalidateQueries({ queryKey: ["perguntas-modelo"] });
       toast.success("Pergunta removida");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -717,7 +718,7 @@ export function useSaveTriagem() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["triagens-tipo", vars.id_tipo] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -736,7 +737,7 @@ export function useDeleteTriagem() {
       qc.invalidateQueries({ queryKey: ["triagens-tipo"] });
       toast.success("Triagem removida");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -816,7 +817,7 @@ export function useSaveOpcaoTriagem() {
       qc.invalidateQueries({ queryKey: ["triagem-opcoes", vars.id_triagem] });
       qc.invalidateQueries({ queryKey: ["triagem-opcoes-tipo"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -835,7 +836,7 @@ export function useDeleteOpcaoTriagem() {
       qc.invalidateQueries({ queryKey: ["triagem-opcoes"] });
       qc.invalidateQueries({ queryKey: ["triagem-opcoes-tipo"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -922,6 +923,6 @@ export function useToggleModeloTriagem() {
       qc.invalidateQueries({ queryKey: ["triagem-modelos", vars.id_triagem] });
       qc.invalidateQueries({ queryKey: ["triagem-modelos-multi"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }

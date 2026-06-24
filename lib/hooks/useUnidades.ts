@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import { gerarId } from "@/lib/utils";
@@ -45,7 +46,7 @@ export function useCriarUnidade() {
       qc.invalidateQueries({ queryKey: KEY });
       toast.success("Unidade criada");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -64,7 +65,7 @@ export function useRenomearUnidade() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -86,6 +87,6 @@ export function useExcluirUnidade() {
       qc.invalidateQueries({ queryKey: ["empresas"] });
       toast.success("Unidade excluída");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }

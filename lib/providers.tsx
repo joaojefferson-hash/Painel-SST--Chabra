@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 
 export default function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -15,7 +16,7 @@ export default function Providers({ children }: { children: ReactNode }) {
             // meta.silent — uma falha não deve poluir a tela com toast de erro
             // (a imagem só faz fallback). Ver useSignedUrl.
             if (query.meta?.silent) return;
-            toast.error(`Erro ao carregar dados: ${(error as Error).message}`);
+            toast.error(mensagemErro(error, "Não foi possível carregar os dados."));
           },
         }),
         defaultOptions: {

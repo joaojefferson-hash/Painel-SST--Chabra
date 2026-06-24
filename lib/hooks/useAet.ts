@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import { useUserStore } from "@/lib/store";
@@ -228,7 +229,7 @@ export function useAetCriarCapitulo() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["aet-textos-padrao"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -250,7 +251,7 @@ export function useAetSalvarCapitulo() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["aet-textos-padrao"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -307,7 +308,7 @@ export function useAetExcluirCapitulo() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["aet-textos-padrao"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -400,7 +401,7 @@ export function useAetSalvarOwasCategoria() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aet-owas-config"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -417,7 +418,7 @@ export function useAetInicializarOwasConfig() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aet-owas-config"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -462,7 +463,7 @@ export function useAetSalvarOwasSelect() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aet-owas-selects"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -478,7 +479,7 @@ export function useAetInicializarOwasSelects() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aet-owas-selects"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -526,7 +527,7 @@ export function useAetSalvarChecklistPergunta() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aet-checklist-perguntas"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -542,7 +543,7 @@ export function useAetInicializarChecklistPerguntas() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aet-checklist-perguntas"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -558,7 +559,7 @@ export function useAetDeletarChecklistPergunta() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aet-checklist-perguntas"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -593,7 +594,7 @@ export function useAetCriarPerfilOwas() {
       return data as AetPerfilOwas;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aet-perfis-owas"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -609,7 +610,7 @@ export function useAetSalvarPerfilOwas() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aet-perfis-owas"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -625,7 +626,7 @@ export function useAetExcluirPerfilOwas() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aet-perfis-owas"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 

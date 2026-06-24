@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { excluirComLixeiraPorId } from "@/lib/hooks/useLixeira";
 import { MEDIDAS_EXISTENTES_OPCOES, MEDIDAS_CONTROLE } from "@/lib/drps/topicos";
@@ -73,7 +74,7 @@ export function useCriarMedidaRecomendada() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -93,7 +94,7 @@ export function useAtualizarMedidaRecomendada() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -139,6 +140,6 @@ export function useRestaurarBaseMedidas() {
       qc.invalidateQueries({ queryKey: KEY });
       toast.success(n > 0 ? `${n} medida(s) adicionada(s) à base.` : "Base já estava completa.");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }

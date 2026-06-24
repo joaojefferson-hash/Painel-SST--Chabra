@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { mensagemErro } from "@/lib/errors";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { registrarSoftNaLixeira } from "@/lib/hooks/useLixeira";
 import { gerarId } from "@/lib/utils";
@@ -108,7 +109,7 @@ export function useDrpsCriarRelatorio() {
       qc.invalidateQueries({ queryKey: ["drps-relatorios", vars.id_empresa] });
       toast.success("Relatório criado");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -135,7 +136,7 @@ export function useDrpsSalvarRelatorio() {
       }
       toast.success(vars._toast ?? "Relatório atualizado");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -176,7 +177,7 @@ export function useDrpsExcluirRelatorio() {
       qc.invalidateQueries({ queryKey: ["drps-relatorios", vars.id_empresa] });
       toast.success("Relatório excluído");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -236,7 +237,7 @@ export function useDrpsImportar() {
       });
       toast.success(`${total} respondente(s) importado(s)`);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -255,7 +256,7 @@ export function useDrpsLimparTudo() {
       qc.invalidateQueries({ queryKey: ["drps-respondentes", idRelatorio] });
       toast.success("Respondentes removidos");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -313,7 +314,7 @@ export function useDrpsSalvarProbabilidade() {
         queryKey: ["drps-probabilidades", args.id_relatorio],
       });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -373,7 +374,7 @@ export function useDrpsSalvarPlanoMedidas() {
       });
       toast.success("Plano salvo");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -425,7 +426,7 @@ export function useDrpsSalvarMonitoramento() {
         queryKey: ["drps-monitoramento", vars.id_relatorio],
       });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -476,7 +477,7 @@ export function useDrpsSalvarRevisao() {
       });
       toast.success("Revisão salva");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -530,7 +531,7 @@ export function useDrpsCriarCapitulo() {
       qc.invalidateQueries({ queryKey: ["drps-texto-padrao"] });
       toast.success("Capítulo criado");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -560,7 +561,7 @@ export function useDrpsSalvarCapitulo() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["drps-texto-padrao"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -595,7 +596,7 @@ export function useDrpsSeedCapitulosFixos() {
       qc.invalidateQueries({ queryKey: ["drps-texto-padrao"] });
       toast.success("Seções do sistema adicionadas!");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
@@ -614,7 +615,7 @@ export function useDrpsExcluirCapitulo() {
       qc.invalidateQueries({ queryKey: ["drps-texto-padrao"] });
       toast.success("Capítulo excluído");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
 
