@@ -439,6 +439,80 @@ export function useExcluirCampo() {
   });
 }
 
+export interface GestaoDependencia {
+  id: string;
+  id_tarefa: string;   // depende de…
+  depende_de: string;  // …esta
+}
+
+export interface DepRef {
+  id: string;       // id da linha de dependência (para excluir)
+  tarefa: string;   // id da outra tarefa
+}
+
+/** Dependências de uma tarefa: "depende de" (pré-requisitos) e "bloqueia" (inverso). */
+export function useDependencias(idTarefa: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gestao-dependencias", idTarefa],
+    enabled: !!idTarefa,
+    queryFn: async (): Promise<{ dependeDe: DepRef[]; bloqueia: DepRef[] }> => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb
+        .from("gestao_dependencias")
+        .select("id,id_tarefa,depende_de")
+        .or(`id_tarefa.eq.${idTarefa},depende_de.eq.${idTarefa}`);
+      if (error) throw error;
+      const rows = (data ?? []) as unknown as GestaoDependencia[];
+      return {
+        dependeDe: rows.filter((r) => r.id_tarefa === idTarefa).map((r) => ({ id: r.id, tarefa: r.depende_de })),
+        bloqueia: rows.filter((r) => r.depende_de === idTarefa).map((r) => ({ id: r.id, tarefa: r.id_tarefa })),
+      };
+    },
+  });
+}
+
+/** Todas as dependências (para desenhar setas na Timeline). */
+export function useTodasDependencias() {
+  return useQuery({
+    queryKey: ["gestao-dependencias-todas"],
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_dependencias").select("id,id_tarefa,depende_de");
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoDependencia[];
+    },
+  });
+}
+
+export function useAddDependencia() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id_tarefa: string; depende_de: string }) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_dependencias").insert({ id: crypto.randomUUID(), id_tarefa: p.id_tarefa, depende_de: p.depende_de } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-dependencias"] }); qc.invalidateQueries({ queryKey: ["gestao-dependencias-todas"] }); },
+    onError: (e) => {
+      const err = e as { message?: string; code?: string };
+      toast.error(err.code === "23505" ? "Essa dependência já existe." : err.message || "Não foi possível adicionar a dependência.");
+    },
+  });
+}
+
+export function useExcluirDependencia() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_dependencias").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-dependencias"] }); qc.invalidateQueries({ queryKey: ["gestao-dependencias-todas"] }); },
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível remover a dependência.")),
+  });
+}
+
 export function useTarefas(idQuadro: string | null | undefined) {
   return useQuery({
     queryKey: ["gestao-tarefas", idQuadro],

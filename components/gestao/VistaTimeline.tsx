@@ -6,7 +6,7 @@ import {
   addDays, subDays, format, isWeekend, isToday, isSameMonth,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { PRIORIDADES, type GestaoTarefa, type GestaoStatus } from "@/lib/hooks/useGestao";
+import { PRIORIDADES, type GestaoTarefa, type GestaoStatus, type GestaoDependencia } from "@/lib/hooks/useGestao";
 
 const corPrioridade = (p: string) => PRIORIDADES.find((x) => x.value === p)?.cor ?? "#94a3b8";
 const COLW = 30;       // largura por dia (px)
@@ -16,10 +16,12 @@ const ROWH = 38;       // altura de linha (px)
 export default function VistaTimeline({
   tarefas,
   statuses,
+  dependencias = [],
   onAbrir,
 }: {
   tarefas: GestaoTarefa[];
   statuses: GestaoStatus[];
+  dependencias?: GestaoDependencia[];
   onAbrir: (t: GestaoTarefa) => void;
 }) {
   const concluidoSet = useMemo(() => new Set(statuses.filter((s) => s.tipo === "concluido").map((s) => s.slug)), [statuses]);
@@ -35,6 +37,25 @@ export default function VistaTimeline({
     const end = addDays(parseISO(maxStr), 2);
     return { dias: eachDayOfInterval({ start, end }), inicio: start };
   }, [dated]);
+
+  // Geometria de cada barra (para desenhar as setas de dependência).
+  const geo = useMemo(() => {
+    const m = new Map<string, { x0: number; x1: number; y: number }>();
+    if (!inicio) return m;
+    dated.forEach((t, r) => {
+      const s = t.data_inicio ?? t.prazo!;
+      const e = t.prazo ?? t.data_inicio!;
+      const startIdx = Math.max(0, differenceInCalendarDays(parseISO(s), inicio));
+      const span = Math.max(1, differenceInCalendarDays(parseISO(e), parseISO(s)) + 1);
+      m.set(t.id_tarefa, { x0: LABELW + startIdx * COLW, x1: LABELW + (startIdx + span) * COLW, y: r * ROWH + ROWH / 2 });
+    });
+    return m;
+  }, [dated, inicio]);
+
+  const setas = useMemo(
+    () => dependencias.filter((d) => geo.has(d.id_tarefa) && geo.has(d.depende_de)),
+    [dependencias, geo],
+  );
 
   if (dated.length === 0) {
     return (
@@ -71,6 +92,7 @@ export default function VistaTimeline({
         </div>
 
         {/* Linhas */}
+        <div className="relative">
         {dated.map((t) => {
           const s = t.data_inicio ?? t.prazo!;
           const e = t.prazo ?? t.data_inicio!;
@@ -106,6 +128,21 @@ export default function VistaTimeline({
             </div>
           );
         })}
+        {setas.length > 0 && (
+          <svg className="pointer-events-none absolute left-0 top-0 z-20" width={LABELW + largura} height={dated.length * ROWH}>
+            <defs>
+              <marker id="dep-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                <path d="M0,0 L6,3 L0,6 Z" fill="#94a3b8" />
+              </marker>
+            </defs>
+            {setas.map((d) => {
+              const A = geo.get(d.id_tarefa)!;   // depende de B
+              const B = geo.get(d.depende_de)!;  // pré-requisito
+              return <path key={d.id} d={`M ${B.x1} ${B.y} C ${B.x1 + 24} ${B.y}, ${A.x0 - 24} ${A.y}, ${A.x0} ${A.y}`} stroke="#94a3b8" strokeWidth={1.5} fill="none" markerEnd="url(#dep-arrow)" />;
+            })}
+          </svg>
+        )}
+        </div>
       </div>
 
       {semData > 0 && (

@@ -10,7 +10,7 @@ import {
   useQuadros, useTarefas, useReordenar, useUsuariosLista,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
   useStatusQuadro, statusPadrao, useCamposQuadro,
-  useEspacos, usePastas,
+  useEspacos, usePastas, useTodasDependencias,
   iniciais, corAvatar,
   PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus,
@@ -63,6 +63,7 @@ export default function GestaoChabraPage() {
   const salvarPref = useSalvarPreferenciaVisao();
   const { data: statusList = [], isLoading: loadingStatus } = useStatusQuadro(quadro?.id_quadro);
   const { data: campos = [] } = useCamposQuadro(quadro?.id_quadro);
+  const { data: dependencias = [] } = useTodasDependencias();
 
   const [items, setItems] = useState<GestaoTarefa[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -386,6 +387,7 @@ export default function GestaoChabraPage() {
           <VistaTimeline
             tarefas={items.filter(passaFiltro)}
             statuses={statuses}
+            dependencias={dependencias}
             onAbrir={(t) => { setEditando(t); setModalOpen(true); }}
           />
         )}
@@ -406,6 +408,7 @@ export default function GestaoChabraPage() {
           statusInicial={statusNovo}
           statuses={statuses}
           campos={campos}
+          tarefasQuadro={items}
           podeEditar={podeEditar}
           etiquetasSugeridas={etiquetasSugeridas}
         />

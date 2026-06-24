@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Trash2, Loader2, Plus, Square, CheckSquare, X, Send } from "lucide-react";
+import { Trash2, Loader2, Plus, Square, CheckSquare, X, Send, ArrowRight } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import MultiChipInput from "@/components/ui/MultiChipInput";
 import { useUserStore } from "@/lib/store";
 import {
   useSalvarTarefa, useExcluirTarefa, useUsuariosLista,
   useComentarios, useAddComentario, useExcluirComentario,
+  useDependencias, useAddDependencia, useExcluirDependencia,
   iniciais, corAvatar,
   PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa, type GestaoStatus, type GestaoCampo,
@@ -28,6 +29,7 @@ export default function TarefaModal({
   statusInicial = "A_FAZER",
   statuses,
   campos,
+  tarefasQuadro,
   podeEditar,
   etiquetasSugeridas = [],
 }: {
@@ -38,6 +40,7 @@ export default function TarefaModal({
   statusInicial?: StatusTarefa;
   statuses: GestaoStatus[];
   campos: GestaoCampo[];
+  tarefasQuadro: GestaoTarefa[];
   podeEditar: boolean;
   etiquetasSugeridas?: string[];
 }) {
@@ -49,6 +52,11 @@ export default function TarefaModal({
   const addComentario = useAddComentario();
   const excluirComentario = useExcluirComentario();
   const [novoComentario, setNovoComentario] = useState("");
+  const { data: deps } = useDependencias(tarefa?.id_tarefa);
+  const addDep = useAddDependencia();
+  const excluirDep = useExcluirDependencia();
+  const tarefaMap = useMemo(() => new Map(tarefasQuadro.map((t) => [t.id_tarefa, t])), [tarefasQuadro]);
+  const statusMap = useMemo(() => new Map(statuses.map((s) => [s.slug, s])), [statuses]);
 
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -90,6 +98,16 @@ export default function TarefaModal({
     if (!titulo.trim()) {
       toast.error("Informe o título da tarefa.");
       return;
+    }
+    // Guarda de conclusão: bloqueia concluir se há dependências não concluídas.
+    if (statusMap.get(status)?.tipo === "concluido" && deps?.dependeDe.length) {
+      const pendentes = deps.dependeDe
+        .map((d) => tarefaMap.get(d.tarefa))
+        .filter((t): t is GestaoTarefa => !!t && statusMap.get(t.status)?.tipo !== "concluido");
+      if (pendentes.length > 0) {
+        toast.error(`Conclua antes: ${pendentes.map((t) => t.titulo).join(", ")}`);
+        return;
+      }
     }
     await salvar.mutateAsync({
       id_tarefa: tarefa?.id_tarefa,
@@ -239,6 +257,51 @@ export default function TarefaModal({
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {tarefa && (
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-600">Dependências</label>
+            <div>
+              <p className="mb-1 text-[11px] text-gray-500">Depende de (precisa concluir antes)</p>
+              <div className="space-y-1">
+                {deps?.dependeDe.map((d) => {
+                  const t = tarefaMap.get(d.tarefa);
+                  const concl = !!t && statusMap.get(t.status)?.tipo === "concluido";
+                  return (
+                    <div key={d.id} className="flex items-center gap-2 text-sm">
+                      <span className={`size-2 shrink-0 rounded-full ${concl ? "bg-verde-primary" : "bg-gray-300"}`} />
+                      <span className={`min-w-0 flex-1 truncate ${concl ? "text-gray-400 line-through" : "text-gray-700"}`}>{t?.titulo ?? d.tarefa}</span>
+                      {!ro && <button type="button" onClick={() => excluirDep.mutate(d.id)} className="text-gray-300 hover:text-red-600"><X className="size-3.5" /></button>}
+                    </div>
+                  );
+                })}
+                {(!deps || deps.dependeDe.length === 0) && <p className="text-xs text-gray-400">Nenhuma.</p>}
+              </div>
+              {!ro && (
+                <select value="" onChange={(e) => { if (e.target.value) addDep.mutate({ id_tarefa: tarefa.id_tarefa, depende_de: e.target.value }); }}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-verde-primary focus:outline-none">
+                  <option value="">+ Adicionar dependência…</option>
+                  {tarefasQuadro.filter((t) => t.id_tarefa !== tarefa.id_tarefa && !deps?.dependeDe.some((d) => d.tarefa === t.id_tarefa)).map((t) => (
+                    <option key={t.id_tarefa} value={t.id_tarefa}>{t.titulo}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            {deps && deps.bloqueia.length > 0 && (
+              <div>
+                <p className="mb-1 text-[11px] text-gray-500">Bloqueia</p>
+                <div className="space-y-1">
+                  {deps.bloqueia.map((d) => (
+                    <div key={d.id} className="flex items-center gap-2 text-sm text-gray-600">
+                      <ArrowRight className="size-3 shrink-0 text-gray-300" />
+                      <span className="min-w-0 flex-1 truncate">{tarefaMap.get(d.tarefa)?.titulo ?? d.tarefa}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
