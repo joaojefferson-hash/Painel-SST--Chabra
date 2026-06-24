@@ -44,6 +44,21 @@ export const STATUS_TAREFA: { value: StatusTarefa; label: string; cor: string }[
   { value: "CONCLUIDO", label: "Concluído", cor: "#16a34a" },
 ];
 
+/** Iniciais (1-2 letras) de um nome, para avatar. */
+export function iniciais(nome: string): string {
+  const p = (nome ?? "").trim().split(/\s+/);
+  return ((p[0]?.[0] ?? "") + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
+}
+
+const AVATAR_CORES = ["#0ea5e9", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444", "#6366f1", "#14b8a6", "#f97316", "#0d9488"];
+
+/** Cor determinística por nome (avatar). */
+export function corAvatar(nome: string): string {
+  let h = 0;
+  for (let i = 0; i < (nome ?? "").length; i++) h = (h * 31 + nome.charCodeAt(i)) >>> 0;
+  return AVATAR_CORES[h % AVATAR_CORES.length];
+}
+
 export const PRIORIDADES: { value: PrioridadeTarefa; label: string; cor: string }[] = [
   { value: "Baixa", label: "Baixa", cor: "#16a34a" },
   { value: "Media", label: "Média", cor: "#f59e0b" },

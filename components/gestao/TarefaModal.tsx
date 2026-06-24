@@ -9,14 +9,11 @@ import { useUserStore } from "@/lib/store";
 import {
   useSalvarTarefa, useExcluirTarefa, useUsuariosLista,
   useComentarios, useAddComentario, useExcluirComentario,
+  iniciais, corAvatar,
   STATUS_TAREFA, PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa,
 } from "@/lib/hooks/useGestao";
 
-function iniciais(nome: string): string {
-  const p = nome.trim().split(/\s+/);
-  return ((p[0]?.[0] ?? "") + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
-}
 function quando(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -222,7 +219,7 @@ export default function TarefaModal({
             <div className="space-y-2">
               {comentarios.map((c) => (
                 <div key={c.id_comentario} className="group flex gap-2">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-verde-light text-[10px] font-bold text-verde-primary">{iniciais(c.autor ?? "?")}</span>
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: corAvatar(c.autor ?? "?") }}>{iniciais(c.autor ?? "?")}</span>
                   <div className="flex-1 rounded-lg bg-gray-50 px-3 py-1.5">
                     <p className="text-[11px] text-gray-400">{c.autor ?? "—"} · {quando(c.created_at)}</p>
                     <p className="whitespace-pre-wrap text-sm text-gray-700">{c.texto}</p>

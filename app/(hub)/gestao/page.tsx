@@ -8,15 +8,12 @@ import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
   useQuadros, useCriarQuadro, useTarefas, useReordenar, useUsuariosLista,
+  iniciais, corAvatar,
   STATUS_TAREFA, PRIORIDADES,
   type GestaoTarefa, type StatusTarefa,
 } from "@/lib/hooks/useGestao";
 import TarefaModal from "@/components/gestao/TarefaModal";
 
-function iniciais(nome: string): string {
-  const p = nome.trim().split(/\s+/);
-  return ((p[0]?.[0] ?? "") + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
-}
 const corPrioridade = (p: string) => PRIORIDADES.find((x) => x.value === p)?.cor ?? "#94a3b8";
 function diasAte(iso: string): number {
   const hoje = new Date();
@@ -58,6 +55,8 @@ export default function GestaoChabraPage() {
   const [filtroResp, setFiltroResp] = useState("");
   const [filtroPrio, setFiltroPrio] = useState("");
   const [vista, setVista] = useState<"quadro" | "lista">("quadro");
+  const [soMinhas, setSoMinhas] = useState(false);
+  const [dropAlvo, setDropAlvo] = useState<{ col: StatusTarefa; beforeId: string | null } | null>(null);
 
   const [criandoQuadro, setCriandoQuadro] = useState(false);
   const [nomeQuadro, setNomeQuadro] = useState("");
@@ -73,8 +72,9 @@ export default function GestaoChabraPage() {
     [items],
   );
 
-  const temFiltro = !!(busca.trim() || filtroResp || filtroPrio);
+  const temFiltro = !!(busca.trim() || filtroResp || filtroPrio || soMinhas);
   const passaFiltro = (t: GestaoTarefa) => {
+    if (soMinhas && (t.responsavel ?? "") !== (user?.nome ?? "")) return false;
     if (filtroResp && (t.responsavel ?? "") !== filtroResp) return false;
     if (filtroPrio && t.prioridade !== filtroPrio) return false;
     const q = busca.trim().toLowerCase();
@@ -107,6 +107,7 @@ export default function GestaoChabraPage() {
 
   function soltar(targetStatus: StatusTarefa, beforeId?: string) {
     setColHover(null);
+    setDropAlvo(null);
     const dragged = items.find((t) => t.id_tarefa === dragId);
     setDragId(null);
     if (!dragged || !podeEditar) return;
@@ -187,8 +188,13 @@ export default function GestaoChabraPage() {
             <option value="">Toda prioridade</option>
             {PRIORIDADES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
+          {user?.nome && (
+            <button type="button" onClick={() => setSoMinhas((v) => !v)} className={`rounded-lg px-3 py-2 text-sm font-medium transition ${soMinhas ? "bg-verde-primary text-white" : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}>
+              Minhas
+            </button>
+          )}
           {temFiltro && (
-            <button type="button" onClick={() => { setBusca(""); setFiltroResp(""); setFiltroPrio(""); }} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
+            <button type="button" onClick={() => { setBusca(""); setFiltroResp(""); setFiltroPrio(""); setSoMinhas(false); }} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
               <X className="size-4" /> Limpar
             </button>
           )}
@@ -214,7 +220,8 @@ export default function GestaoChabraPage() {
               return (
                 <div
                   key={col.value}
-                  onDragOver={(e) => { if (dragId) { e.preventDefault(); setColHover(col.value); } }}
+                  onDragOver={(e) => { if (dragId) { e.preventDefault(); setColHover(col.value); setDropAlvo({ col: col.value, beforeId: null }); } }}
+                  onDragLeave={(e) => { if (dragId && !e.currentTarget.contains(e.relatedTarget as Node)) setColHover((c) => (c === col.value ? null : c)); }}
                   onDrop={() => soltar(col.value)}
                   className={`rounded-xl border bg-gray-50/60 p-2.5 transition ${colHover === col.value ? "border-verde-primary ring-2 ring-verde-primary/20" : "border-gray-200"}`}
                 >
@@ -237,48 +244,54 @@ export default function GestaoChabraPage() {
                       const atrasada = dias != null && dias < 0 && t.status !== "CONCLUIDO";
                       const subs = t.subtarefas ?? [];
                       const subFeitas = subs.filter((s) => s.feito).length;
+                      const concluido = t.status === "CONCLUIDO";
                       return (
-                        <div
-                          key={t.id_tarefa}
-                          draggable={podeEditar}
-                          onDragStart={() => setDragId(t.id_tarefa)}
-                          onDragEnd={() => { setDragId(null); setColHover(null); }}
-                          onDragOver={(e) => { if (dragId) { e.preventDefault(); e.stopPropagation(); setColHover(col.value); } }}
-                          onDrop={(e) => { e.stopPropagation(); soltar(col.value, t.id_tarefa); }}
-                          onClick={() => { setEditando(t); setModalOpen(true); }}
-                          className={`cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${dragId === t.id_tarefa ? "opacity-40" : ""}`}
-                        >
-                          <div className="flex items-start gap-2">
-                            <span className="mt-1 size-2 shrink-0 rounded-full" style={{ background: corPrioridade(t.prioridade) }} title={`Prioridade: ${t.prioridade}`} />
-                            <p className="flex-1 text-sm font-medium text-gray-800">{t.titulo}</p>
-                          </div>
-                          {(t.etiquetas ?? []).length > 0 && (
-                            <div className="mt-1.5 flex flex-wrap gap-1">
-                              {(t.etiquetas ?? []).map((e) => (
-                                <span key={e} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">{e}</span>
-                              ))}
-                            </div>
+                        <div key={t.id_tarefa}>
+                          {dropAlvo?.col === col.value && dropAlvo.beforeId === t.id_tarefa && dragId !== t.id_tarefa && (
+                            <div className="mb-2 h-1 rounded-full bg-verde-primary/70" />
                           )}
-                          <div className="mt-2 flex items-center gap-2">
-                            {t.prazo && (
-                              <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${atrasada ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
-                                <CalendarClock className="size-3" /> {fmtPrazo(t.prazo)}
-                              </span>
+                          <div
+                            draggable={podeEditar}
+                            onDragStart={() => setDragId(t.id_tarefa)}
+                            onDragEnd={() => { setDragId(null); setColHover(null); setDropAlvo(null); }}
+                            onDragOver={(e) => { if (dragId) { e.preventDefault(); e.stopPropagation(); setColHover(col.value); setDropAlvo({ col: col.value, beforeId: t.id_tarefa }); } }}
+                            onDrop={(e) => { e.stopPropagation(); soltar(col.value, t.id_tarefa); }}
+                            onClick={() => { setEditando(t); setModalOpen(true); }}
+                            style={{ borderLeftColor: corPrioridade(t.prioridade) }}
+                            className={`cursor-pointer rounded-lg border border-l-4 border-gray-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${dragId === t.id_tarefa ? "opacity-40" : ""}`}
+                          >
+                            <p className={`text-sm font-medium ${concluido ? "text-gray-400 line-through" : "text-gray-800"}`}>{t.titulo}</p>
+                            {(t.etiquetas ?? []).length > 0 && (
+                              <div className="mt-1.5 flex flex-wrap gap-1">
+                                {(t.etiquetas ?? []).map((e) => (
+                                  <span key={e} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">{e}</span>
+                                ))}
+                              </div>
                             )}
-                            {subs.length > 0 && (
-                              <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500" title="Subtarefas">
-                                <CheckSquare className="size-3" /> {subFeitas}/{subs.length}
-                              </span>
-                            )}
-                            {t.responsavel && (
-                              <span className="ml-auto flex size-6 items-center justify-center rounded-full bg-verde-light text-[10px] font-bold text-verde-primary" title={t.responsavel}>
-                                {iniciais(t.responsavel)}
-                              </span>
-                            )}
+                            <div className="mt-2 flex items-center gap-2">
+                              {t.prazo && (
+                                <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${atrasada ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
+                                  <CalendarClock className="size-3" /> {fmtPrazo(t.prazo)}
+                                </span>
+                              )}
+                              {subs.length > 0 && (
+                                <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500" title="Subtarefas">
+                                  <CheckSquare className="size-3" /> {subFeitas}/{subs.length}
+                                </span>
+                              )}
+                              {t.responsavel && (
+                                <span className="ml-auto flex size-6 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: corAvatar(t.responsavel) }} title={t.responsavel}>
+                                  {iniciais(t.responsavel)}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
                     })}
+                    {dropAlvo?.col === col.value && dropAlvo.beforeId === null && dragId && (
+                      <div className="h-1 rounded-full bg-verde-primary/70" />
+                    )}
                     {lista.length === 0 && (
                       <p className="px-1 py-3 text-center text-xs text-gray-300">{todas.length > 0 ? "Nada no filtro" : "Solte aqui"}</p>
                     )}
