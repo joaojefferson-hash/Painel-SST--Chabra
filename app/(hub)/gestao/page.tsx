@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Loader2, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Zap } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
   useQuadros, useTarefas, useReordenar, useUsuariosLista,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
   useStatusQuadro, statusPadrao, useCamposQuadro,
-  useEspacos, usePastas, useTodasDependencias,
+  useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner,
   iniciais, corAvatar,
   PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus, type GestaoNotificacao,
@@ -20,6 +20,7 @@ import NotificacoesSino from "@/components/gestao/NotificacoesSino";
 import TarefaModal from "@/components/gestao/TarefaModal";
 import StatusManagerModal from "@/components/gestao/StatusManagerModal";
 import CamposManagerModal from "@/components/gestao/CamposManagerModal";
+import AutomacoesManagerModal from "@/components/gestao/AutomacoesManagerModal";
 import { formatarCampoValor } from "@/components/gestao/CampoInput";
 import VistaLista from "@/components/gestao/VistaLista";
 import VistaCalendario from "@/components/gestao/VistaCalendario";
@@ -65,6 +66,7 @@ export default function GestaoChabraPage() {
   const { data: statusList = [], isLoading: loadingStatus } = useStatusQuadro(quadro?.id_quadro);
   const { data: campos = [] } = useCamposQuadro(quadro?.id_quadro);
   const { data: dependencias = [] } = useTodasDependencias();
+  const runAuto = useAutomacaoRunner(quadro?.id_quadro);
 
   const [items, setItems] = useState<GestaoTarefa[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export default function GestaoChabraPage() {
 
   const [managerOpen, setManagerOpen] = useState(false);
   const [camposOpen, setCamposOpen] = useState(false);
+  const [autoOpen, setAutoOpen] = useState(false);
 
   useEffect(() => {
     if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
@@ -181,6 +184,9 @@ export default function GestaoChabraPage() {
     const reindex = col.map((t, i) => ({ ...t, ordem: i }));
     setItems([...fora, ...reindex]);
     reordenar.mutate(reindex.map((t) => ({ id_tarefa: t.id_tarefa, status: targetStatus, ordem: t.ordem })));
+    if (dragged.status !== targetStatus) {
+      runAuto({ gatilho: "status_muda", tarefa: { ...dragged, status: targetStatus }, de: dragged.status, para: targetStatus });
+    }
   }
 
   return (
@@ -267,6 +273,11 @@ export default function GestaoChabraPage() {
           {podeEditar && (
             <button type="button" onClick={() => setCamposOpen(true)} title="Campos personalizados do quadro" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
               <Tags className="size-4" /> Campos
+            </button>
+          )}
+          {podeEditar && (
+            <button type="button" onClick={() => setAutoOpen(true)} title="Automações do quadro" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <Zap className="size-4" /> Automações
             </button>
           )}
         </div>
@@ -387,6 +398,7 @@ export default function GestaoChabraPage() {
             onAgruparPor={mudarAgrupar}
             podeEditar={podeEditar}
             onAbrir={(t) => { setEditando(t); setModalOpen(true); }}
+            aoMudarStatus={(t, de, para) => runAuto({ gatilho: "status_muda", tarefa: { ...t, status: para }, de, para })}
           />
         ) : vista === "calendario" ? (
           <VistaCalendario
@@ -423,6 +435,7 @@ export default function GestaoChabraPage() {
           tarefasQuadro={items}
           podeEditar={podeEditar}
           etiquetasSugeridas={etiquetasSugeridas}
+          aoAutomatizar={runAuto}
         />
       )}
 
@@ -442,6 +455,16 @@ export default function GestaoChabraPage() {
           onClose={() => setCamposOpen(false)}
           idQuadro={quadro.id_quadro}
           campos={campos}
+          podeEditar={podeEditar}
+        />
+      )}
+
+      {quadro && (
+        <AutomacoesManagerModal
+          open={autoOpen}
+          onClose={() => setAutoOpen(false)}
+          idQuadro={quadro.id_quadro}
+          statuses={statuses}
           podeEditar={podeEditar}
         />
       )}

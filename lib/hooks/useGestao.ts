@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -727,6 +728,103 @@ export function useExcluirTempo() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-tempo"] }); qc.invalidateQueries({ queryKey: ["gestao-timer-ativo"] }); },
     onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir o apontamento.")),
   });
+}
+
+export type GatilhoAutomacao = "status_muda" | "tarefa_criada" | "prazo_proximo";
+
+export interface GestaoAutomacao {
+  id: string;
+  id_quadro: string;
+  nome: string;
+  ativo: boolean;
+  gatilho: GatilhoAutomacao;
+  condicao: { de?: string; para?: string };
+  acao: { tipo?: string; valor?: string };
+  ordem: number;
+}
+
+export function useAutomacoes(idQuadro: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gestao-automacoes", idQuadro],
+    enabled: !!idQuadro,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_automacoes").select("*").eq("id_quadro", idQuadro!).order("ordem", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoAutomacao[];
+    },
+  });
+}
+
+export function useSalvarAutomacao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (a: Partial<GestaoAutomacao> & { id_quadro: string }) => {
+      const sb = createSupabaseBrowserClient();
+      if (!a.id) {
+        const { error } = await sb.from("gestao_automacoes").insert({
+          id: crypto.randomUUID(), id_quadro: a.id_quadro,
+          nome: a.nome ?? "Nova automação", ativo: a.ativo ?? true,
+          gatilho: a.gatilho ?? "status_muda", condicao: a.condicao ?? {}, acao: a.acao ?? {}, ordem: a.ordem ?? 0,
+        } as never);
+        if (error) throw error;
+        return;
+      }
+      const patch: Record<string, unknown> = {};
+      if (a.nome !== undefined) patch.nome = a.nome;
+      if (a.ativo !== undefined) patch.ativo = a.ativo;
+      if (a.gatilho !== undefined) patch.gatilho = a.gatilho;
+      if (a.condicao !== undefined) patch.condicao = a.condicao;
+      if (a.acao !== undefined) patch.acao = a.acao;
+      if (a.ordem !== undefined) patch.ordem = a.ordem;
+      const { error } = await sb.from("gestao_automacoes").update(patch as never).eq("id", a.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-automacoes"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível salvar a automação.")),
+  });
+}
+
+export function useExcluirAutomacao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_automacoes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-automacoes"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir a automação.")),
+  });
+}
+
+/** Executor client-side das automações (gatilhos de ação imediata). */
+export function useAutomacaoRunner(idQuadro: string | null | undefined) {
+  const { data: automacoes = [] } = useAutomacoes(idQuadro);
+  const salvar = useSalvarTarefa();
+  const criarNotif = useCriarNotificacao();
+  const { data: usuariosFull = [] } = useUsuarios();
+  return useCallback(
+    (ctx: { gatilho: "status_muda" | "tarefa_criada"; tarefa: GestaoTarefa; de?: string; para?: string }) => {
+      for (const a of automacoes) {
+        if (!a.ativo || a.gatilho !== ctx.gatilho) continue;
+        if (ctx.gatilho === "status_muda") {
+          if (a.condicao?.de && a.condicao.de !== ctx.de) continue;
+          if (a.condicao?.para && a.condicao.para !== ctx.para) continue;
+        }
+        const acao = a.acao || {};
+        const base = { id_tarefa: ctx.tarefa.id_tarefa, id_quadro: ctx.tarefa.id_quadro };
+        if (acao.tipo === "mover_status" && acao.valor) salvar.mutate({ ...base, status: acao.valor });
+        else if (acao.tipo === "definir_responsavel") salvar.mutate({ ...base, responsavel: acao.valor || null });
+        else if (acao.tipo === "definir_prioridade" && acao.valor) salvar.mutate({ ...base, prioridade: acao.valor as PrioridadeTarefa });
+        else if (acao.tipo === "notificar") {
+          const email = ctx.tarefa.responsavel ? usuariosFull.find((u) => u.nome === ctx.tarefa.responsavel)?.email ?? null : null;
+          if (email) criarNotif.mutate({ destinatario: email, tipo: "status", titulo: acao.valor || `Automação em "${ctx.tarefa.titulo}"`, id_tarefa: ctx.tarefa.id_tarefa, id_quadro: ctx.tarefa.id_quadro });
+        }
+      }
+    },
+    [automacoes, salvar, criarNotif, usuariosFull],
+  );
 }
 
 export function useTarefas(idQuadro: string | null | undefined) {

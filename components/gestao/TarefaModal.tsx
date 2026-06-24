@@ -34,6 +34,7 @@ export default function TarefaModal({
   tarefasQuadro,
   podeEditar,
   etiquetasSugeridas = [],
+  aoAutomatizar,
 }: {
   open: boolean;
   onClose: () => void;
@@ -45,6 +46,7 @@ export default function TarefaModal({
   tarefasQuadro: GestaoTarefa[];
   podeEditar: boolean;
   etiquetasSugeridas?: string[];
+  aoAutomatizar?: (ctx: { gatilho: "status_muda" | "tarefa_criada"; tarefa: GestaoTarefa; de?: string; para?: string }) => void;
 }) {
   const salvar = useSalvarTarefa();
   const excluir = useExcluirTarefa();
@@ -141,6 +143,11 @@ export default function TarefaModal({
     if (tarefa && !respMudou && status !== tarefa.status && respEmail && respEmail !== userEmail) {
       criarNotif.mutate({ destinatario: respEmail, tipo: "status", titulo: `"${titulo.trim()}" mudou para ${statusNome}`, id_tarefa: idSalvo, id_quadro: idQuadro });
     }
+
+    // Automações (gatilhos imediatos)
+    const tNova = { ...(tarefa ?? {}), id_tarefa: idSalvo, id_quadro: idQuadro, titulo: titulo.trim(), status, responsavel: respNome } as GestaoTarefa;
+    if (!tarefa) aoAutomatizar?.({ gatilho: "tarefa_criada", tarefa: tNova });
+    else if (status !== tarefa.status) aoAutomatizar?.({ gatilho: "status_muda", tarefa: tNova, de: tarefa.status, para: status });
 
     toast.success(tarefa ? "Tarefa atualizada" : "Tarefa criada");
     onClose();
