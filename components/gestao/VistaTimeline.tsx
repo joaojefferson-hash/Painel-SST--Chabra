@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   parseISO, eachDayOfInterval, differenceInCalendarDays,
   addDays, subDays, format, isWeekend, isToday, isSameMonth,
@@ -57,6 +57,13 @@ export default function VistaTimeline({
     [dependencias, geo],
   );
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!inicio || dias.length === 0 || !scrollRef.current) return;
+    const hojeIdx = differenceInCalendarDays(new Date(), inicio);
+    if (hojeIdx > 0) scrollRef.current.scrollLeft = Math.max(0, hojeIdx * COLW + LABELW - 250);
+  }, [dias, inicio]);
+
   if (dated.length === 0) {
     return (
       <div className="mt-5 rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400">
@@ -68,7 +75,7 @@ export default function VistaTimeline({
   const largura = dias.length * COLW;
 
   return (
-    <div className="mt-5 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+    <div ref={scrollRef} className="mt-5 overflow-x-auto rounded-xl border border-gray-200 bg-white">
       <div style={{ minWidth: LABELW + largura }}>
         {/* Cabeçalho: meses + dias */}
         <div className="flex border-b border-gray-200 bg-gray-50">

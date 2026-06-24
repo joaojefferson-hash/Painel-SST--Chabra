@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Trash2, Loader2, Plus, Square, CheckSquare, X, Send, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import Modal from "@/components/ui/Modal";
@@ -25,8 +25,14 @@ function quando(iso: string): string {
 
 function Secao({ titulo, badge, defaultOpen = false, children }: { titulo: string; badge?: number; defaultOpen?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
+  const ref = useRef<HTMLDivElement>(null);
+  const primeiro = useRef(true);
+  useEffect(() => {
+    if (primeiro.current) { primeiro.current = false; return; }
+    if (open) ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [open]);
   return (
-    <div className="rounded-lg border border-gray-200">
+    <div ref={ref} className="rounded-lg border border-gray-200">
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
         <span className="flex items-center gap-2">
           {titulo}

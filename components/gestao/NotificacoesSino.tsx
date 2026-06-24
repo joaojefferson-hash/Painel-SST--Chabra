@@ -16,7 +16,7 @@ export default function NotificacoesSino({ onAbrir }: { onAbrir: (n: GestaoNotif
 
   return (
     <div className="relative">
-      <button type="button" onClick={() => setAberto((v) => !v)} title="Notificações" className="relative rounded-lg border border-gray-200 bg-white p-2 text-gray-600 hover:bg-gray-50">
+      <button type="button" onClick={() => setAberto((v) => !v)} title="Notificações" className="relative z-40 rounded-lg border border-gray-200 bg-white p-2 text-gray-600 hover:bg-gray-50">
         <Bell className="size-4" />
         {naoLidas > 0 && <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">{naoLidas > 9 ? "9+" : naoLidas}</span>}
       </button>

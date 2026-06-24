@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Zap, Repeat, Settings, ChevronDown } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Zap, Repeat, Settings, ChevronDown, Clock } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
   useQuadros, useTarefas, useReordenar, useUsuariosLista,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
   useStatusQuadro, statusPadrao, useCamposQuadro,
-  useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner,
-  iniciais, corAvatar,
+  useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner, useTempoQuadro,
+  iniciais, corAvatar, formatarDuracao,
   PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus, type GestaoNotificacao,
 } from "@/lib/hooks/useGestao";
@@ -21,6 +21,7 @@ import TarefaModal from "@/components/gestao/TarefaModal";
 import StatusManagerModal from "@/components/gestao/StatusManagerModal";
 import CamposManagerModal from "@/components/gestao/CamposManagerModal";
 import AutomacoesManagerModal from "@/components/gestao/AutomacoesManagerModal";
+import TempoRelatorioModal from "@/components/gestao/TempoRelatorioModal";
 import { formatarCampoValor } from "@/components/gestao/CampoInput";
 import VistaLista from "@/components/gestao/VistaLista";
 import VistaCalendario from "@/components/gestao/VistaCalendario";
@@ -67,6 +68,7 @@ export default function GestaoChabraPage() {
   const { data: campos = [] } = useCamposQuadro(quadro?.id_quadro);
   const { data: dependencias = [] } = useTodasDependencias();
   const runAuto = useAutomacaoRunner(quadro?.id_quadro);
+  const { data: tempoEntries = [] } = useTempoQuadro(quadro?.id_quadro, tarefas.map((t) => t.id_tarefa));
 
   const [items, setItems] = useState<GestaoTarefa[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -88,6 +90,7 @@ export default function GestaoChabraPage() {
   const [camposOpen, setCamposOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
+  const [relatorioOpen, setRelatorioOpen] = useState(false);
 
   useEffect(() => {
     if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
@@ -113,6 +116,15 @@ export default function GestaoChabraPage() {
     () => [...new Set(items.flatMap((t) => t.etiquetas ?? []))].sort((a, b) => a.localeCompare(b, "pt-BR")),
     [items],
   );
+
+  const tempoPorTarefa = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const e of tempoEntries) {
+      const seg = e.fim ? (e.segundos ?? 0) : Math.max(0, Math.round((Date.now() - new Date(e.inicio).getTime()) / 1000));
+      m.set(e.id_tarefa, (m.get(e.id_tarefa) ?? 0) + seg);
+    }
+    return m;
+  }, [tempoEntries]);
 
   const temFiltro = !!(busca.trim() || filtroResp || filtroPrio || soMinhas);
   const passaFiltro = (t: GestaoTarefa) => {
@@ -269,7 +281,7 @@ export default function GestaoChabraPage() {
           </div>
           {podeEditar && (
             <div className="relative">
-              <button type="button" onClick={() => setConfigOpen((v) => !v)} title="Configurar quadro" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <button type="button" onClick={() => setConfigOpen((v) => !v)} title="Configurar quadro" className="relative z-40 inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
                 <Settings className="size-4" /> Configurar <ChevronDown className="size-3.5 text-gray-400" />
               </button>
               {configOpen && (
@@ -279,6 +291,7 @@ export default function GestaoChabraPage() {
                     <button type="button" onClick={() => { setConfigOpen(false); setManagerOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><SlidersHorizontal className="size-4 text-gray-400" /> Status</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setCamposOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Tags className="size-4 text-gray-400" /> Campos personalizados</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setAutoOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Zap className="size-4 text-gray-400" /> Automações</button>
+                    <button type="button" onClick={() => { setConfigOpen(false); setRelatorioOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Clock className="size-4 text-gray-400" /> Relatório de tempo</button>
                   </div>
                 </>
               )}
@@ -310,7 +323,8 @@ export default function GestaoChabraPage() {
                   onDragOver={(e) => { if (dragId) { e.preventDefault(); setColHover(col.slug); setDropAlvo({ col: col.slug, beforeId: null }); } }}
                   onDragLeave={(e) => { if (dragId && !e.currentTarget.contains(e.relatedTarget as Node)) setColHover((c) => (c === col.slug ? null : c)); }}
                   onDrop={() => soltar(col.slug)}
-                  className={`w-72 shrink-0 rounded-xl border bg-gray-50/60 p-2.5 transition ${colHover === col.slug ? "border-verde-primary ring-2 ring-verde-primary/20" : "border-gray-200"}`}
+                  className={`flex w-72 shrink-0 flex-col rounded-xl border bg-gray-50/60 p-2.5 transition ${colHover === col.slug ? "border-verde-primary ring-2 ring-verde-primary/20" : "border-gray-200"}`}
+                  style={{ minHeight: "calc(100vh - 15rem)" }}
                 >
                   <div className="mb-2 flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
@@ -325,7 +339,7 @@ export default function GestaoChabraPage() {
                     )}
                   </div>
 
-                  <div className="min-h-[40px] space-y-2">
+                  <div className="min-h-[40px] flex-1 space-y-2">
                     {lista.map((t) => {
                       const dias = t.prazo ? diasAte(t.prazo) : null;
                       const concluido = statusMap.get(t.status)?.tipo === "concluido";
@@ -384,6 +398,11 @@ export default function GestaoChabraPage() {
                               {t.recorrencia && (
                                 <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-gray-500" title="Recorrente">
                                   <Repeat className="size-3" />
+                                </span>
+                              )}
+                              {(tempoPorTarefa.get(t.id_tarefa) ?? 0) > 0 && (
+                                <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500" title="Tempo registrado">
+                                  <Clock className="size-3" /> {formatarDuracao(tempoPorTarefa.get(t.id_tarefa)!)}
                                 </span>
                               )}
                               {t.responsavel && (
@@ -485,9 +504,12 @@ export default function GestaoChabraPage() {
           onClose={() => setAutoOpen(false)}
           idQuadro={quadro.id_quadro}
           statuses={statuses}
+          campos={campos}
           podeEditar={podeEditar}
         />
       )}
+
+      <TempoRelatorioModal open={relatorioOpen} onClose={() => setRelatorioOpen(false)} entries={tempoEntries} />
     </div>
   );
 }

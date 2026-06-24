@@ -4,7 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import {
   useAutomacoes, useSalvarAutomacao, useExcluirAutomacao, useUsuariosLista,
-  PRIORIDADES, type GestaoAutomacao, type GestaoStatus, type GatilhoAutomacao,
+  PRIORIDADES, type GestaoAutomacao, type GestaoStatus, type GatilhoAutomacao, type GestaoCampo,
 } from "@/lib/hooks/useGestao";
 
 const GATILHOS: { value: GatilhoAutomacao; label: string }[] = [
@@ -16,17 +16,19 @@ const ACOES: { value: string; label: string }[] = [
   { value: "mover_status", label: "Mover para status" },
   { value: "definir_responsavel", label: "Definir responsável" },
   { value: "definir_prioridade", label: "Definir prioridade" },
+  { value: "definir_campo", label: "Definir campo" },
   { value: "notificar", label: "Notificar responsável" },
 ];
 const sel = "rounded-md border border-gray-200 px-2 py-1 text-sm focus:border-verde-primary focus:outline-none";
 
 export default function AutomacoesManagerModal({
-  open, onClose, idQuadro, statuses, podeEditar,
+  open, onClose, idQuadro, statuses, campos, podeEditar,
 }: {
   open: boolean;
   onClose: () => void;
   idQuadro: string;
   statuses: GestaoStatus[];
+  campos: GestaoCampo[];
   podeEditar: boolean;
 }) {
   const { data: automacoes = [] } = useAutomacoes(idQuadro);
@@ -96,6 +98,16 @@ export default function AutomacoesManagerModal({
                   <option value="">prioridade…</option>
                   {PRIORIDADES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                 </select>
+              )}
+              {a.acao?.tipo === "definir_campo" && (
+                <>
+                  <select value={a.acao?.campo_id ?? ""} disabled={!podeEditar} onChange={(e) => setAcao(a, { campo_id: e.target.value, valor: undefined })} className={sel}>
+                    <option value="">campo…</option>
+                    {campos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                  <input defaultValue={a.acao?.valor ?? ""} disabled={!podeEditar} onBlur={(e) => setAcao(a, { valor: e.target.value.trim() })} placeholder="valor" className={sel} />
+                  {campos.length === 0 && <span className="text-[11px] text-gray-400">crie um campo primeiro</span>}
+                </>
               )}
               {a.acao?.tipo === "notificar" && (
                 <input defaultValue={a.acao?.valor ?? ""} disabled={!podeEditar} onBlur={(e) => setAcao(a, { valor: e.target.value.trim() })} placeholder="mensagem (opcional)" className={`${sel} flex-1`} />

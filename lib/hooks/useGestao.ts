@@ -650,6 +650,20 @@ export function useTempoTarefa(idTarefa: string | null | undefined) {
   });
 }
 
+/** Apontamentos de tempo de todas as tarefas de um quadro (para chip no card + relatório). */
+export function useTempoQuadro(idQuadro: string | null | undefined, taskIds: string[]) {
+  return useQuery({
+    queryKey: ["gestao-tempo", "quadro", idQuadro, taskIds.length],
+    enabled: !!idQuadro && taskIds.length > 0,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_tempo").select("*").in("id_tarefa", taskIds);
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoTempo[];
+    },
+  });
+}
+
 /** Apontamento em andamento (fim null) do usuário logado, se houver. */
 export function useTimerAtivo() {
   const email = useUserStore((s) => s.user?.email ?? null);
@@ -746,7 +760,7 @@ export interface GestaoAutomacao {
   ativo: boolean;
   gatilho: GatilhoAutomacao;
   condicao: { de?: string; para?: string };
-  acao: { tipo?: string; valor?: string };
+  acao: { tipo?: string; valor?: string; campo_id?: string };
   ordem: number;
 }
 
@@ -824,6 +838,7 @@ export function useAutomacaoRunner(idQuadro: string | null | undefined) {
         if (acao.tipo === "mover_status" && acao.valor) salvar.mutate({ ...base, status: acao.valor });
         else if (acao.tipo === "definir_responsavel") salvar.mutate({ ...base, responsavel: acao.valor || null });
         else if (acao.tipo === "definir_prioridade" && acao.valor) salvar.mutate({ ...base, prioridade: acao.valor as PrioridadeTarefa });
+        else if (acao.tipo === "definir_campo" && acao.campo_id) salvar.mutate({ ...base, campos: { ...(ctx.tarefa.campos ?? {}), [acao.campo_id]: acao.valor ?? null } });
         else if (acao.tipo === "notificar") {
           const email = ctx.tarefa.responsavel ? usuariosFull.find((u) => u.nome === ctx.tarefa.responsavel)?.email ?? null : null;
           if (email) criarNotif.mutate({ destinatario: email, tipo: "status", titulo: acao.valor || `Automação em "${ctx.tarefa.titulo}"`, id_tarefa: ctx.tarefa.id_tarefa, id_quadro: ctx.tarefa.id_quadro });
