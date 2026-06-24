@@ -2,7 +2,7 @@
 
 import { useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Plus, Search, Building2 } from "lucide-react";
+import { Plus, Search, Building2, UploadCloud } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
@@ -10,6 +10,7 @@ import { useUnidades } from "@/lib/hooks/useUnidades";
 import { excluirComLixeira } from "@/lib/hooks/useLixeira";
 import EmpresaCard from "@/components/empresas/EmpresaCard";
 import EmpresaForm from "@/components/empresas/EmpresaForm";
+import ImportarEmpresasModal from "@/components/empresas/ImportarEmpresasModal";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useCanCreate, useCanDelete, useCanEdit } from "@/lib/hooks/useUsuario";
@@ -27,6 +28,7 @@ function EmpresasInner() {
   // Pré-filtra por unidade quando vem da "Visão geral" (/empresas?unidade=ID|__sem__).
   const [filtroUnidade, setFiltroUnidade] = useState(searchParams.get("unidade") ?? "");
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Empresa | null>(null);
   const [confirmDel, setConfirmDel] = useState<Empresa | null>(null);
 
@@ -95,17 +97,27 @@ function EmpresasInner() {
           </select>
         )}
         {canCreate && (
-          <button
-            type="button"
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-            className="inline-flex items-center gap-2 rounded-xl bg-verde-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-verde-accent active:scale-95"
-          >
-            <Plus className="size-4" />
-            Nova Empresa
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 active:scale-95"
+            >
+              <UploadCloud className="size-4" />
+              Importar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl bg-verde-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-verde-accent active:scale-95"
+            >
+              <Plus className="size-4" />
+              Nova Empresa
+            </button>
+          </div>
         )}
       </div>
 
@@ -168,6 +180,13 @@ function EmpresasInner() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         empresa={editing}
+      />
+
+      <ImportarEmpresasModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        empresas={empresas}
+        unidades={unidades}
       />
 
       <ConfirmDialog
