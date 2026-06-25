@@ -13,8 +13,8 @@ import {
   useStatusQuadro, statusPadrao, useCamposQuadro, useEtiquetasQuadro,
   useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner, useTempoQuadro,
   corAvatar, formatarDuracao,
-  PRIORIDADES,
-  type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus, type GestaoNotificacao, type PrioridadeTarefa,
+  PRIORIDADES, FILTRO_VAZIO, contarFiltros,
+  type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus, type GestaoNotificacao, type PrioridadeTarefa, type FiltrosGestao,
 } from "@/lib/hooks/useGestao";
 import GestaoSidebar from "@/components/gestao/GestaoSidebar";
 import NotificacoesSino from "@/components/gestao/NotificacoesSino";
@@ -25,6 +25,7 @@ import AutomacoesManagerModal from "@/components/gestao/AutomacoesManagerModal";
 import TempoRelatorioModal from "@/components/gestao/TempoRelatorioModal";
 import EtiquetasManagerModal from "@/components/gestao/EtiquetasManagerModal";
 import TarefaCard from "@/components/gestao/TarefaCard";
+import FiltrosPanel from "@/components/gestao/FiltrosPanel";
 import { ConfirmHost } from "@/components/ui/confirm";
 import VistaLista from "@/components/gestao/VistaLista";
 import VistaCalendario from "@/components/gestao/VistaCalendario";
@@ -80,8 +81,7 @@ export default function GestaoChabraPage() {
   const [statusNovo, setStatusNovo] = useState<StatusTarefa>("A_FAZER");
 
   const [busca, setBusca] = useState("");
-  const [filtroResp, setFiltroResp] = useState("");
-  const [filtroPrio, setFiltroPrio] = useState("");
+  const [filtros, setFiltros] = useState<FiltrosGestao>(FILTRO_VAZIO);
   const [vista, setVista] = useState<VistaGestao>("quadro");
   const [agruparPor, setAgruparPor] = useState<AgruparPor | null>(null);
   const [soMinhas, setSoMinhas] = useState(false);
@@ -140,11 +140,25 @@ export default function GestaoChabraPage() {
     return m;
   }, [tempoEntries]);
 
-  const temFiltro = !!(busca.trim() || filtroResp || filtroPrio || soMinhas);
+  const temFiltro = !!(busca.trim() || soMinhas || contarFiltros(filtros));
   const passaFiltro = (t: GestaoTarefa) => {
     if (soMinhas && (t.responsavel ?? "") !== (user?.nome ?? "")) return false;
-    if (filtroResp && (t.responsavel ?? "") !== filtroResp) return false;
-    if (filtroPrio && t.prioridade !== filtroPrio) return false;
+    if (filtros.semResponsavel && (t.responsavel ?? "").trim()) return false;
+    if (filtros.responsavel && (t.responsavel ?? "") !== filtros.responsavel) return false;
+    if (filtros.prioridades.length && !filtros.prioridades.includes(t.prioridade)) return false;
+    if (filtros.status.length && !filtros.status.includes(t.status)) return false;
+    if (filtros.etiquetas.length && !filtros.etiquetas.some((e) => (t.etiquetas ?? []).includes(e))) return false;
+    if (filtros.prazo) {
+      if (filtros.prazo === "sem") { if (t.prazo) return false; }
+      else {
+        if (!t.prazo) return false;
+        const d = diasAte(t.prazo);
+        const concl = statusMap.get(t.status)?.tipo === "concluido";
+        if (filtros.prazo === "atrasadas" && !(d < 0 && !concl)) return false;
+        if (filtros.prazo === "hoje" && d !== 0) return false;
+        if (filtros.prazo === "semana" && !(d >= 0 && d <= 7)) return false;
+      }
+    }
     const q = busca.trim().toLowerCase();
     if (q) {
       const valoresCampos = Object.values(t.campos ?? {}).map((v) => (Array.isArray(v) ? v.join(" ") : v ?? "")).join(" ");
@@ -318,21 +332,14 @@ export default function GestaoChabraPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar tarefa…" className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-verde-primary focus:outline-none" />
           </div>
-          <select value={filtroResp} onChange={(e) => setFiltroResp(e.target.value)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-verde-primary focus:outline-none">
-            <option value="">Todos os responsáveis</option>
-            {usuarios.map((u) => <option key={u} value={u}>{u}</option>)}
-          </select>
-          <select value={filtroPrio} onChange={(e) => setFiltroPrio(e.target.value)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-verde-primary focus:outline-none">
-            <option value="">Toda prioridade</option>
-            {PRIORIDADES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
+          <FiltrosPanel filtros={filtros} onChange={setFiltros} statuses={statuses} etiquetas={etiquetasCat} usuarios={usuarios} idQuadro={quadro?.id_quadro ?? ""} />
           {user?.nome && (
             <button type="button" onClick={() => setSoMinhas((v) => !v)} className={`rounded-lg px-3 py-2 text-sm font-medium transition ${soMinhas ? "bg-verde-primary text-white" : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}>
               Minhas
             </button>
           )}
           {temFiltro && (
-            <button type="button" onClick={() => { setBusca(""); setFiltroResp(""); setFiltroPrio(""); setSoMinhas(false); }} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
+            <button type="button" onClick={() => { setBusca(""); setFiltros(FILTRO_VAZIO); setSoMinhas(false); }} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
               <X className="size-4" /> Limpar
             </button>
           )}

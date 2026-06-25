@@ -504,6 +504,67 @@ export function useExcluirEtiqueta() {
   });
 }
 
+export interface FiltrosGestao {
+  responsavel: string;
+  prioridades: string[];
+  status: string[];
+  etiquetas: string[];
+  prazo: "" | "atrasadas" | "sem" | "hoje" | "semana";
+  semResponsavel: boolean;
+}
+export const FILTRO_VAZIO: FiltrosGestao = { responsavel: "", prioridades: [], status: [], etiquetas: [], prazo: "", semResponsavel: false };
+export function contarFiltros(f: FiltrosGestao): number {
+  return (f.responsavel ? 1 : 0) + (f.prioridades.length ? 1 : 0) + (f.status.length ? 1 : 0) + (f.etiquetas.length ? 1 : 0) + (f.prazo ? 1 : 0) + (f.semResponsavel ? 1 : 0);
+}
+
+export interface GestaoFiltroSalvo {
+  id: string;
+  nome: string;
+  criterios: FiltrosGestao;
+}
+
+export function useFiltrosSalvos(idQuadro: string | null | undefined) {
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useQuery({
+    queryKey: ["gestao-filtros", idQuadro, email],
+    enabled: !!idQuadro && !!email,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_filtros_salvos").select("id,nome,criterios").eq("usuario_email", email!).eq("id_quadro", idQuadro!).order("nome", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoFiltroSalvo[];
+    },
+  });
+}
+
+export function useSalvarFiltro() {
+  const qc = useQueryClient();
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useMutation({
+    mutationFn: async (p: { id_quadro: string; nome: string; criterios: FiltrosGestao }) => {
+      if (!email) return;
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_filtros_salvos").insert({ id: crypto.randomUUID(), usuario_email: email, id_quadro: p.id_quadro, nome: p.nome.trim() || "Filtro", criterios: p.criterios } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-filtros"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível salvar o filtro.")),
+  });
+}
+
+export function useExcluirFiltro() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_filtros_salvos").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-filtros"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir o filtro.")),
+  });
+}
+
 export interface GestaoDependencia {
   id: string;
   id_tarefa: string;   // depende de…
