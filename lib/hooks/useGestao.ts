@@ -1237,6 +1237,90 @@ export async function urlAssinadaAnexo(path: string): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
+// ---- Formulários de entrada (captação por link público) ----
+export interface PerguntaFormulario { label: string; obrigatorio: boolean }
+export interface GestaoFormulario {
+  id: string;
+  id_quadro: string;
+  titulo: string;
+  descricao: string | null;
+  token: string;
+  ativo: boolean;
+  mostra_descricao: boolean;
+  mostra_prazo: boolean;
+  mostra_prioridade: boolean;
+  prioridade_padrao: string;
+  status_inicial: string | null;
+  responsavel_padrao: string | null;
+  etiquetas_padrao: string[];
+  perguntas: PerguntaFormulario[];
+  created_by: string | null;
+  created_at: string;
+}
+
+export function useFormulariosQuadro(idQuadro: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gestao-formularios", idQuadro],
+    enabled: !!idQuadro,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_formularios").select("*").eq("id_quadro", idQuadro!).order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoFormulario[];
+    },
+  });
+}
+
+export function useSalvarFormulario() {
+  const qc = useQueryClient();
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useMutation({
+    mutationFn: async (f: Partial<GestaoFormulario> & { id_quadro: string }) => {
+      const sb = createSupabaseBrowserClient();
+      if (!f.id) {
+        const token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "").slice(0, 24);
+        const { error } = await sb.from("gestao_formularios").insert({
+          id: crypto.randomUUID(),
+          id_quadro: f.id_quadro,
+          titulo: (f.titulo ?? "").trim() || "Formulário de solicitação",
+          descricao: f.descricao ?? null,
+          token,
+          ativo: f.ativo ?? true,
+          mostra_descricao: f.mostra_descricao ?? true,
+          mostra_prazo: f.mostra_prazo ?? false,
+          mostra_prioridade: f.mostra_prioridade ?? false,
+          prioridade_padrao: f.prioridade_padrao ?? "Media",
+          status_inicial: f.status_inicial ?? null,
+          responsavel_padrao: f.responsavel_padrao ?? null,
+          etiquetas_padrao: f.etiquetas_padrao ?? [],
+          perguntas: f.perguntas ?? [],
+          created_by: email,
+        } as never);
+        if (error) throw error;
+        return;
+      }
+      const { id, ...patch } = f;
+      const { error } = await sb.from("gestao_formularios").update(patch as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-formularios"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível salvar o formulário.")),
+  });
+}
+
+export function useExcluirFormulario() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_formularios").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-formularios"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir o formulário.")),
+  });
+}
+
 export interface GestaoComentario {
   id_comentario: string;
   id_tarefa: string;

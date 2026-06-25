@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock, CircleUser, CheckSquare, BarChart3 } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock, CircleUser, CheckSquare, BarChart3, FileText } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
@@ -25,6 +25,7 @@ import CamposManagerModal from "@/components/gestao/CamposManagerModal";
 import AutomacoesManagerModal from "@/components/gestao/AutomacoesManagerModal";
 import TempoRelatorioModal from "@/components/gestao/TempoRelatorioModal";
 import EtiquetasManagerModal from "@/components/gestao/EtiquetasManagerModal";
+import FormulariosManagerModal from "@/components/gestao/FormulariosManagerModal";
 import TarefaCard from "@/components/gestao/TarefaCard";
 import FiltrosPanel from "@/components/gestao/FiltrosPanel";
 import MinhasTarefas from "@/components/gestao/MinhasTarefas";
@@ -100,6 +101,7 @@ export default function GestaoChabraPage() {
   const [configOpen, setConfigOpen] = useState(false);
   const [relatorioOpen, setRelatorioOpen] = useState(false);
   const [etiquetasOpen, setEtiquetasOpen] = useState(false);
+  const [formulariosOpen, setFormulariosOpen] = useState(false);
   const [quadroAgrupar, setQuadroAgrupar] = useState<"status" | "responsavel" | "prioridade" | "etiqueta">("status");
   const [online, setOnline] = useState(true);
   const [boardScrolled, setBoardScrolled] = useState(false);
@@ -413,6 +415,7 @@ export default function GestaoChabraPage() {
                     <button type="button" onClick={() => { setConfigOpen(false); setCamposOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Tags className="size-4 text-gray-400" /> Campos personalizados</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setEtiquetasOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Tag className="size-4 text-gray-400" /> Etiquetas</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setAutoOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Zap className="size-4 text-gray-400" /> Automações</button>
+                    <button type="button" onClick={() => { setConfigOpen(false); setFormulariosOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><FileText className="size-4 text-gray-400" /> Formulários</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setRelatorioOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Clock className="size-4 text-gray-400" /> Relatório de tempo</button>
                   </div>
                 </>
@@ -629,6 +632,18 @@ export default function GestaoChabraPage() {
           onClose={() => setEtiquetasOpen(false)}
           idQuadro={quadro.id_quadro}
           etiquetas={etiquetasCat}
+          podeEditar={podeEditar}
+        />
+      )}
+
+      {quadro && (
+        <FormulariosManagerModal
+          open={formulariosOpen}
+          onClose={() => setFormulariosOpen(false)}
+          idQuadro={quadro.id_quadro}
+          statuses={statuses}
+          etiquetas={etiquetasCat}
+          usuarios={usuarios}
           podeEditar={podeEditar}
         />
       )}
