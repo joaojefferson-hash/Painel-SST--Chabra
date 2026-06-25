@@ -243,20 +243,27 @@ export default function GestaoChabraPage() {
 
   return (
     <div className="min-h-screen bg-[#f6f5f2]">
-      <div className="mx-auto max-w-7xl px-5 py-7 sm:px-8">
-        <Link href="/visao-geral" className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
-          <ArrowLeft className="size-4" /> Visão geral
+      {/* Menu lateral fixo (verde, igual ao app) */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col lg:flex print:hidden" style={{ background: "linear-gradient(180deg, #1a3d26 0%, #112a1a 60%, #0d2016 100%)" }}>
+        <Link href="/visao-geral" className="flex items-center gap-2.5 border-b border-white/[0.09] px-4 py-3.5 transition-colors hover:bg-white/[0.05]">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-verde-primary text-white shadow"><KanbanSquare className="size-4" /></span>
+          <div className="min-w-0 leading-tight">
+            <p className="truncate text-[13px] font-bold tracking-tight text-white">Gestão Chabra</p>
+            <p className="inline-flex items-center gap-1 text-[10px] tracking-wide text-white/50"><ArrowLeft className="size-3" /> Visão geral</p>
+          </div>
         </Link>
+        <div className="flex-1 overflow-y-auto px-2 py-2">
+          <p className="mb-1 px-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/30">Espaços</p>
+          <GestaoSidebar espacos={espacos} pastas={pastas} quadros={quadros} quadroId={quadro?.id_quadro ?? null} onSelect={setQuadroId} podeEditar={podeEditar} />
+        </div>
+      </aside>
 
-        <div className="flex gap-5">
-          <aside className="hidden w-60 shrink-0 lg:block">
-            <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-gray-200 bg-white p-2">
-              <p className="px-1.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Espaços</p>
-              <GestaoSidebar espacos={espacos} pastas={pastas} quadros={quadros} quadroId={quadro?.id_quadro ?? null} onSelect={setQuadroId} podeEditar={podeEditar} />
-            </div>
-          </aside>
-
-          <div className="min-w-0 flex-1">
+      {/* Conteúdo: desloca pela sidebar e ocupa toda a largura restante */}
+      <div className="lg:pl-64">
+        <div className="px-5 py-7 sm:px-8">
+          <Link href="/visao-geral" className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 lg:hidden">
+            <ArrowLeft className="size-4" /> Visão geral
+          </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="flex size-11 items-center justify-center rounded-xl bg-verde-light text-verde-primary">
@@ -526,7 +533,6 @@ export default function GestaoChabraPage() {
               : `Arraste os cards entre as colunas para mudar ${quadroAgrupar === "responsavel" ? "o responsável" : quadroAgrupar === "prioridade" ? "a prioridade" : "o status"}.`}
           </p>
         )}
-          </div>
         </div>
       </div>
 
