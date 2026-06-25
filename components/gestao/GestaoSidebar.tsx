@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Folder, List, Layers } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Folder, List, Layers, CircleUser } from "lucide-react";
 import {
   useSalvarEspaco, useExcluirEspaco, useSalvarPasta, useExcluirPasta,
   useCriarQuadro, useRenomearQuadro, useExcluirQuadro,
@@ -18,6 +18,8 @@ export default function GestaoSidebar({
   quadroId,
   onSelect,
   podeEditar,
+  minhasAtivo,
+  onMinhas,
 }: {
   espacos: GestaoEspaco[];
   pastas: GestaoPasta[];
@@ -25,6 +27,8 @@ export default function GestaoSidebar({
   quadroId: string | null;
   onSelect: (id: string) => void;
   podeEditar: boolean;
+  minhasAtivo: boolean;
+  onMinhas: () => void;
 }) {
   const salvarEspaco = useSalvarEspaco();
   const excluirEspaco = useExcluirEspaco();
@@ -64,6 +68,11 @@ export default function GestaoSidebar({
 
   return (
     <nav className="space-y-1 text-sm">
+      <button type="button" onClick={onMinhas} className={`relative mb-1 flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-verde-accent ${minhasAtivo ? "bg-white/[0.16] text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}>
+        {minhasAtivo && <span className="absolute left-0 top-[15%] h-[70%] w-[3px] rounded-r-full bg-verde-accent" />}
+        <CircleUser className="size-4" /> Minhas tarefas
+      </button>
+      <div className="mb-1 border-t border-white/[0.07]" />
       {espacos.map((esp) => {
         const pastasDoEspaco = pastas.filter((p) => p.id_espaco === esp.id);
         const listasSoltas = quadros.filter((q) => q.id_espaco === esp.id && !q.id_pasta);

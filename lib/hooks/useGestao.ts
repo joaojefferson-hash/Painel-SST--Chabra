@@ -986,6 +986,35 @@ export function useTarefas(idQuadro: string | null | undefined) {
   });
 }
 
+/** Minhas tarefas em TODOS os quadros (responsável = usuário logado). */
+export function useMinhasTarefas(enabled = true) {
+  const nome = useUserStore((s) => s.user?.nome ?? null);
+  return useQuery({
+    queryKey: ["gestao-minhas", nome],
+    enabled: enabled && !!nome,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_tarefas").select("*").eq("responsavel", nome!).order("prazo", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoTarefa[];
+    },
+  });
+}
+
+/** Todos os status de todos os quadros (para resolver nome/cor na visão "Minhas tarefas"). */
+export function useTodosStatus(enabled = true) {
+  return useQuery({
+    queryKey: ["gestao-status-todos"],
+    enabled,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_status").select("*");
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoStatus[];
+    },
+  });
+}
+
 /** Lista de usuários internos (para o seletor de responsável). */
 export function useUsuariosLista() {
   return useQuery({

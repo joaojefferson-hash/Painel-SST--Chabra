@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock, CircleUser } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import {
   useQuadros, useTarefas, useReordenar, useUsuariosLista, useSalvarTarefa,
+  useMinhasTarefas, useTodosStatus,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
   useStatusQuadro, statusPadrao, useCamposQuadro, useEtiquetasQuadro,
   useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner, useTempoQuadro,
@@ -26,6 +27,7 @@ import TempoRelatorioModal from "@/components/gestao/TempoRelatorioModal";
 import EtiquetasManagerModal from "@/components/gestao/EtiquetasManagerModal";
 import TarefaCard from "@/components/gestao/TarefaCard";
 import FiltrosPanel from "@/components/gestao/FiltrosPanel";
+import MinhasTarefas from "@/components/gestao/MinhasTarefas";
 import { ConfirmHost } from "@/components/ui/confirm";
 import VistaLista from "@/components/gestao/VistaLista";
 import VistaCalendario from "@/components/gestao/VistaCalendario";
@@ -97,6 +99,10 @@ export default function GestaoChabraPage() {
   const [quadroAgrupar, setQuadroAgrupar] = useState<"status" | "responsavel" | "prioridade" | "etiqueta">("status");
   const [online, setOnline] = useState(true);
   const [boardScrolled, setBoardScrolled] = useState(false);
+  const [minhasView, setMinhasView] = useState(false);
+  const { data: minhas = [] } = useMinhasTarefas(minhasView);
+  const { data: todosStatus = [] } = useTodosStatus(minhasView);
+  const statusGlobalMap = useMemo(() => new Map(todosStatus.map((s) => [`${s.id_quadro}|${s.slug}`, s])), [todosStatus]);
 
   useEffect(() => {
     if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
@@ -288,7 +294,7 @@ export default function GestaoChabraPage() {
         </Link>
         <div className="flex-1 overflow-y-auto px-2 py-2">
           <p className="mb-1 px-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/30">Espaços</p>
-          <GestaoSidebar espacos={espacos} pastas={pastas} quadros={quadros} quadroId={quadro?.id_quadro ?? null} onSelect={setQuadroId} podeEditar={podeEditar} />
+          <GestaoSidebar espacos={espacos} pastas={pastas} quadros={quadros} quadroId={minhasView ? null : (quadro?.id_quadro ?? null)} onSelect={(id) => { setQuadroId(id); setMinhasView(false); }} podeEditar={podeEditar} minhasAtivo={minhasView} onMinhas={() => setMinhasView(true)} />
         </div>
       </aside>
 
@@ -303,6 +309,20 @@ export default function GestaoChabraPage() {
           <Link href="/visao-geral" className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 lg:hidden">
             <ArrowLeft className="size-4" /> Visão geral
           </Link>
+
+        {minhasView ? (
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="flex size-11 items-center justify-center rounded-xl bg-verde-light text-verde-primary"><CircleUser className="size-6" /></span>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Minhas tarefas</h1>
+                <p className="text-sm text-gray-500">{minhas.length} tarefa(s) em todos os quadros</p>
+              </div>
+            </div>
+            <MinhasTarefas tarefas={minhas} quadros={quadros} statusMap={statusGlobalMap} onAbrir={(t) => { setQuadroId(t.id_quadro); setMinhasView(false); setEditando(t); setModalOpen(true); }} />
+          </div>
+        ) : (
+        <>
         <div className="flex items-center gap-3">
           <span className="flex size-11 items-center justify-center rounded-xl bg-verde-light text-verde-primary">
             <KanbanSquare className="size-6" />
@@ -502,6 +522,8 @@ export default function GestaoChabraPage() {
               ? "Agrupado por etiqueta — arraste desabilitado neste modo."
               : `Arraste os cards entre as colunas para mudar ${quadroAgrupar === "responsavel" ? "o responsável" : quadroAgrupar === "prioridade" ? "a prioridade" : "o status"}.`}
           </p>
+        )}
+        </>
         )}
         </div>
       </div>
