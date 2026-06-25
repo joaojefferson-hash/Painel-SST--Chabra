@@ -282,23 +282,13 @@ export default function GestaoChabraPage() {
           <Link href="/visao-geral" className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 lg:hidden">
             <ArrowLeft className="size-4" /> Visão geral
           </Link>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex size-11 items-center justify-center rounded-xl bg-verde-light text-verde-primary">
-              <KanbanSquare className="size-6" />
-            </span>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{quadro?.nome ?? "Gestão Chabra"}</h1>
-              <p className="text-sm text-gray-500">{items.length} tarefa(s) nesta lista</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <NotificacoesSino onAbrir={abrirNotif} />
-            {podeEditar && (
-              <button type="button" onClick={() => novaTarefa(statusInicialSlug)} className="inline-flex items-center gap-2 rounded-xl bg-verde-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-verde-accent active:scale-95">
-                <Plus className="size-4" /> Nova tarefa
-              </button>
-            )}
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 items-center justify-center rounded-xl bg-verde-light text-verde-primary">
+            <KanbanSquare className="size-6" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{quadro?.nome ?? "Gestão Chabra"}</h1>
+            <p className="text-sm text-gray-500">{items.length} tarefa(s) nesta lista</p>
           </div>
         </div>
 
@@ -309,9 +299,15 @@ export default function GestaoChabraPage() {
           </select>
         </div>
 
-        {/* Filtros */}
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="relative max-w-xs flex-1">
+        {/* Barra de ferramentas: busca + filtros + ações, tudo agrupado */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {podeEditar && (
+            <button type="button" onClick={() => novaTarefa(statusInicialSlug)} className="inline-flex items-center gap-2 rounded-lg bg-verde-primary px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-verde-accent active:scale-95">
+              <Plus className="size-4" /> Nova tarefa
+            </button>
+          )}
+          <NotificacoesSino onAbrir={abrirNotif} />
+          <div className="relative w-full sm:w-64">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar tarefa…" className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-verde-primary focus:outline-none" />
           </div>
@@ -334,7 +330,7 @@ export default function GestaoChabraPage() {
             </button>
           )}
           {podeEditar && (
-            <div className="relative sm:ml-auto">
+            <div className="relative">
               <button type="button" onClick={() => setConfigOpen((v) => !v)} title="Configurar quadro" className="relative z-40 inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
                 <Settings className="size-4" /> Configurar <ChevronDown className="size-3.5 text-gray-400" />
               </button>
