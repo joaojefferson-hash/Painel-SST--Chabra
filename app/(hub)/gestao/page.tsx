@@ -3,17 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Zap, Repeat, Settings, ChevronDown, Clock } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Repeat, Settings, ChevronDown, Clock } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
-  useQuadros, useTarefas, useReordenar, useUsuariosLista,
+  useQuadros, useTarefas, useReordenar, useUsuariosLista, useSalvarTarefa,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
-  useStatusQuadro, statusPadrao, useCamposQuadro,
+  useStatusQuadro, statusPadrao, useCamposQuadro, useEtiquetasQuadro,
   useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner, useTempoQuadro,
   iniciais, corAvatar, formatarDuracao,
   PRIORIDADES,
-  type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus, type GestaoNotificacao,
+  type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus, type GestaoNotificacao, type PrioridadeTarefa,
 } from "@/lib/hooks/useGestao";
 import GestaoSidebar from "@/components/gestao/GestaoSidebar";
 import NotificacoesSino from "@/components/gestao/NotificacoesSino";
@@ -22,6 +22,7 @@ import StatusManagerModal from "@/components/gestao/StatusManagerModal";
 import CamposManagerModal from "@/components/gestao/CamposManagerModal";
 import AutomacoesManagerModal from "@/components/gestao/AutomacoesManagerModal";
 import TempoRelatorioModal from "@/components/gestao/TempoRelatorioModal";
+import EtiquetasManagerModal from "@/components/gestao/EtiquetasManagerModal";
 import { formatarCampoValor } from "@/components/gestao/CampoInput";
 import VistaLista from "@/components/gestao/VistaLista";
 import VistaCalendario from "@/components/gestao/VistaCalendario";
@@ -66,9 +67,12 @@ export default function GestaoChabraPage() {
   const salvarPref = useSalvarPreferenciaVisao();
   const { data: statusList = [], isLoading: loadingStatus } = useStatusQuadro(quadro?.id_quadro);
   const { data: campos = [] } = useCamposQuadro(quadro?.id_quadro);
+  const { data: etiquetasCat = [] } = useEtiquetasQuadro(quadro?.id_quadro);
   const { data: dependencias = [] } = useTodasDependencias();
   const runAuto = useAutomacaoRunner(quadro?.id_quadro);
+  const salvar = useSalvarTarefa();
   const { data: tempoEntries = [] } = useTempoQuadro(quadro?.id_quadro, tarefas.map((t) => t.id_tarefa));
+  const etiquetaCor = useMemo(() => new Map(etiquetasCat.map((e) => [e.nome, e.cor])), [etiquetasCat]);
 
   const [items, setItems] = useState<GestaoTarefa[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -91,6 +95,8 @@ export default function GestaoChabraPage() {
   const [autoOpen, setAutoOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [relatorioOpen, setRelatorioOpen] = useState(false);
+  const [etiquetasOpen, setEtiquetasOpen] = useState(false);
+  const [quadroAgrupar, setQuadroAgrupar] = useState<"status" | "responsavel" | "prioridade" | "etiqueta">("status");
 
   useEffect(() => {
     if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
@@ -113,8 +119,8 @@ export default function GestaoChabraPage() {
   }
 
   const etiquetasSugeridas = useMemo(
-    () => [...new Set(items.flatMap((t) => t.etiquetas ?? []))].sort((a, b) => a.localeCompare(b, "pt-BR")),
-    [items],
+    () => [...new Set([...etiquetasCat.map((e) => e.nome), ...items.flatMap((t) => t.etiquetas ?? [])])].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [items, etiquetasCat],
   );
 
   const tempoPorTarefa = useMemo(() => {
@@ -157,13 +163,34 @@ export default function GestaoChabraPage() {
     ];
   }, [statuses, items, quadro]);
 
-  const colunas = useMemo(() => {
+  // Grupos do Quadro: por status (default) ou por responsável/prioridade/etiqueta.
+  const gruposQuadro = useMemo<{ slug: string; nome: string; cor: string }[]>(() => {
+    if (quadroAgrupar === "status") return colunasDef.map((c) => ({ slug: c.slug, nome: c.nome, cor: c.cor }));
+    if (quadroAgrupar === "prioridade") return PRIORIDADES.map((p) => ({ slug: p.value, nome: p.label, cor: p.cor }));
+    if (quadroAgrupar === "responsavel") {
+      const nomes = [...new Set(items.map((t) => t.responsavel).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+      return [...nomes.map((n) => ({ slug: n, nome: n, cor: corAvatar(n) })), { slug: "__none__", nome: "Sem responsável", cor: "#cbd5e1" }];
+    }
+    const tags = [...new Set(items.flatMap((t) => t.etiquetas ?? []))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return [...tags.map((tg) => ({ slug: tg, nome: tg, cor: etiquetaCor.get(tg) ?? "#94a3b8" })), { slug: "__none__", nome: "Sem etiqueta", cor: "#cbd5e1" }];
+  }, [quadroAgrupar, colunasDef, items, etiquetaCor]);
+
+  const porGrupo = useMemo(() => {
+    const pertence = (t: GestaoTarefa, chave: string) => {
+      if (quadroAgrupar === "status") return t.status === chave;
+      if (quadroAgrupar === "prioridade") return t.prioridade === chave;
+      if (quadroAgrupar === "responsavel") return (t.responsavel || "__none__") === chave;
+      return chave === "__none__" ? (t.etiquetas?.length ?? 0) === 0 : (t.etiquetas ?? []).includes(chave);
+    };
     const m: Record<string, GestaoTarefa[]> = {};
-    for (const s of colunasDef) m[s.slug] = [];
-    for (const t of items) (m[t.status] ??= []).push(t);
-    for (const k of Object.keys(m)) m[k].sort((a, b) => a.ordem - b.ordem || a.created_at.localeCompare(b.created_at));
+    for (const g of gruposQuadro) {
+      m[g.slug] = items.filter((t) => pertence(t, g.slug));
+      m[g.slug].sort(quadroAgrupar === "status"
+        ? (a, b) => a.ordem - b.ordem || a.created_at.localeCompare(b.created_at)
+        : (a, b) => a.created_at.localeCompare(b.created_at));
+    }
     return m;
-  }, [items, colunasDef]);
+  }, [gruposQuadro, items, quadroAgrupar]);
 
   function novaTarefa(status: StatusTarefa) {
     setEditando(null);
@@ -200,6 +227,18 @@ export default function GestaoChabraPage() {
     if (dragged.status !== targetStatus) {
       runAuto({ gatilho: "status_muda", tarefa: { ...dragged, status: targetStatus }, de: dragged.status, para: targetStatus });
     }
+  }
+
+  // Soltar num grupo: por status reaproveita soltar(); nos demais, define o campo do grupo.
+  function soltarGrupo(chave: string, beforeId?: string) {
+    if (quadroAgrupar === "status") { soltar(chave, beforeId); return; }
+    setColHover(null);
+    const dragged = items.find((t) => t.id_tarefa === dragId);
+    setDragId(null);
+    if (!dragged || !podeEditar) return;
+    const base = { id_tarefa: dragged.id_tarefa, id_quadro: dragged.id_quadro };
+    if (quadroAgrupar === "prioridade") salvar.mutate({ ...base, prioridade: chave as PrioridadeTarefa });
+    else if (quadroAgrupar === "responsavel") salvar.mutate({ ...base, responsavel: chave === "__none__" ? null : chave });
   }
 
   return (
@@ -290,6 +329,7 @@ export default function GestaoChabraPage() {
                   <div className="absolute right-0 z-40 mt-1 w-44 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
                     <button type="button" onClick={() => { setConfigOpen(false); setManagerOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><SlidersHorizontal className="size-4 text-gray-400" /> Status</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setCamposOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Tags className="size-4 text-gray-400" /> Campos personalizados</button>
+                    <button type="button" onClick={() => { setConfigOpen(false); setEtiquetasOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Tag className="size-4 text-gray-400" /> Etiquetas</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setAutoOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Zap className="size-4 text-gray-400" /> Automações</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setRelatorioOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Clock className="size-4 text-gray-400" /> Relatório de tempo</button>
                   </div>
@@ -298,6 +338,18 @@ export default function GestaoChabraPage() {
             </div>
           )}
         </div>
+
+        {vista === "quadro" && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-medium text-gray-500">Agrupar:</span>
+            {([["status", "Status"], ["responsavel", "Responsável"], ["prioridade", "Prioridade"], ["etiqueta", "Etiqueta"]] as const).map(([v, l]) => (
+              <button key={v} type="button" onClick={() => setQuadroAgrupar(v)}
+                className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${quadroAgrupar === v ? "bg-verde-primary text-white" : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"}`}>
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
 
         {(loadingQuadros || loadingTarefas || loadingStatus) ? (
           <div className="mt-5 flex gap-3 overflow-hidden">
@@ -314,26 +366,30 @@ export default function GestaoChabraPage() {
         ) : vista === "quadro" ? (
           <div className="relative mt-5">
           <div className="flex gap-3 overflow-x-auto pb-2">
-            {colunasDef.map((col) => {
-              const todas = colunas[col.slug] ?? [];
+            {gruposQuadro.map((col) => {
+              const todas = porGrupo[col.slug] ?? [];
               const lista = todas.filter(passaFiltro);
+              const atrasadasCol = todas.filter((t) => t.prazo && diasAte(t.prazo) < 0 && statusMap.get(t.status)?.tipo !== "concluido").length;
+              const tempoCol = todas.reduce((s, t) => s + (tempoPorTarefa.get(t.id_tarefa) ?? 0), 0);
               return (
                 <div
                   key={col.slug}
                   onDragOver={(e) => { if (dragId) { e.preventDefault(); setColHover(col.slug); setDropAlvo({ col: col.slug, beforeId: null }); } }}
                   onDragLeave={(e) => { if (dragId && !e.currentTarget.contains(e.relatedTarget as Node)) setColHover((c) => (c === col.slug ? null : c)); }}
-                  onDrop={() => soltar(col.slug)}
+                  onDrop={() => soltarGrupo(col.slug)}
                   className={`flex w-72 shrink-0 flex-col rounded-xl border bg-gray-50/60 p-2.5 transition ${colHover === col.slug ? "border-verde-primary ring-2 ring-verde-primary/20" : "border-gray-200"}`}
                   style={{ minHeight: "calc(100vh - 15rem)" }}
                 >
                   <div className="mb-2 flex items-center justify-between px-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span className="size-2.5 rounded-full" style={{ background: col.cor }} />
                       <p className="text-sm font-semibold text-gray-700">{col.nome}</p>
                       <span className="rounded-full bg-gray-200 px-1.5 text-[11px] font-semibold text-gray-600">{temFiltro ? `${lista.length}/${todas.length}` : todas.length}</span>
+                      {atrasadasCol > 0 && <span className="rounded-full bg-red-50 px-1.5 text-[11px] font-semibold text-red-600" title="Atrasadas">{atrasadasCol} atras.</span>}
+                      {tempoCol > 0 && <span className="inline-flex items-center gap-0.5 text-[11px] text-gray-400" title="Tempo total"><Clock className="size-3" />{formatarDuracao(tempoCol)}</span>}
                     </div>
                     {podeEditar && (
-                      <button type="button" onClick={() => novaTarefa(col.slug)} className="rounded-md p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700" title="Nova tarefa aqui">
+                      <button type="button" onClick={() => novaTarefa(quadroAgrupar === "status" ? col.slug : statusInicialSlug)} className="rounded-md p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700" title="Nova tarefa aqui">
                         <Plus className="size-4" />
                       </button>
                     )}
@@ -348,15 +404,15 @@ export default function GestaoChabraPage() {
                       const subFeitas = subs.filter((s) => s.feito).length;
                       return (
                         <div key={t.id_tarefa}>
-                          {dropAlvo?.col === col.slug && dropAlvo.beforeId === t.id_tarefa && dragId !== t.id_tarefa && (
+                          {quadroAgrupar === "status" && dropAlvo?.col === col.slug && dropAlvo.beforeId === t.id_tarefa && dragId !== t.id_tarefa && (
                             <div className="mb-2 h-1 rounded-full bg-verde-primary/70" />
                           )}
                           <div
-                            draggable={podeEditar}
+                            draggable={podeEditar && quadroAgrupar !== "etiqueta"}
                             onDragStart={() => setDragId(t.id_tarefa)}
                             onDragEnd={() => { setDragId(null); setColHover(null); setDropAlvo(null); }}
                             onDragOver={(e) => { if (dragId) { e.preventDefault(); e.stopPropagation(); setColHover(col.slug); setDropAlvo({ col: col.slug, beforeId: t.id_tarefa }); } }}
-                            onDrop={(e) => { e.stopPropagation(); soltar(col.slug, t.id_tarefa); }}
+                            onDrop={(e) => { e.stopPropagation(); soltarGrupo(col.slug, t.id_tarefa); }}
                             onClick={() => { setEditando(t); setModalOpen(true); }}
                             style={{ borderLeftColor: corPrioridade(t.prioridade) }}
                             className={`cursor-pointer rounded-lg border border-l-4 border-gray-200 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md ${dragId === t.id_tarefa ? "rotate-1 opacity-40" : ""}`}
@@ -364,9 +420,12 @@ export default function GestaoChabraPage() {
                             <p className={`text-sm font-medium ${concluido ? "text-gray-400 line-through" : "text-gray-800"}`}>{t.titulo}</p>
                             {(t.etiquetas ?? []).length > 0 && (
                               <div className="mt-1.5 flex flex-wrap gap-1">
-                                {(t.etiquetas ?? []).map((e) => (
-                                  <span key={e} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">{e}</span>
-                                ))}
+                                {(t.etiquetas ?? []).map((e) => {
+                                  const cor = etiquetaCor.get(e);
+                                  return (
+                                    <span key={e} className="rounded px-1.5 py-0.5 text-[10px] font-medium" style={cor ? { background: cor, color: "#fff" } : { background: "#f3f4f6", color: "#6b7280" }}>{e}</span>
+                                  );
+                                })}
                               </div>
                             )}
                             {(() => {
@@ -384,6 +443,11 @@ export default function GestaoChabraPage() {
                                 </div>
                               ) : null;
                             })()}
+                            {subs.length > 0 && (
+                              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-100">
+                                <div className="h-1 rounded-full bg-verde-primary transition-all" style={{ width: `${Math.round((subFeitas / subs.length) * 100)}%` }} />
+                              </div>
+                            )}
                             <div className="mt-2 flex items-center gap-2">
                               {t.prazo && (
                                 <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${atrasada ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
@@ -415,7 +479,7 @@ export default function GestaoChabraPage() {
                         </div>
                       );
                     })}
-                    {dropAlvo?.col === col.slug && dropAlvo.beforeId === null && dragId && (
+                    {quadroAgrupar === "status" && dropAlvo?.col === col.slug && dropAlvo.beforeId === null && dragId && (
                       <div className="h-1 rounded-full bg-verde-primary/70" />
                     )}
                     {lista.length === 0 && (
@@ -456,7 +520,11 @@ export default function GestaoChabraPage() {
         )}
 
         {podeEditar && vista === "quadro" && (
-          <p className="mt-3 text-center text-xs text-gray-400">Arraste os cards entre as colunas para mudar o status.</p>
+          <p className="mt-3 text-center text-xs text-gray-400">
+            {quadroAgrupar === "etiqueta"
+              ? "Agrupado por etiqueta — arraste desabilitado neste modo."
+              : `Arraste os cards entre as colunas para mudar ${quadroAgrupar === "responsavel" ? "o responsável" : quadroAgrupar === "prioridade" ? "a prioridade" : "o status"}.`}
+          </p>
         )}
           </div>
         </div>
@@ -510,6 +578,16 @@ export default function GestaoChabraPage() {
       )}
 
       <TempoRelatorioModal open={relatorioOpen} onClose={() => setRelatorioOpen(false)} entries={tempoEntries} />
+
+      {quadro && (
+        <EtiquetasManagerModal
+          open={etiquetasOpen}
+          onClose={() => setEtiquetasOpen(false)}
+          idQuadro={quadro.id_quadro}
+          etiquetas={etiquetasCat}
+          podeEditar={podeEditar}
+        />
+      )}
     </div>
   );
 }

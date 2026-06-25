@@ -447,6 +447,63 @@ export function useExcluirCampo() {
   });
 }
 
+export interface GestaoEtiqueta {
+  id: string;
+  id_quadro: string;
+  nome: string;
+  cor: string;
+  ordem: number;
+}
+
+/** Catálogo de etiquetas (nome + cor) de um quadro. */
+export function useEtiquetasQuadro(idQuadro: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gestao-etiquetas", idQuadro],
+    enabled: !!idQuadro,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_etiquetas").select("*").eq("id_quadro", idQuadro!).order("ordem", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoEtiqueta[];
+    },
+  });
+}
+
+export function useSalvarEtiqueta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (e: { id?: string; id_quadro: string; nome?: string; cor?: string; ordem?: number }) => {
+      const sb = createSupabaseBrowserClient();
+      if (!e.id) {
+        const { error } = await sb.from("gestao_etiquetas").insert({ id: crypto.randomUUID(), id_quadro: e.id_quadro, nome: e.nome?.trim() || "etiqueta", cor: e.cor ?? "#94a3b8", ordem: e.ordem ?? 0 } as never);
+        if (error) throw error;
+        return;
+      }
+      const patch: Record<string, unknown> = {};
+      if (e.nome !== undefined) patch.nome = e.nome.trim() || "etiqueta";
+      if (e.cor !== undefined) patch.cor = e.cor;
+      if (e.ordem !== undefined) patch.ordem = e.ordem;
+      const { error } = await sb.from("gestao_etiquetas").update(patch as never).eq("id", e.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-etiquetas"] }),
+    onError: (e) => toast.error((e as { code?: string }).code === "23505" ? "Já existe uma etiqueta com esse nome." : mensagemErro(e, "Não foi possível salvar a etiqueta.")),
+  });
+}
+
+export function useExcluirEtiqueta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_etiquetas").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-etiquetas"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir a etiqueta.")),
+  });
+}
+
 export interface GestaoDependencia {
   id: string;
   id_tarefa: string;   // depende de…
