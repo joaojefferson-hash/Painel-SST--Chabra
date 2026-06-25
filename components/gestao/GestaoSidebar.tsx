@@ -7,6 +7,7 @@ import {
   useCriarQuadro, useRenomearQuadro, useExcluirQuadro,
   type GestaoEspaco, type GestaoPasta, type GestaoQuadro,
 } from "@/lib/hooks/useGestao";
+import { confirmar } from "@/components/ui/confirm";
 
 const inputDark = "min-w-0 flex-1 rounded border border-white/40 bg-white/10 px-1 py-0.5 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-verde-accent";
 
@@ -68,7 +69,7 @@ export default function GestaoSidebar({
         const listasSoltas = quadros.filter((q) => q.id_espaco === esp.id && !q.id_pasta);
         return (
           <div key={esp.id}>
-            <div className="group flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-white/10" onClick={() => toggle(`e:${esp.id}`)} role="button">
+            <div className="group flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-verde-accent" onClick={() => toggle(`e:${esp.id}`)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(`e:${esp.id}`); } }} role="button" tabIndex={0}>
               {aberto(`e:${esp.id}`) ? <ChevronDown className="size-3.5 shrink-0 text-white/40" /> : <ChevronRight className="size-3.5 shrink-0 text-white/40" />}
               <Layers className="size-4 shrink-0" style={{ color: esp.cor }} />
               <Nome chave={`e:${esp.id}`} nome={esp.nome} onSalvar={(v) => salvarEspaco.mutate({ id: esp.id, nome: v })} className="font-semibold text-white/90" />
@@ -76,7 +77,7 @@ export default function GestaoSidebar({
                 <AcoesBtn>
                   <button type="button" title="Nova pasta" onClick={(e) => { e.stopPropagation(); salvarPasta.mutate({ id_espaco: esp.id, nome: "Nova pasta" }); }} className="rounded p-0.5 text-white/40 hover:text-white"><Plus className="size-3.5" /></button>
                   <button type="button" title="Renomear" onClick={(e) => { e.stopPropagation(); setEditando(`e:${esp.id}`); }} className="rounded p-0.5 text-white/40 hover:text-white"><Pencil className="size-3.5" /></button>
-                  <button type="button" title="Excluir espaço" onClick={(e) => { e.stopPropagation(); excluirEspaco.mutate(esp.id); }} className="rounded p-0.5 text-white/30 hover:text-red-300"><Trash2 className="size-3.5" /></button>
+                  <button type="button" title="Excluir espaço" onClick={async (e) => { e.stopPropagation(); if (await confirmar({ title: `Excluir espaço "${esp.nome}"?` })) excluirEspaco.mutate(esp.id); }} className="rounded p-0.5 text-white/30 hover:text-red-300"><Trash2 className="size-3.5" /></button>
                 </AcoesBtn>
               )}
             </div>
@@ -87,7 +88,7 @@ export default function GestaoSidebar({
                 {listasSoltas.map((q) => (
                   <ItemLista key={q.id_quadro} q={q} ativo={q.id_quadro === quadroId} editando={editando === `q:${q.id_quadro}`}
                     onSelect={onSelect} podeEditar={podeEditar} onRenomearStart={() => setEditando(`q:${q.id_quadro}`)}
-                    onRenomear={(v) => { renomearQuadro.mutate({ id_quadro: q.id_quadro, nome: v }); setEditando(null); }} onExcluir={() => excluirQuadro.mutate(q.id_quadro)} />
+                    onRenomear={(v) => { renomearQuadro.mutate({ id_quadro: q.id_quadro, nome: v }); setEditando(null); }} onExcluir={async () => { if (await confirmar({ title: `Excluir lista "${q.nome}"?` })) excluirQuadro.mutate(q.id_quadro); }} />
                 ))}
                 {podeEditar && (
                   <button type="button" onClick={() => novaLista(esp.id, null)} className="flex w-full items-center gap-1 rounded px-1.5 py-0.5 text-xs text-white/45 hover:bg-white/10 hover:text-white">
@@ -100,7 +101,7 @@ export default function GestaoSidebar({
                   const listas = quadros.filter((q) => q.id_pasta === pa.id);
                   return (
                     <div key={pa.id}>
-                      <div className="group flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-white/10" onClick={() => toggle(`p:${pa.id}`)} role="button">
+                      <div className="group flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-verde-accent" onClick={() => toggle(`p:${pa.id}`)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(`p:${pa.id}`); } }} role="button" tabIndex={0}>
                         {aberto(`p:${pa.id}`) ? <ChevronDown className="size-3.5 shrink-0 text-white/40" /> : <ChevronRight className="size-3.5 shrink-0 text-white/40" />}
                         <Folder className="size-4 shrink-0 text-white/45" />
                         <Nome chave={`p:${pa.id}`} nome={pa.nome} onSalvar={(v) => salvarPasta.mutate({ id: pa.id, nome: v })} className="font-medium text-white/80" />
@@ -108,7 +109,7 @@ export default function GestaoSidebar({
                           <AcoesBtn>
                             <button type="button" title="Nova lista" onClick={(e) => { e.stopPropagation(); novaLista(esp.id, pa.id); }} className="rounded p-0.5 text-white/40 hover:text-white"><Plus className="size-3.5" /></button>
                             <button type="button" title="Renomear" onClick={(e) => { e.stopPropagation(); setEditando(`p:${pa.id}`); }} className="rounded p-0.5 text-white/40 hover:text-white"><Pencil className="size-3.5" /></button>
-                            <button type="button" title="Excluir pasta" onClick={(e) => { e.stopPropagation(); excluirPasta.mutate(pa.id); }} className="rounded p-0.5 text-white/30 hover:text-red-300"><Trash2 className="size-3.5" /></button>
+                            <button type="button" title="Excluir pasta" onClick={async (e) => { e.stopPropagation(); if (await confirmar({ title: `Excluir pasta "${pa.nome}"?` })) excluirPasta.mutate(pa.id); }} className="rounded p-0.5 text-white/30 hover:text-red-300"><Trash2 className="size-3.5" /></button>
                           </AcoesBtn>
                         )}
                       </div>
@@ -117,7 +118,7 @@ export default function GestaoSidebar({
                           {listas.map((q) => (
                             <ItemLista key={q.id_quadro} q={q} ativo={q.id_quadro === quadroId} editando={editando === `q:${q.id_quadro}`}
                               onSelect={onSelect} podeEditar={podeEditar} onRenomearStart={() => setEditando(`q:${q.id_quadro}`)}
-                              onRenomear={(v) => { renomearQuadro.mutate({ id_quadro: q.id_quadro, nome: v }); setEditando(null); }} onExcluir={() => excluirQuadro.mutate(q.id_quadro)} />
+                              onRenomear={(v) => { renomearQuadro.mutate({ id_quadro: q.id_quadro, nome: v }); setEditando(null); }} onExcluir={async () => { if (await confirmar({ title: `Excluir lista "${q.nome}"?` })) excluirQuadro.mutate(q.id_quadro); }} />
                           ))}
                           {listas.length === 0 && <p className="px-1.5 py-0.5 text-xs text-white/30">Vazia</p>}
                         </div>
@@ -151,7 +152,7 @@ function ItemLista({ q, ativo, editando, onSelect, podeEditar, onRenomearStart, 
   onExcluir: () => void;
 }) {
   return (
-    <div className={`group relative flex items-center gap-1.5 rounded-md px-1.5 py-1 ${ativo ? "bg-white/[0.16] text-white" : "text-white/70 hover:bg-white/10 hover:text-white"}`} onClick={() => onSelect(q.id_quadro)} role="button">
+    <div className={`group relative flex items-center gap-1.5 rounded-md px-1.5 py-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-verde-accent ${ativo ? "bg-white/[0.16] text-white" : "text-white/70 hover:bg-white/10 hover:text-white"}`} onClick={() => onSelect(q.id_quadro)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onSelect(q.id_quadro); } }} role="button" tabIndex={0}>
       {ativo && <span className="absolute left-0 top-[15%] h-[70%] w-[3px] rounded-r-full bg-verde-accent" />}
       <List className="size-3.5 shrink-0" />
       {editando ? (

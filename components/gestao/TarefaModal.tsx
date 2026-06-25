@@ -17,6 +17,7 @@ import {
 } from "@/lib/hooks/useGestao";
 import CampoInput from "@/components/gestao/CampoInput";
 import TempoTracker from "@/components/gestao/TempoTracker";
+import { confirmar } from "@/components/ui/confirm";
 
 function quando(iso: string): string {
   const d = new Date(iso);
@@ -182,8 +183,9 @@ export default function TarefaModal({
     onClose();
   }
 
-  function handleExcluir() {
+  async function handleExcluir() {
     if (!tarefa) return;
+    if (!(await confirmar({ title: "Excluir tarefa?", description: `"${tarefa.titulo}" e seus comentários/apontamentos serão removidos. Esta ação não pode ser desfeita.` }))) return;
     excluir.mutate(tarefa.id_tarefa, { onSuccess: () => { toast.success("Tarefa excluída"); onClose(); } });
   }
 

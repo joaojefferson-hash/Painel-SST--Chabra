@@ -3,6 +3,7 @@
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import MultiChipInput from "@/components/ui/MultiChipInput";
+import { confirmar } from "@/components/ui/confirm";
 import { useSalvarCampo, useExcluirCampo, type GestaoCampo, type TipoCampo } from "@/lib/hooks/useGestao";
 
 const TIPOS: { value: TipoCampo; label: string }[] = [
@@ -69,7 +70,7 @@ export default function CamposManagerModal({
                 <div className="flex shrink-0 items-center">
                   <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30"><ChevronUp className="size-4" /></button>
                   <button type="button" onClick={() => mover(i, 1)} disabled={i === campos.length - 1} className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30"><ChevronDown className="size-4" /></button>
-                  <button type="button" onClick={() => excluir.mutate(c.id)} className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-600" title="Excluir campo"><Trash2 className="size-4" /></button>
+                  <button type="button" onClick={async () => { if (await confirmar({ title: `Excluir campo "${c.nome}"?`, description: "O valor desse campo nas tarefas deixa de aparecer." })) excluir.mutate(c.id); }} className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-600" title="Excluir campo"><Trash2 className="size-4" /></button>
                 </div>
               )}
             </div>

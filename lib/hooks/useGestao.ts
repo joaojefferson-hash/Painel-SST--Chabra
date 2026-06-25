@@ -536,10 +536,11 @@ export function useDependencias(idTarefa: string | null | undefined) {
   });
 }
 
-/** Todas as dependências (para desenhar setas na Timeline). */
-export function useTodasDependencias() {
+/** Todas as dependências (para desenhar setas na Timeline). Carregue só quando a Timeline estiver aberta. */
+export function useTodasDependencias(enabled = true) {
   return useQuery({
     queryKey: ["gestao-dependencias-todas"],
+    enabled,
     queryFn: async () => {
       const sb = createSupabaseBrowserClient();
       const { data, error } = await sb.from("gestao_dependencias").select("id,id_tarefa,depende_de");

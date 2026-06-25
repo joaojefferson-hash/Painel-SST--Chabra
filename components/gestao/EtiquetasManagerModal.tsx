@@ -2,6 +2,7 @@
 
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import Modal from "@/components/ui/Modal";
+import { confirmar } from "@/components/ui/confirm";
 import { useSalvarEtiqueta, useExcluirEtiqueta, type GestaoEtiqueta } from "@/lib/hooks/useGestao";
 
 export default function EtiquetasManagerModal({
@@ -57,7 +58,7 @@ export default function EtiquetasManagerModal({
               <div className="flex shrink-0 items-center">
                 <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30"><ChevronUp className="size-4" /></button>
                 <button type="button" onClick={() => mover(i, 1)} disabled={i === etiquetas.length - 1} className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30"><ChevronDown className="size-4" /></button>
-                <button type="button" onClick={() => excluir.mutate(e.id)} className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-600" title="Excluir"><Trash2 className="size-4" /></button>
+                <button type="button" onClick={async () => { if (await confirmar({ title: `Excluir etiqueta "${e.nome}"?`, description: "Some do catálogo; as tarefas mantêm o nome (sem cor)." })) excluir.mutate(e.id); }} className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-600" title="Excluir"><Trash2 className="size-4" /></button>
               </div>
             )}
           </div>

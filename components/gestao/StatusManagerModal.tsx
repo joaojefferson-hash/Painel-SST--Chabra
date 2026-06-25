@@ -2,6 +2,7 @@
 
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import Modal from "@/components/ui/Modal";
+import { confirmar } from "@/components/ui/confirm";
 import { useSalvarStatus, useExcluirStatus, type GestaoStatus, type TipoStatus } from "@/lib/hooks/useGestao";
 
 const TIPOS: { value: TipoStatus; label: string }[] = [
@@ -71,7 +72,7 @@ export default function StatusManagerModal({
               <div className="flex shrink-0 items-center">
                 <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30"><ChevronUp className="size-4" /></button>
                 <button type="button" onClick={() => mover(i, 1)} disabled={i === statuses.length - 1} className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30"><ChevronDown className="size-4" /></button>
-                <button type="button" onClick={() => excluir.mutate({ id: s.id, id_quadro: idQuadro, slug: s.slug })} className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-600" title="Excluir"><Trash2 className="size-4" /></button>
+                <button type="button" onClick={async () => { if (await confirmar({ title: `Excluir status "${s.nome}"?` })) excluir.mutate({ id: s.id, id_quadro: idQuadro, slug: s.slug }); }} className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-600" title="Excluir"><Trash2 className="size-4" /></button>
               </div>
             )}
           </div>

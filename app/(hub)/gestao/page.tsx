@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, CalendarClock, Search, X, CheckSquare, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Repeat, Settings, ChevronDown, Clock } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
@@ -11,7 +11,7 @@ import {
   usePreferenciaVisao, useSalvarPreferenciaVisao,
   useStatusQuadro, statusPadrao, useCamposQuadro, useEtiquetasQuadro,
   useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner, useTempoQuadro,
-  iniciais, corAvatar, formatarDuracao,
+  corAvatar, formatarDuracao,
   PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus, type GestaoNotificacao, type PrioridadeTarefa,
 } from "@/lib/hooks/useGestao";
@@ -23,20 +23,16 @@ import CamposManagerModal from "@/components/gestao/CamposManagerModal";
 import AutomacoesManagerModal from "@/components/gestao/AutomacoesManagerModal";
 import TempoRelatorioModal from "@/components/gestao/TempoRelatorioModal";
 import EtiquetasManagerModal from "@/components/gestao/EtiquetasManagerModal";
-import { formatarCampoValor } from "@/components/gestao/CampoInput";
+import TarefaCard from "@/components/gestao/TarefaCard";
+import { ConfirmHost } from "@/components/ui/confirm";
 import VistaLista from "@/components/gestao/VistaLista";
 import VistaCalendario from "@/components/gestao/VistaCalendario";
 import VistaTimeline from "@/components/gestao/VistaTimeline";
 
-const corPrioridade = (p: string) => PRIORIDADES.find((x) => x.value === p)?.cor ?? "#94a3b8";
 function diasAte(iso: string): number {
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   return Math.round((new Date(iso + "T00:00:00").getTime() - hoje.getTime()) / 86_400_000);
-}
-function fmtPrazo(iso: string): string {
-  const [, m, d] = iso.split("-");
-  return `${d}/${m}`;
 }
 
 const VISTAS: { value: VistaGestao; label: string; icon: typeof KanbanSquare }[] = [
@@ -68,7 +64,6 @@ export default function GestaoChabraPage() {
   const { data: statusList = [], isLoading: loadingStatus } = useStatusQuadro(quadro?.id_quadro);
   const { data: campos = [] } = useCamposQuadro(quadro?.id_quadro);
   const { data: etiquetasCat = [] } = useEtiquetasQuadro(quadro?.id_quadro);
-  const { data: dependencias = [] } = useTodasDependencias();
   const runAuto = useAutomacaoRunner(quadro?.id_quadro);
   const salvar = useSalvarTarefa();
   const { data: tempoEntries = [] } = useTempoQuadro(quadro?.id_quadro, tarefas.map((t) => t.id_tarefa));
@@ -89,6 +84,7 @@ export default function GestaoChabraPage() {
   const [agruparPor, setAgruparPor] = useState<AgruparPor | null>(null);
   const [soMinhas, setSoMinhas] = useState(false);
   const [dropAlvo, setDropAlvo] = useState<{ col: StatusTarefa; beforeId: string | null } | null>(null);
+  const { data: dependencias = [] } = useTodasDependencias(vista === "timeline");
 
   const [managerOpen, setManagerOpen] = useState(false);
   const [camposOpen, setCamposOpen] = useState(false);
@@ -97,10 +93,20 @@ export default function GestaoChabraPage() {
   const [relatorioOpen, setRelatorioOpen] = useState(false);
   const [etiquetasOpen, setEtiquetasOpen] = useState(false);
   const [quadroAgrupar, setQuadroAgrupar] = useState<"status" | "responsavel" | "prioridade" | "etiqueta">("status");
+  const [online, setOnline] = useState(true);
+  const [boardScrolled, setBoardScrolled] = useState(false);
 
   useEffect(() => {
     if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
   }, [user?.perfil, router]);
+
+  useEffect(() => {
+    setOnline(navigator.onLine);
+    const up = () => setOnline(true), down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
+  }, []);
 
   useEffect(() => setItems(tarefas), [tarefas]);
 
@@ -237,8 +243,15 @@ export default function GestaoChabraPage() {
     setDragId(null);
     if (!dragged || !podeEditar) return;
     const base = { id_tarefa: dragged.id_tarefa, id_quadro: dragged.id_quadro };
-    if (quadroAgrupar === "prioridade") salvar.mutate({ ...base, prioridade: chave as PrioridadeTarefa });
-    else if (quadroAgrupar === "responsavel") salvar.mutate({ ...base, responsavel: chave === "__none__" ? null : chave });
+    if (quadroAgrupar === "prioridade") {
+      const prio = chave as PrioridadeTarefa;
+      setItems((arr) => arr.map((t) => (t.id_tarefa === dragged.id_tarefa ? { ...t, prioridade: prio } : t)));
+      salvar.mutate({ ...base, prioridade: prio });
+    } else if (quadroAgrupar === "responsavel") {
+      const novo = chave === "__none__" ? null : chave;
+      setItems((arr) => arr.map((t) => (t.id_tarefa === dragged.id_tarefa ? { ...t, responsavel: novo } : t)));
+      salvar.mutate({ ...base, responsavel: novo });
+    }
   }
 
   return (
@@ -261,6 +274,11 @@ export default function GestaoChabraPage() {
       {/* Conteúdo: desloca pela sidebar e ocupa toda a largura restante */}
       <div className="lg:pl-64">
         <div className="px-5 py-7 sm:px-8">
+          {!online && (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
+              Sem conexão — as alterações podem não ser salvas até reconectar.
+            </div>
+          )}
           <Link href="/visao-geral" className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 lg:hidden">
             <ArrowLeft className="size-4" /> Visão geral
           </Link>
@@ -375,7 +393,8 @@ export default function GestaoChabraPage() {
           </div>
         ) : vista === "quadro" ? (
           <div className="relative mt-5">
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          {boardScrolled && <div className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-10 bg-gradient-to-r from-[#f6f5f2] to-transparent" />}
+          <div className="flex gap-3 overflow-x-auto pb-2" onScroll={(e) => { const s = e.currentTarget.scrollLeft > 4; setBoardScrolled((p) => (p !== s ? s : p)); }}>
             {gruposQuadro.map((col) => {
               const todas = porGrupo[col.slug] ?? [];
               const lista = todas.filter(passaFiltro);
@@ -406,89 +425,27 @@ export default function GestaoChabraPage() {
                   </div>
 
                   <div className="min-h-[40px] flex-1 space-y-2">
-                    {lista.map((t) => {
-                      const dias = t.prazo ? diasAte(t.prazo) : null;
-                      const concluido = statusMap.get(t.status)?.tipo === "concluido";
-                      const atrasada = dias != null && dias < 0 && !concluido;
-                      const subs = t.subtarefas ?? [];
-                      const subFeitas = subs.filter((s) => s.feito).length;
-                      return (
-                        <div key={t.id_tarefa}>
-                          {quadroAgrupar === "status" && dropAlvo?.col === col.slug && dropAlvo.beforeId === t.id_tarefa && dragId !== t.id_tarefa && (
-                            <div className="mb-2 h-1 rounded-full bg-verde-primary/70" />
-                          )}
-                          <div
-                            draggable={podeEditar && quadroAgrupar !== "etiqueta"}
-                            onDragStart={() => setDragId(t.id_tarefa)}
-                            onDragEnd={() => { setDragId(null); setColHover(null); setDropAlvo(null); }}
-                            onDragOver={(e) => { if (dragId) { e.preventDefault(); e.stopPropagation(); setColHover(col.slug); setDropAlvo({ col: col.slug, beforeId: t.id_tarefa }); } }}
-                            onDrop={(e) => { e.stopPropagation(); soltarGrupo(col.slug, t.id_tarefa); }}
-                            onClick={() => { setEditando(t); setModalOpen(true); }}
-                            style={{ borderLeftColor: corPrioridade(t.prioridade) }}
-                            className={`cursor-pointer rounded-lg border border-l-4 border-gray-200 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md ${dragId === t.id_tarefa ? "rotate-1 opacity-40" : ""}`}
-                          >
-                            <p className={`text-sm font-medium ${concluido ? "text-gray-400 line-through" : "text-gray-800"}`}>{t.titulo}</p>
-                            {(t.etiquetas ?? []).length > 0 && (
-                              <div className="mt-1.5 flex flex-wrap gap-1">
-                                {(t.etiquetas ?? []).map((e) => {
-                                  const cor = etiquetaCor.get(e);
-                                  return (
-                                    <span key={e} className="rounded px-1.5 py-0.5 text-[10px] font-medium" style={cor ? { background: cor, color: "#fff" } : { background: "#f3f4f6", color: "#6b7280" }}>{e}</span>
-                                  );
-                                })}
-                              </div>
-                            )}
-                            {(() => {
-                              const chips = campos
-                                .filter((c) => c.tipo === "checkbox" || c.tipo === "selecao" || c.tipo === "moeda")
-                                .map((c) => ({ c, v: (t.campos ?? {})[c.id] }))
-                                .filter(({ c, v }) => (c.tipo === "checkbox" ? v === true : v != null && v !== ""));
-                              return chips.length > 0 ? (
-                                <div className="mt-1.5 flex flex-wrap gap-1">
-                                  {chips.map(({ c, v }) => (
-                                    <span key={c.id} className="rounded bg-verde-light/60 px-1.5 py-0.5 text-[10px] font-medium text-verde-primary" title={c.nome}>
-                                      {c.tipo === "checkbox" ? c.nome : formatarCampoValor(c, v)}
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : null;
-                            })()}
-                            {subs.length > 0 && (
-                              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-100">
-                                <div className="h-1 rounded-full bg-verde-primary transition-all" style={{ width: `${Math.round((subFeitas / subs.length) * 100)}%` }} />
-                              </div>
-                            )}
-                            <div className="mt-2 flex items-center gap-2">
-                              {t.prazo && (
-                                <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${atrasada ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
-                                  <CalendarClock className="size-3" /> {fmtPrazo(t.prazo)}
-                                </span>
-                              )}
-                              {subs.length > 0 && (
-                                <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500" title="Subtarefas">
-                                  <CheckSquare className="size-3" /> {subFeitas}/{subs.length}
-                                </span>
-                              )}
-                              {t.recorrencia && (
-                                <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-gray-500" title="Recorrente">
-                                  <Repeat className="size-3" />
-                                </span>
-                              )}
-                              {(tempoPorTarefa.get(t.id_tarefa) ?? 0) > 0 && (
-                                <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500" title="Tempo registrado">
-                                  <Clock className="size-3" /> {formatarDuracao(tempoPorTarefa.get(t.id_tarefa)!)}
-                                </span>
-                              )}
-                              {t.responsavel && (
-                                <span className="ml-auto flex size-6 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: corAvatar(t.responsavel) }} title={t.responsavel}>
-                                  {iniciais(t.responsavel)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {lista.map((t) => (
+                      <div key={t.id_tarefa}>
+                        {quadroAgrupar === "status" && dropAlvo?.col === col.slug && dropAlvo.beforeId === t.id_tarefa && dragId !== t.id_tarefa && (
+                          <div className="mb-2 h-1 rounded-full bg-verde-primary/70" />
+                        )}
+                        <TarefaCard
+                          t={t}
+                          statusMap={statusMap}
+                          etiquetaCor={etiquetaCor}
+                          tempoSeg={tempoPorTarefa.get(t.id_tarefa) ?? 0}
+                          campos={campos}
+                          arrastavel={podeEditar && quadroAgrupar !== "etiqueta"}
+                          arrastando={dragId === t.id_tarefa}
+                          onAbrir={() => { setEditando(t); setModalOpen(true); }}
+                          onDragStart={() => setDragId(t.id_tarefa)}
+                          onDragEnd={() => { setDragId(null); setColHover(null); setDropAlvo(null); }}
+                          onDragOver={(e) => { if (dragId) { e.preventDefault(); e.stopPropagation(); setColHover(col.slug); setDropAlvo({ col: col.slug, beforeId: t.id_tarefa }); } }}
+                          onDrop={(e) => { e.stopPropagation(); soltarGrupo(col.slug, t.id_tarefa); }}
+                        />
+                      </div>
+                    ))}
                     {quadroAgrupar === "status" && dropAlvo?.col === col.slug && dropAlvo.beforeId === null && dragId && (
                       <div className="h-1 rounded-full bg-verde-primary/70" />
                     )}
@@ -597,6 +554,8 @@ export default function GestaoChabraPage() {
           podeEditar={podeEditar}
         />
       )}
+
+      <ConfirmHost />
     </div>
   );
 }

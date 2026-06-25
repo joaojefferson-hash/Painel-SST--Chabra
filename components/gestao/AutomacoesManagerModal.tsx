@@ -2,6 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
+import { confirmar } from "@/components/ui/confirm";
 import {
   useAutomacoes, useSalvarAutomacao, useExcluirAutomacao, useUsuariosLista,
   PRIORIDADES, type GestaoAutomacao, type GestaoStatus, type GatilhoAutomacao, type GestaoCampo,
@@ -51,7 +52,7 @@ export default function AutomacoesManagerModal({
               <label className="inline-flex items-center gap-1 text-xs text-gray-500">
                 <input type="checkbox" disabled={!podeEditar} checked={a.ativo} onChange={(e) => setCampo(a, { ativo: e.target.checked })} className="size-3.5 rounded accent-verde-primary" /> Ativa
               </label>
-              {podeEditar && <button type="button" onClick={() => excluir.mutate(a.id)} className="rounded p-1 text-gray-300 hover:text-red-600"><Trash2 className="size-4" /></button>}
+              {podeEditar && <button type="button" onClick={async () => { if (await confirmar({ title: `Excluir automação "${a.nome}"?` })) excluir.mutate(a.id); }} className="rounded p-1 text-gray-300 hover:text-red-600"><Trash2 className="size-4" /></button>}
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-sm">
