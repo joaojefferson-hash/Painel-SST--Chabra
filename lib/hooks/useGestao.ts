@@ -1237,6 +1237,16 @@ export async function urlAssinadaAnexo(path: string): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
+/** Chama a Edge Function de IA (Groq). Lança em caso de erro. */
+export async function gerarIaGestao(body: { acao: "subtarefas" | "descricao"; titulo: string; descricao?: string }) {
+  const sb = createSupabaseBrowserClient();
+  const { data, error } = await sb.functions.invoke("gestao-ia", { body });
+  if (error) throw error;
+  const d = data as { error?: string; data?: { subtarefas?: string[]; descricao?: string } };
+  if (d?.error) throw new Error(d.error);
+  return d?.data ?? {};
+}
+
 // ---- Formulários de entrada (captação por link público) ----
 export interface PerguntaFormulario { label: string; obrigatorio: boolean }
 export interface GestaoFormulario {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Trash2, Loader2, Plus, Square, CheckSquare, X, Send, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2, Loader2, Plus, Square, CheckSquare, X, Send, ArrowRight, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import MultiChipInput from "@/components/ui/MultiChipInput";
 import { useUserStore } from "@/lib/store";
@@ -10,7 +10,7 @@ import {
   useSalvarTarefa, useExcluirTarefa, useUsuariosLista,
   useComentarios, useAddComentario, useExcluirComentario,
   useDependencias, useAddDependencia, useExcluirDependencia,
-  useUsuarios, useCriarNotificacao, detectarMencoes,
+  useUsuarios, useCriarNotificacao, detectarMencoes, gerarIaGestao,
   iniciais, corAvatar,
   PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa, type GestaoStatus, type GestaoCampo,
@@ -124,6 +124,27 @@ export default function TarefaModal({
   }, [open, tarefa, statusInicial]);
 
   const ro = !podeEditar;
+
+  const [iaLoad, setIaLoad] = useState<"sub" | "desc" | null>(null);
+  async function iaDescricao() {
+    if (!titulo.trim()) { toast.error("Informe o título primeiro."); return; }
+    setIaLoad("desc");
+    try {
+      const d = await gerarIaGestao({ acao: "descricao", titulo: titulo.trim(), descricao });
+      if (d.descricao) { setDescricao((prev) => (prev.trim() ? `${prev}\n\n${d.descricao}` : d.descricao!)); toast.success("Descrição sugerida pela IA"); }
+      else toast.error("A IA não retornou uma descrição.");
+    } catch { toast.error("IA indisponível no momento."); } finally { setIaLoad(null); }
+  }
+  async function iaSubtarefas() {
+    if (!titulo.trim()) { toast.error("Informe o título primeiro."); return; }
+    setIaLoad("sub");
+    try {
+      const d = await gerarIaGestao({ acao: "subtarefas", titulo: titulo.trim(), descricao });
+      const novas = (d.subtarefas ?? []).map((t) => ({ texto: t, feito: false }));
+      if (novas.length) { setSubtarefas((s) => [...s, ...novas]); toast.success(`${novas.length} subtarefa(s) sugerida(s)`); }
+      else toast.error("A IA não sugeriu subtarefas.");
+    } catch { toast.error("IA indisponível no momento."); } finally { setIaLoad(null); }
+  }
 
   function addSub() {
     const t = novaSub.trim();
@@ -246,7 +267,14 @@ export default function TarefaModal({
           <input value={titulo} disabled={ro} onChange={(e) => setTitulo(e.target.value)} placeholder="O que precisa ser feito?" className={inputCls} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Descrição</label>
+          <div className="mb-1 flex items-center justify-between">
+            <label className="block text-xs font-medium text-gray-600">Descrição</label>
+            {!ro && (
+              <button type="button" onClick={iaDescricao} disabled={iaLoad !== null} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-verde-primary hover:bg-verde-light/50 disabled:opacity-50">
+                {iaLoad === "desc" ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />} Redigir com IA
+              </button>
+            )}
+          </div>
           <textarea value={descricao} disabled={ro} onChange={(e) => setDescricao(e.target.value)} rows={3} className={inputCls} />
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -306,9 +334,16 @@ export default function TarefaModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">
-            Subtarefas {subtarefas.length > 0 && <span className="text-gray-400">({feitas}/{subtarefas.length})</span>}
-          </label>
+          <div className="mb-1 flex items-center justify-between">
+            <label className="block text-xs font-medium text-gray-600">
+              Subtarefas {subtarefas.length > 0 && <span className="text-gray-400">({feitas}/{subtarefas.length})</span>}
+            </label>
+            {!ro && (
+              <button type="button" onClick={iaSubtarefas} disabled={iaLoad !== null} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-verde-primary hover:bg-verde-light/50 disabled:opacity-50">
+                {iaLoad === "sub" ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />} Sugerir com IA
+              </button>
+            )}
+          </div>
           <div className="space-y-1.5">
             {subtarefas.map((s, i) => (
               <div key={i} className="flex items-center gap-2">
