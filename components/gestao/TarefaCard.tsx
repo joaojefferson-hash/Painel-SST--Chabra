@@ -59,18 +59,15 @@ export default function TarefaCard({
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={`${t.titulo} · prioridade ${labelPrioridade(t.prioridade)} · status ${st?.nome ?? t.status}${t.responsavel ? ` · responsável ${t.responsavel}` : ""}${atrasada ? " · atrasada" : ""}`}
+      title={`${t.titulo} · prioridade ${labelPrioridade(t.prioridade)} · status ${st?.nome ?? t.status}${atrasada ? " · atrasada" : ""}`}
       draggable={arrastavel}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onDragOver={onDragOver}
       onDrop={onDrop}
       onClick={onAbrir}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(); } }}
       style={{ borderLeftColor: corPrioridade(t.prioridade) }}
-      className={`cursor-pointer rounded-lg border border-l-4 border-gray-200 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-verde-primary/50 ${arrastando ? "rotate-1 opacity-40" : ""}`}
+      className={`cursor-pointer rounded-lg border border-l-4 border-gray-200 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md ${arrastando ? "rotate-1 opacity-40" : ""}`}
     >
       <p className={`text-sm font-medium ${concluido ? "text-gray-400 line-through" : "text-gray-800"}`}>{t.titulo}</p>
 

@@ -109,11 +109,15 @@ export default function GestaoChabraPage() {
   }, [user?.perfil, router]);
 
   useEffect(() => {
-    setOnline(navigator.onLine);
-    const up = () => setOnline(true), down = () => setOnline(false);
-    window.addEventListener("online", up);
-    window.addEventListener("offline", down);
-    return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const recompute = () => {
+      if (navigator.onLine) { if (t) clearTimeout(t); setOnline(true); }
+      else { if (t) clearTimeout(t); t = setTimeout(() => setOnline(false), 3000); }
+    };
+    recompute();
+    window.addEventListener("online", recompute);
+    window.addEventListener("offline", recompute);
+    return () => { if (t) clearTimeout(t); window.removeEventListener("online", recompute); window.removeEventListener("offline", recompute); };
   }, []);
 
   useEffect(() => setItems(tarefas), [tarefas]);
@@ -302,7 +306,7 @@ export default function GestaoChabraPage() {
       <div className="lg:pl-64">
         <div className="px-5 py-7 sm:px-8">
           {!online && (
-            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
+            <div className="fixed inset-x-0 top-0 z-[60] bg-amber-500 px-3 py-1.5 text-center text-sm font-medium text-white shadow-md">
               Sem conexão — as alterações podem não ser salvas até reconectar.
             </div>
           )}
