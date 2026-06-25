@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Folder, List, Layers, CircleUser, BarChart3 } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Folder, List, Layers, CircleUser, BarChart3, Inbox } from "lucide-react";
 import {
   useSalvarEspaco, useExcluirEspaco, useSalvarPasta, useExcluirPasta,
   useCriarQuadro, useRenomearQuadro, useExcluirQuadro,
@@ -22,6 +22,9 @@ export default function GestaoSidebar({
   onMinhas,
   painelAtivo,
   onPainel,
+  inboxAtivo,
+  onInbox,
+  inboxCount,
 }: {
   espacos: GestaoEspaco[];
   pastas: GestaoPasta[];
@@ -33,6 +36,9 @@ export default function GestaoSidebar({
   onMinhas: () => void;
   painelAtivo: boolean;
   onPainel: () => void;
+  inboxAtivo: boolean;
+  onInbox: () => void;
+  inboxCount: number;
 }) {
   const salvarEspaco = useSalvarEspaco();
   const excluirEspaco = useExcluirEspaco();
@@ -72,6 +78,11 @@ export default function GestaoSidebar({
 
   return (
     <nav className="space-y-1 text-sm">
+      <button type="button" onClick={onInbox} className={`relative mb-1 flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-verde-accent ${inboxAtivo ? "bg-white/[0.16] text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}>
+        {inboxAtivo && <span className="absolute left-0 top-[15%] h-[70%] w-[3px] rounded-r-full bg-verde-accent" />}
+        <Inbox className="size-4" /> Caixa de entrada
+        {inboxCount > 0 && <span className="ml-auto rounded-full bg-verde-accent px-1.5 text-[11px] font-bold text-verde-dark">{inboxCount}</span>}
+      </button>
       <button type="button" onClick={onMinhas} className={`relative mb-1 flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-verde-accent ${minhasAtivo ? "bg-white/[0.16] text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}>
         {minhasAtivo && <span className="absolute left-0 top-[15%] h-[70%] w-[3px] rounded-r-full bg-verde-accent" />}
         <CircleUser className="size-4" /> Minhas tarefas
