@@ -315,18 +315,8 @@ export default function GestaoChabraPage() {
               <X className="size-4" /> Limpar
             </button>
           )}
-          <div className="inline-flex flex-wrap rounded-lg border border-gray-200 bg-white p-0.5 text-sm font-medium sm:ml-auto">
-            {VISTAS.map((v) => {
-              const Icon = v.icon;
-              return (
-                <button key={v.value} type="button" onClick={() => mudarVista(v.value)} className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 ${vista === v.value ? "bg-verde-primary text-white" : "text-gray-500 hover:bg-gray-100"}`}>
-                  <Icon className="size-4" /> {v.label}
-                </button>
-              );
-            })}
-          </div>
           {podeEditar && (
-            <div className="relative">
+            <div className="relative sm:ml-auto">
               <button type="button" onClick={() => setConfigOpen((v) => !v)} title="Configurar quadro" className="relative z-40 inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
                 <Settings className="size-4" /> Configurar <ChevronDown className="size-3.5 text-gray-400" />
               </button>
@@ -346,17 +336,30 @@ export default function GestaoChabraPage() {
           )}
         </div>
 
-        {vista === "quadro" && (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-medium text-gray-500">Agrupar:</span>
-            {([["status", "Status"], ["responsavel", "Responsável"], ["prioridade", "Prioridade"], ["etiqueta", "Etiqueta"]] as const).map(([v, l]) => (
-              <button key={v} type="button" onClick={() => setQuadroAgrupar(v)}
-                className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${quadroAgrupar === v ? "bg-verde-primary text-white" : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"}`}>
-                {l}
-              </button>
-            ))}
+        {/* Modo de exibição (abaixo da busca) + agrupar */}
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="inline-flex flex-wrap rounded-lg border border-gray-200 bg-white p-0.5 text-sm font-medium">
+            {VISTAS.map((v) => {
+              const Icon = v.icon;
+              return (
+                <button key={v.value} type="button" onClick={() => mudarVista(v.value)} className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 ${vista === v.value ? "bg-verde-primary text-white" : "text-gray-500 hover:bg-gray-100"}`}>
+                  <Icon className="size-4" /> {v.label}
+                </button>
+              );
+            })}
           </div>
-        )}
+          {vista === "quadro" && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-medium text-gray-500">Agrupar:</span>
+              {([["status", "Status"], ["responsavel", "Responsável"], ["prioridade", "Prioridade"], ["etiqueta", "Etiqueta"]] as const).map(([v, l]) => (
+                <button key={v} type="button" onClick={() => setQuadroAgrupar(v)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${quadroAgrupar === v ? "bg-verde-primary text-white" : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {(loadingQuadros || loadingTarefas || loadingStatus) ? (
           <div className="mt-5 flex gap-3 overflow-hidden">
