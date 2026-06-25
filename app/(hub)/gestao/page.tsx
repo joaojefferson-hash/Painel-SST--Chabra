@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
+import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import {
   useQuadros, useTarefas, useReordenar, useUsuariosLista, useSalvarTarefa,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
@@ -46,6 +47,7 @@ export default function GestaoChabraPage() {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
   const podeEditar = useCanEdit();
+  const { data: configs } = useConfiguracoes();
   const { data: quadros = [], isLoading: loadingQuadros } = useQuadros();
   const { data: espacos = [] } = useEspacos();
   const { data: pastas = [] } = usePastas();
@@ -259,7 +261,12 @@ export default function GestaoChabraPage() {
       {/* Menu lateral fixo (verde, igual ao app) */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col lg:flex print:hidden" style={{ background: "linear-gradient(180deg, #1a3d26 0%, #112a1a 60%, #0d2016 100%)" }}>
         <Link href="/visao-geral" className="flex items-center gap-2.5 border-b border-white/[0.09] px-4 py-3.5 transition-colors hover:bg-white/[0.05]">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-verde-primary text-white shadow"><KanbanSquare className="size-4" /></span>
+          {configs?.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={configs.logo_url} alt="Logo Chabra" className="h-8 w-auto max-w-[36px] shrink-0 rounded-md bg-white object-contain p-0.5 shadow" referrerPolicy="no-referrer" />
+          ) : (
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-verde-primary text-white shadow"><KanbanSquare className="size-4" /></span>
+          )}
           <div className="min-w-0 leading-tight">
             <p className="truncate text-[13px] font-bold tracking-tight text-white">Gestão Chabra</p>
             <p className="inline-flex items-center gap-1 text-[10px] tracking-wide text-white/50"><ArrowLeft className="size-3" /> Visão geral</p>
