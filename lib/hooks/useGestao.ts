@@ -86,6 +86,7 @@ export interface GestaoTarefa {
   subtarefas: Subtarefa[];
   campos: Record<string, unknown>;
   recorrencia: Recorrencia | null;
+  pontos: number | null;
   created_by: string | null;
   created_at: string;
   updated_at: string | null;
@@ -1056,6 +1057,7 @@ export function useSalvarTarefa() {
           subtarefas: t.subtarefas ?? [],
           campos: t.campos ?? {},
           recorrencia: t.recorrencia ?? null,
+          pontos: t.pontos ?? null,
           created_at: now,
           updated_at: now,
         } as never);
@@ -1143,6 +1145,96 @@ export function useExcluirTarefa() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-tarefas"] }),
     onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir.")),
   });
+}
+
+// ---- Anexos (bucket 'anexos', caminho gestao/<id_tarefa>/<uuid>-<nome>) ----
+export interface GestaoAnexo {
+  id: string;
+  id_tarefa: string;
+  nome: string;
+  storage_path: string;
+  mime: string | null;
+  tamanho_bytes: number | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+const BUCKET_ANEXOS = "anexos";
+
+export function useAnexos(idTarefa: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gestao-anexos", idTarefa],
+    enabled: !!idTarefa,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_anexos").select("*").eq("id_tarefa", idTarefa!).order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoAnexo[];
+    },
+  });
+}
+
+/** Contagem de anexos por tarefa (para os cards de um quadro), numa única consulta. */
+export function useAnexosCountQuadro(idQuadro: string | null | undefined, ids: string[]) {
+  return useQuery({
+    queryKey: ["gestao-anexos-count", idQuadro, ids.length],
+    enabled: !!idQuadro && ids.length > 0,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_anexos").select("id_tarefa").in("id_tarefa", ids);
+      if (error) throw error;
+      const m = new Map<string, number>();
+      for (const r of (data ?? []) as { id_tarefa: string }[]) m.set(r.id_tarefa, (m.get(r.id_tarefa) ?? 0) + 1);
+      return m;
+    },
+  });
+}
+
+export function useUploadAnexo() {
+  const qc = useQueryClient();
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useMutation({
+    mutationFn: async (p: { id_tarefa: string; file: File }) => {
+      const sb = createSupabaseBrowserClient();
+      const safe = p.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `gestao/${p.id_tarefa}/${crypto.randomUUID()}-${safe}`;
+      const { error: upErr } = await sb.storage.from(BUCKET_ANEXOS).upload(path, p.file, { upsert: false });
+      if (upErr) throw upErr;
+      const { error } = await sb.from("gestao_anexos").insert({
+        id: crypto.randomUUID(),
+        id_tarefa: p.id_tarefa,
+        nome: p.file.name,
+        storage_path: path,
+        mime: p.file.type || null,
+        tamanho_bytes: p.file.size,
+        created_by: email,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-anexos"] }); qc.invalidateQueries({ queryKey: ["gestao-anexos-count"] }); },
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível enviar o anexo.")),
+  });
+}
+
+export function useExcluirAnexo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id: string; storage_path: string }) => {
+      const sb = createSupabaseBrowserClient();
+      await sb.storage.from(BUCKET_ANEXOS).remove([p.storage_path]);
+      const { error } = await sb.from("gestao_anexos").delete().eq("id", p.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-anexos"] }); qc.invalidateQueries({ queryKey: ["gestao-anexos-count"] }); },
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir o anexo.")),
+  });
+}
+
+/** URL assinada (bucket privado) para abrir/baixar um anexo. */
+export async function urlAssinadaAnexo(path: string): Promise<string | null> {
+  const sb = createSupabaseBrowserClient();
+  const { data } = await sb.storage.from(BUCKET_ANEXOS).createSignedUrl(path, 120);
+  return data?.signedUrl ?? null;
 }
 
 export interface GestaoComentario {

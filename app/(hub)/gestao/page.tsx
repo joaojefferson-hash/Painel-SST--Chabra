@@ -12,7 +12,7 @@ import {
   useMinhasTarefas, useTodosStatus,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
   useStatusQuadro, statusPadrao, useCamposQuadro, useEtiquetasQuadro,
-  useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner, useTempoQuadro,
+  useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner, useTempoQuadro, useAnexosCountQuadro,
   corAvatar, formatarDuracao,
   PRIORIDADES, FILTRO_VAZIO, contarFiltros,
   type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus, type GestaoNotificacao, type PrioridadeTarefa, type FiltrosGestao,
@@ -74,6 +74,7 @@ export default function GestaoChabraPage() {
   const salvar = useSalvarTarefa();
   const acaoMassa = useAcaoMassa();
   const { data: tempoEntries = [] } = useTempoQuadro(quadro?.id_quadro, tarefas.map((t) => t.id_tarefa));
+  const { data: anexosCount = new Map<string, number>() } = useAnexosCountQuadro(quadro?.id_quadro, tarefas.map((t) => t.id_tarefa));
   const etiquetaCor = useMemo(() => new Map(etiquetasCat.map((e) => [e.nome, e.cor])), [etiquetasCat]);
 
   const [items, setItems] = useState<GestaoTarefa[]>([]);
@@ -493,6 +494,7 @@ export default function GestaoChabraPage() {
                           statusMap={statusMap}
                           etiquetaCor={etiquetaCor}
                           tempoSeg={tempoPorTarefa.get(t.id_tarefa) ?? 0}
+                          anexos={anexosCount.get(t.id_tarefa) ?? 0}
                           campos={campos}
                           arrastavel={podeEditar && quadroAgrupar !== "etiqueta"}
                           arrastando={dragId === t.id_tarefa}

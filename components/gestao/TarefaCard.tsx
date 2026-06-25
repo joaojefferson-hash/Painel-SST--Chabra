@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, CheckSquare, Repeat, Clock, Flag, Check } from "lucide-react";
+import { CalendarClock, CheckSquare, Repeat, Clock, Flag, Check, Paperclip, Target } from "lucide-react";
 import {
   iniciais, corAvatar, formatarDuracao,
   PRIORIDADES,
@@ -22,6 +22,7 @@ export default function TarefaCard({
   statusMap,
   etiquetaCor,
   tempoSeg,
+  anexos = 0,
   campos,
   arrastavel,
   arrastando,
@@ -38,6 +39,7 @@ export default function TarefaCard({
   statusMap: Map<string, GestaoStatus>;
   etiquetaCor: Map<string, string>;
   tempoSeg: number;
+  anexos?: number;
   campos: GestaoCampo[];
   arrastavel: boolean;
   arrastando: boolean;
@@ -128,6 +130,16 @@ export default function TarefaCard({
         {t.recorrencia && (
           <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-gray-500" title="Recorrente" aria-label="Recorrente">
             <Repeat className="size-3" />
+          </span>
+        )}
+        {anexos > 0 && (
+          <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500" title="Anexos">
+            <Paperclip className="size-3" /> {anexos}
+          </span>
+        )}
+        {t.pontos != null && t.pontos > 0 && (
+          <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500" title="Pontos (esforço)">
+            <Target className="size-3" /> {t.pontos}
           </span>
         )}
         {tempoSeg > 0 && (

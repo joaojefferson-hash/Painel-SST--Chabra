@@ -17,6 +17,7 @@ import {
 } from "@/lib/hooks/useGestao";
 import CampoInput from "@/components/gestao/CampoInput";
 import TempoTracker from "@/components/gestao/TempoTracker";
+import AnexosTarefa from "@/components/gestao/AnexosTarefa";
 import { confirmar } from "@/components/ui/confirm";
 
 function quando(iso: string): string {
@@ -99,6 +100,7 @@ export default function TarefaModal({
   const [recTipo, setRecTipo] = useState<"" | "diaria" | "semanal" | "mensal">("");
   const [recInt, setRecInt] = useState(1);
   const [etiquetas, setEtiquetas] = useState<string[]>([]);
+  const [pontos, setPontos] = useState("");
   const [subtarefas, setSubtarefas] = useState<Subtarefa[]>([]);
   const [novaSub, setNovaSub] = useState("");
   const [valoresCampos, setValoresCampos] = useState<Record<string, unknown>>({});
@@ -115,6 +117,7 @@ export default function TarefaModal({
     setRecTipo(tarefa?.recorrencia?.tipo ?? "");
     setRecInt(tarefa?.recorrencia?.intervalo ?? 1);
     setEtiquetas(tarefa?.etiquetas ?? []);
+    setPontos(tarefa?.pontos != null ? String(tarefa.pontos) : "");
     setSubtarefas(tarefa?.subtarefas ?? []);
     setNovaSub("");
     setValoresCampos((tarefa?.campos as Record<string, unknown>) ?? {});
@@ -155,6 +158,7 @@ export default function TarefaModal({
       data_inicio: dataInicio || null,
       status,
       etiquetas,
+      pontos: pontos.trim() === "" ? null : Math.max(0, parseInt(pontos, 10) || 0),
       subtarefas: subtarefas.filter((s) => s.texto.trim()),
       campos: valoresCampos,
       recorrencia: recTipo
@@ -271,6 +275,10 @@ export default function TarefaModal({
               {statuses.map((s) => <option key={s.slug} value={s.slug}>{s.nome}</option>)}
             </select>
           </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">Pontos (esforço)</label>
+            <input type="number" min="0" value={pontos} disabled={ro} onChange={(e) => setPontos(e.target.value)} placeholder="—" className={inputCls} />
+          </div>
         </div>
 
         <div>
@@ -345,6 +353,12 @@ export default function TarefaModal({
                 </div>
               ))}
             </div>
+          </Secao>
+        )}
+
+        {tarefa && (
+          <Secao titulo="Anexos">
+            <AnexosTarefa idTarefa={tarefa.id_tarefa} podeEditar={podeEditar} />
           </Secao>
         )}
 
