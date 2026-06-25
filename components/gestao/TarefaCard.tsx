@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, CheckSquare, Repeat, Clock, Flag } from "lucide-react";
+import { CalendarClock, CheckSquare, Repeat, Clock, Flag, Check } from "lucide-react";
 import {
   iniciais, corAvatar, formatarDuracao,
   PRIORIDADES,
@@ -30,6 +30,9 @@ export default function TarefaCard({
   onDragEnd,
   onDragOver,
   onDrop,
+  selecionavel = false,
+  selecionado = false,
+  onToggleSel,
 }: {
   t: GestaoTarefa;
   statusMap: Map<string, GestaoStatus>;
@@ -43,6 +46,9 @@ export default function TarefaCard({
   onDragEnd: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
+  selecionavel?: boolean;
+  selecionado?: boolean;
+  onToggleSel?: () => void;
 }) {
   const st = statusMap.get(t.status);
   const concluido = st?.tipo === "concluido";
@@ -60,16 +66,23 @@ export default function TarefaCard({
   return (
     <div
       title={`${t.titulo} · prioridade ${labelPrioridade(t.prioridade)} · status ${st?.nome ?? t.status}${atrasada ? " · atrasada" : ""}`}
-      draggable={arrastavel}
+      draggable={arrastavel && !selecionavel}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      onClick={onAbrir}
+      onClick={selecionavel ? onToggleSel : onAbrir}
       style={{ borderLeftColor: corPrioridade(t.prioridade) }}
-      className={`cursor-pointer rounded-lg border border-l-4 border-gray-200 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md ${arrastando ? "rotate-1 opacity-40" : ""}`}
+      className={`cursor-pointer rounded-lg border border-l-4 border-gray-200 bg-white p-3 shadow-sm transition-all duration-150 hover:border-gray-300 hover:shadow-md ${selecionavel ? "" : "hover:-translate-y-0.5"} ${selecionado ? "ring-2 ring-verde-primary" : ""} ${arrastando ? "rotate-1 opacity-40" : ""}`}
     >
-      <p className={`text-sm font-medium ${concluido ? "text-gray-400 line-through" : "text-gray-800"}`}>{t.titulo}</p>
+      <div className="flex items-start gap-2">
+        {selecionavel && (
+          <span className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border ${selecionado ? "border-verde-primary bg-verde-primary text-white" : "border-gray-300 bg-white"}`}>
+            {selecionado && <Check className="size-3" />}
+          </span>
+        )}
+        <p className={`flex-1 text-sm font-medium ${concluido ? "text-gray-400 line-through" : "text-gray-800"}`}>{t.titulo}</p>
+      </div>
 
       {(t.etiquetas ?? []).length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">

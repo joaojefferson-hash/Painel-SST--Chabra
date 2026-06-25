@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock, CircleUser } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock, CircleUser, CheckSquare } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import {
-  useQuadros, useTarefas, useReordenar, useUsuariosLista, useSalvarTarefa,
+  useQuadros, useTarefas, useReordenar, useUsuariosLista, useSalvarTarefa, useAcaoMassa,
   useMinhasTarefas, useTodosStatus,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
   useStatusQuadro, statusPadrao, useCamposQuadro, useEtiquetasQuadro,
@@ -28,7 +28,8 @@ import EtiquetasManagerModal from "@/components/gestao/EtiquetasManagerModal";
 import TarefaCard from "@/components/gestao/TarefaCard";
 import FiltrosPanel from "@/components/gestao/FiltrosPanel";
 import MinhasTarefas from "@/components/gestao/MinhasTarefas";
-import { ConfirmHost } from "@/components/ui/confirm";
+import BarraAcoesMassa from "@/components/gestao/BarraAcoesMassa";
+import { ConfirmHost, confirmar } from "@/components/ui/confirm";
 import VistaLista from "@/components/gestao/VistaLista";
 import VistaCalendario from "@/components/gestao/VistaCalendario";
 import VistaTimeline from "@/components/gestao/VistaTimeline";
@@ -71,6 +72,7 @@ export default function GestaoChabraPage() {
   const { data: etiquetasCat = [] } = useEtiquetasQuadro(quadro?.id_quadro);
   const runAuto = useAutomacaoRunner(quadro?.id_quadro);
   const salvar = useSalvarTarefa();
+  const acaoMassa = useAcaoMassa();
   const { data: tempoEntries = [] } = useTempoQuadro(quadro?.id_quadro, tarefas.map((t) => t.id_tarefa));
   const etiquetaCor = useMemo(() => new Map(etiquetasCat.map((e) => [e.nome, e.cor])), [etiquetasCat]);
 
@@ -100,6 +102,8 @@ export default function GestaoChabraPage() {
   const [online, setOnline] = useState(true);
   const [boardScrolled, setBoardScrolled] = useState(false);
   const [minhasView, setMinhasView] = useState(false);
+  const [selecaoModo, setSelecaoModo] = useState(false);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const { data: minhas = [] } = useMinhasTarefas(minhasView);
   const { data: todosStatus = [] } = useTodosStatus(minhasView);
   const statusGlobalMap = useMemo(() => new Map(todosStatus.map((s) => [`${s.id_quadro}|${s.slug}`, s])), [todosStatus]);
@@ -121,6 +125,9 @@ export default function GestaoChabraPage() {
   }, []);
 
   useEffect(() => setItems(tarefas), [tarefas]);
+
+  // Limpa a seleção ao trocar de lista ou de visão.
+  useEffect(() => { setSelecaoModo(false); setSelecionados(new Set()); }, [quadroId, vista]);
 
   // Aplica a preferência de visão salva (por usuário/quadro).
   useEffect(() => {
@@ -280,6 +287,18 @@ export default function GestaoChabraPage() {
     }
   }
 
+  // Ações em massa
+  const limparSel = () => { setSelecionados(new Set()); setSelecaoModo(false); };
+  const toggleSel = (id: string) => setSelecionados((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const aplicarMassa = (patch: Partial<GestaoTarefa>) => acaoMassa.mutate({ ids: [...selecionados], patch }, { onSuccess: limparSel });
+  function aplicarEtiquetaMassa(nome: string) {
+    const alvo = items.filter((t) => selecionados.has(t.id_tarefa));
+    Promise.all(alvo.map((t) => salvar.mutateAsync({ id_tarefa: t.id_tarefa, id_quadro: t.id_quadro, etiquetas: [...new Set([...(t.etiquetas ?? []), nome])] }))).then(limparSel).catch(() => {});
+  }
+  async function excluirMassa() {
+    if (await confirmar({ title: `Excluir ${selecionados.size} tarefa(s)?`, description: "Esta ação não pode ser desfeita." })) acaoMassa.mutate({ ids: [...selecionados], excluir: true }, { onSuccess: limparSel });
+  }
+
   return (
     <div className="min-h-screen bg-[#f6f5f2]">
       {/* Menu lateral fixo (verde, igual ao app) */}
@@ -386,6 +405,11 @@ export default function GestaoChabraPage() {
               )}
             </div>
           )}
+          {podeEditar && vista === "quadro" && (
+            <button type="button" onClick={() => { if (selecaoModo) limparSel(); else setSelecaoModo(true); }} className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-2 text-sm font-medium ${selecaoModo ? "border-verde-primary bg-verde-light/60 text-verde-primary" : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}>
+              <CheckSquare className="size-4" /> {selecaoModo ? "Cancelar" : "Selecionar"}
+            </button>
+          )}
         </div>
 
         {/* Modo de exibição (abaixo da busca) + agrupar */}
@@ -472,6 +496,9 @@ export default function GestaoChabraPage() {
                           campos={campos}
                           arrastavel={podeEditar && quadroAgrupar !== "etiqueta"}
                           arrastando={dragId === t.id_tarefa}
+                          selecionavel={selecaoModo}
+                          selecionado={selecionados.has(t.id_tarefa)}
+                          onToggleSel={() => toggleSel(t.id_tarefa)}
                           onAbrir={() => { setEditando(t); setModalOpen(true); }}
                           onDragStart={() => setDragId(t.id_tarefa)}
                           onDragEnd={() => { setDragId(null); setColHover(null); setDropAlvo(null); }}
@@ -588,6 +615,21 @@ export default function GestaoChabraPage() {
           idQuadro={quadro.id_quadro}
           etiquetas={etiquetasCat}
           podeEditar={podeEditar}
+        />
+      )}
+
+      {selecaoModo && selecionados.size > 0 && (
+        <BarraAcoesMassa
+          count={selecionados.size}
+          statuses={statuses}
+          usuarios={usuarios}
+          etiquetas={etiquetasCat}
+          onStatus={(slug) => aplicarMassa({ status: slug })}
+          onResponsavel={(nome) => aplicarMassa({ responsavel: nome })}
+          onPrioridade={(p) => aplicarMassa({ prioridade: p as PrioridadeTarefa })}
+          onEtiqueta={aplicarEtiquetaMassa}
+          onExcluir={excluirMassa}
+          onCancelar={limparSel}
         />
       )}
 

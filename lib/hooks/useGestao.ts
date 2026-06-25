@@ -1112,6 +1112,26 @@ export function useReordenar() {
   });
 }
 
+/** Ações em massa: atualiza um campo em várias tarefas, ou exclui várias. */
+export function useAcaoMassa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { ids: string[]; patch?: Partial<GestaoTarefa>; excluir?: boolean }) => {
+      if (!p.ids.length) return;
+      const sb = createSupabaseBrowserClient();
+      if (p.excluir) {
+        const { error } = await sb.from("gestao_tarefas").delete().in("id_tarefa", p.ids);
+        if (error) throw error;
+        return;
+      }
+      const { error } = await sb.from("gestao_tarefas").update({ ...p.patch, updated_at: new Date().toISOString() } as never).in("id_tarefa", p.ids);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-tarefas"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível aplicar a ação.")),
+  });
+}
+
 export function useExcluirTarefa() {
   const qc = useQueryClient();
   return useMutation({
