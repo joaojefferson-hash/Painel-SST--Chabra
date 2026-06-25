@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock, CircleUser, CheckSquare } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock, CircleUser, CheckSquare, BarChart3 } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
@@ -28,6 +28,7 @@ import EtiquetasManagerModal from "@/components/gestao/EtiquetasManagerModal";
 import TarefaCard from "@/components/gestao/TarefaCard";
 import FiltrosPanel from "@/components/gestao/FiltrosPanel";
 import MinhasTarefas from "@/components/gestao/MinhasTarefas";
+import PainelGestao from "@/components/gestao/PainelGestao";
 import BarraAcoesMassa from "@/components/gestao/BarraAcoesMassa";
 import { ConfirmHost, confirmar } from "@/components/ui/confirm";
 import VistaLista from "@/components/gestao/VistaLista";
@@ -103,6 +104,7 @@ export default function GestaoChabraPage() {
   const [online, setOnline] = useState(true);
   const [boardScrolled, setBoardScrolled] = useState(false);
   const [minhasView, setMinhasView] = useState(false);
+  const [painelView, setPainelView] = useState(false);
   const [selecaoModo, setSelecaoModo] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const { data: minhas = [] } = useMinhasTarefas(minhasView);
@@ -318,7 +320,7 @@ export default function GestaoChabraPage() {
         </Link>
         <div className="flex-1 overflow-y-auto px-2 py-2">
           <p className="mb-1 px-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/30">Espaços</p>
-          <GestaoSidebar espacos={espacos} pastas={pastas} quadros={quadros} quadroId={minhasView ? null : (quadro?.id_quadro ?? null)} onSelect={(id) => { setQuadroId(id); setMinhasView(false); }} podeEditar={podeEditar} minhasAtivo={minhasView} onMinhas={() => setMinhasView(true)} />
+          <GestaoSidebar espacos={espacos} pastas={pastas} quadros={quadros} quadroId={minhasView || painelView ? null : (quadro?.id_quadro ?? null)} onSelect={(id) => { setQuadroId(id); setMinhasView(false); setPainelView(false); }} podeEditar={podeEditar} minhasAtivo={minhasView} onMinhas={() => { setMinhasView(true); setPainelView(false); }} painelAtivo={painelView} onPainel={() => { setPainelView(true); setMinhasView(false); }} />
         </div>
       </aside>
 
@@ -344,6 +346,17 @@ export default function GestaoChabraPage() {
               </div>
             </div>
             <MinhasTarefas tarefas={minhas} quadros={quadros} statusMap={statusGlobalMap} onAbrir={(t) => { setQuadroId(t.id_quadro); setMinhasView(false); setEditando(t); setModalOpen(true); }} />
+          </div>
+        ) : painelView ? (
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="flex size-11 items-center justify-center rounded-xl bg-verde-light text-verde-primary"><BarChart3 className="size-6" /></span>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Painel{quadro ? ` — ${quadro.nome}` : ""}</h1>
+                <p className="text-sm text-gray-500">Métricas da lista selecionada</p>
+              </div>
+            </div>
+            <PainelGestao tarefas={items} statuses={statuses} tempoPorTarefa={tempoPorTarefa} />
           </div>
         ) : (
         <>
