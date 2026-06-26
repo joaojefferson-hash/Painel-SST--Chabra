@@ -2,32 +2,40 @@ import type { NextConfig } from "next";
 import path from "node:path";
 import { version } from "./package.json";
 
+// Proxy same-origin p/ o PostgREST interno (cutover .107). O browser chama
+// /api/rest/v1/* (mesma origem, sem hostname publico do PostgREST) e o Next
+// reescreve para o container interno. SSR fala o interno direto (ver client.ts).
+const postgrestInternal =
+  process.env.POSTGREST_INTERNAL_URL ?? "http://painel-sst-postgrest:3000";
+
 const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: version,
   },
-  // Necessário para empacotar o Next.js dentro do Electron (produção desktop).
-  // Compatível com Vercel — ignorado pela plataforma no deploy web.
+  // Necessario para empacotar o Next.js dentro do Electron (producao desktop)
+  // e para a imagem Docker standalone do self-host.
   output: "standalone",
-  // Silencia o aviso "multiple lockfiles detected" — força este projeto
-  // como raiz mesmo quando há um lockfile no diretório pai.
   outputFileTracingRoot: path.join(__dirname),
   transpilePackages: ["xlsx"],
-  // Impede o webpack de tentar empacotar os módulos nativos do Puppeteer.
-  // Eles são carregados via require() em runtime pelo Node.js (nunca bundlados).
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core", "puppeteer"],
-  // Força a inclusão dos binários do Chromium no bundle de deploy do Vercel.
-  // Sem isto, o file-tracing do Next.js não inclui os .br do sparticuz.
   outputFileTracingIncludes: {
     "/api/pdf/aep/[id]": ["./node_modules/@sparticuz/chromium/**/*"],
   },
+  async rewrites() {
+    return [
+      {
+        // PostgREST puro serve as tabelas na raiz -> sem /rest/v1 no destino.
+        source: "/api/rest/v1/:path*",
+        destination: `${postgrestInternal}/:path*`,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
-      // Permite servir fotos do Supabase Storage.
-      {
-        protocol: "https",
-        hostname: "*.supabase.co",
-      },
+      // Storage self-host (MinIO via tunnel CF).
+      { protocol: "https", hostname: "storage.chabra.com.br" },
+      // Legado Supabase Storage (fallback p/ URLs antigas nao reescritas).
+      { protocol: "https", hostname: "*.supabase.co" },
     ],
   },
 };

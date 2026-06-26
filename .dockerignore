@@ -1,0 +1,19 @@
+# Copiar como .dockerignore na raiz da build tree.
+# Mantem o contexto de build enxuto e reproduzivel.
+.git
+node_modules
+.next
+out
+dist
+electron-dist
+electron/dist
+build
+*.log
+vercel-deploy*.log
+.env*
+.vscode
+.idea
+npm-debug.log*
+.DS_Store
+coverage
+*.local

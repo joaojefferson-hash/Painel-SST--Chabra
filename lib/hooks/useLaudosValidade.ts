@@ -67,7 +67,7 @@ export function useLaudosValidade() {
           if (f.excluirStatus) q = q.neq("status", f.excluirStatus);
           const { data, error } = await q;
           if (error) return [] as LaudoValidadeItem[];
-          return ((data ?? []) as Record<string, string | null>[]).map((r) => {
+          return ((data ?? []) as unknown as Record<string, string | null>[]).map((r) => {
             const id = r[f.idCol] as string;
             const idEmpresa = r.id_empresa;
             const dataDocRaw = r[f.dataCol];

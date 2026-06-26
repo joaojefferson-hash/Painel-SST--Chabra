@@ -76,7 +76,7 @@ export function useVencimentos() {
           if (f.excluirStatus) q = q.neq("status", f.excluirStatus);
           const { data, error } = await q;
           if (error) return [] as VencimentoItem[]; // degrada por fonte (não quebra o painel)
-          return ((data ?? []) as Record<string, string | null>[]).map((r) => {
+          return ((data ?? []) as unknown as Record<string, string | null>[]).map((r) => {
             const id = r[f.idCol] as string;
             const idEmpresa = r.id_empresa;
             const data_validade = r.data_validade as string;
