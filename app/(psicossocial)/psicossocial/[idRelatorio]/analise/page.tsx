@@ -125,6 +125,7 @@ const STATUS_OPCOES: { v: StatusRelatorio; label: string; cls: string }[] = [
   { v: "RASCUNHO",     label: "Rascunho",      cls: "bg-gray-100 text-gray-700" },
   { v: "EM_ANDAMENTO", label: "Em andamento",  cls: "bg-blue-100 text-blue-700" },
   { v: "CONCLUIDO",    label: "Concluído",      cls: "bg-green-100 text-green-700" },
+  { v: "ENVIADO_CLIENTE", label: "Enviado p/ cliente", cls: "bg-indigo-100 text-indigo-700" },
 ];
 
 export default function AnalisePage({
@@ -699,10 +700,10 @@ export default function AnalisePage({
                   {salvar.isPending ? "Salvando..." : "Salvar"}
                 </button>
               )}
-              {relatorio?.status === "CONCLUIDO" ? (
+              {relatorio && (relatorio.status === "CONCLUIDO" || relatorio.status === "ENVIADO_CLIENTE") ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-verde-light px-3 py-1.5 text-xs font-semibold text-verde-primary">
                   <CheckCircle2 className="size-3.5" />
-                  Concluído
+                  {relatorio.status === "ENVIADO_CLIENTE" ? "Enviado p/ cliente" : "Concluído"}
                 </span>
               ) : (
                 <button

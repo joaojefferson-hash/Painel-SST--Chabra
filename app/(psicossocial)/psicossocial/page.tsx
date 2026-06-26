@@ -21,6 +21,7 @@ const STATUS_LABEL: Record<StatusRelatorio, string> = {
   RASCUNHO: "Rascunho",
   EM_ANDAMENTO: "Em andamento",
   CONCLUIDO: "Concluído",
+  ENVIADO_CLIENTE: "Enviado p/ cliente",
   DELETADO: "Excluído",
 };
 
@@ -31,6 +32,7 @@ const STATUS_VARIANT: Record<
   RASCUNHO: "muted",
   EM_ANDAMENTO: "info",
   CONCLUIDO: "success",
+  ENVIADO_CLIENTE: "info",
   DELETADO: "warning",
 };
 

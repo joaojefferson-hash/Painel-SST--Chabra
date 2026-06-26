@@ -1,25 +1,33 @@
 "use client";
 
-import { useMemo } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   FileText,
   ArrowRight,
   CircleDashed,
   Activity,
   CheckCircle2,
+  Send,
   Building2,
 } from "lucide-react";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import {
   useDrpsRelatoriosGeral,
+  useDrpsMoverStatus,
   type DrpsRelatorioComEmpresa,
 } from "@/lib/hooks/useDrps";
+import { useCanEdit } from "@/lib/hooks/useUsuario";
 import { fmtData, formatCNPJ } from "@/lib/utils";
 import type { StatusRelatorio } from "@/lib/drps/types";
 
+type StatusColuna = Extract<
+  StatusRelatorio,
+  "RASCUNHO" | "EM_ANDAMENTO" | "CONCLUIDO" | "ENVIADO_CLIENTE"
+>;
+
 interface ColunaConfig {
-  status: Extract<StatusRelatorio, "RASCUNHO" | "EM_ANDAMENTO" | "CONCLUIDO">;
+  status: StatusColuna;
   titulo: string;
   descricao: string;
   cor: string;
@@ -56,28 +64,60 @@ const COLUNAS: ColunaConfig[] = [
     border: "#86efac",
     Icone: CheckCircle2,
   },
+  {
+    status: "ENVIADO_CLIENTE",
+    titulo: "Enviados para clientes",
+    descricao: "Relatórios entregues ao cliente",
+    cor: "#4338ca",
+    bg: "#eef2ff",
+    border: "#c7d2fe",
+    Icone: Send,
+  },
 ];
 
 export default function DashboardGeralPage() {
   const { data: relatorios = [], isLoading } = useDrpsRelatoriosGeral();
+  const podeEditar = useCanEdit();
+  const mover = useDrpsMoverStatus();
+
+  // Cópia local para mover de forma otimista (sincronizada com o servidor).
+  const [items, setItems] = useState<DrpsRelatorioComEmpresa[]>(relatorios);
+  useEffect(() => setItems(relatorios), [relatorios]);
+
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropAlvo, setDropAlvo] = useState<StatusColuna | null>(null);
 
   const porStatus = useMemo(() => {
     const map: Record<string, DrpsRelatorioComEmpresa[]> = {
       RASCUNHO: [],
       EM_ANDAMENTO: [],
       CONCLUIDO: [],
+      ENVIADO_CLIENTE: [],
     };
-    for (const r of relatorios) {
+    for (const r of items) {
       if (map[r.status]) map[r.status].push(r);
     }
     return map;
-  }, [relatorios]);
+  }, [items]);
 
   const empresasUnicas = useMemo(() => {
     const set = new Set<string>();
-    for (const r of relatorios) set.add(r.id_empresa);
+    for (const r of items) set.add(r.id_empresa);
     return set.size;
-  }, [relatorios]);
+  }, [items]);
+
+  function soltar(status: StatusColuna) {
+    const id = dragId;
+    setDragId(null);
+    setDropAlvo(null);
+    if (!id) return;
+    const r = items.find((x) => x.id_relatorio === id);
+    if (!r || r.status === status) return;
+    setItems((arr) =>
+      arr.map((x) => (x.id_relatorio === id ? { ...x, status } : x))
+    );
+    mover.mutate({ id_relatorio: id, status });
+  }
 
   return (
     <div className="space-y-6">
@@ -88,9 +128,15 @@ export default function DashboardGeralPage() {
           {!isLoading && (
             <>
               {" "}
-              <strong>{relatorios.length}</strong> relatório(s) em{" "}
+              <strong>{items.length}</strong> relatório(s) em{" "}
               <strong>{empresasUnicas}</strong> empresa(s).
             </>
+          )}
+          {podeEditar && (
+            <span className="text-gray-400">
+              {" "}
+              · Arraste um cartão entre as colunas para mudar o status.
+            </span>
           )}
         </p>
       </div>
@@ -100,13 +146,24 @@ export default function DashboardGeralPage() {
           <LoadingSkeleton rows={5} />
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-3">
-          {COLUNAS.map((c) => {
-            const items = porStatus[c.status] ?? [];
-            return (
-              <Coluna key={c.status} config={c} items={items} />
-            );
-          })}
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {COLUNAS.map((c) => (
+            <Coluna
+              key={c.status}
+              config={c}
+              items={porStatus[c.status] ?? []}
+              podeEditar={podeEditar}
+              arrastando={dragId !== null}
+              ativo={dropAlvo === c.status}
+              onDragStartCard={(id) => setDragId(id)}
+              onDragEndCard={() => {
+                setDragId(null);
+                setDropAlvo(null);
+              }}
+              onDragOverColuna={() => setDropAlvo(c.status)}
+              onDropColuna={() => soltar(c.status)}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -116,16 +173,50 @@ export default function DashboardGeralPage() {
 function Coluna({
   config,
   items,
+  podeEditar,
+  arrastando,
+  ativo,
+  onDragStartCard,
+  onDragEndCard,
+  onDragOverColuna,
+  onDropColuna,
 }: {
   config: ColunaConfig;
   items: DrpsRelatorioComEmpresa[];
+  podeEditar: boolean;
+  arrastando: boolean;
+  ativo: boolean;
+  onDragStartCard: (id: string) => void;
+  onDragEndCard: () => void;
+  onDragOverColuna: () => void;
+  onDropColuna: () => void;
 }) {
+  const router = useRouter();
   const { titulo, descricao, cor, bg, border, Icone } = config;
 
   return (
     <section
-      className="flex h-full flex-col overflow-hidden rounded-xl border bg-white shadow-sm"
-      style={{ borderColor: border }}
+      className="flex h-full flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-shadow"
+      style={{
+        borderColor: ativo ? cor : border,
+        boxShadow: ativo ? `0 0 0 2px ${cor}` : undefined,
+      }}
+      onDragOver={
+        podeEditar
+          ? (e) => {
+              e.preventDefault();
+              onDragOverColuna();
+            }
+          : undefined
+      }
+      onDrop={
+        podeEditar
+          ? (e) => {
+              e.preventDefault();
+              onDropColuna();
+            }
+          : undefined
+      }
     >
       <header
         className="flex items-start justify-between gap-2 border-b px-4 py-3"
@@ -152,24 +243,43 @@ function Coluna({
       </header>
 
       {items.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center p-6 text-center text-xs italic text-gray-400">
-          Nenhum relatório nesse status.
+        <div
+          className={`flex flex-1 items-center justify-center p-6 text-center text-xs italic ${
+            ativo ? "text-gray-500" : "text-gray-400"
+          }`}
+        >
+          {arrastando && podeEditar
+            ? "Solte aqui"
+            : "Nenhum relatório nesse status."}
         </div>
       ) : (
         <ul className="flex-1 divide-y divide-gray-100 overflow-auto">
           {items.map((r) => (
             <li key={r.id_relatorio}>
-              <Link
-                href={`/psicossocial/${r.id_relatorio}/dashboard`}
-                className="block px-4 py-3 hover:bg-gray-50"
+              <div
+                role="button"
+                tabIndex={0}
+                draggable={podeEditar}
+                onDragStart={() => onDragStartCard(r.id_relatorio)}
+                onDragEnd={onDragEndCard}
+                onClick={() =>
+                  router.push(`/psicossocial/${r.id_relatorio}/dashboard`)
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(`/psicossocial/${r.id_relatorio}/dashboard`);
+                  }
+                }}
+                className={`block px-4 py-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${
+                  podeEditar ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+                }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
                       <Building2 className="size-3" />
-                      <span className="truncate">
-                        {r.empresa_nome ?? "—"}
-                      </span>
+                      <span className="truncate">{r.empresa_nome ?? "—"}</span>
                     </div>
                     <p className="mt-0.5 truncate text-xs font-mono text-gray-700">
                       {r.empresa_cnpj ? formatCNPJ(r.empresa_cnpj) : "—"}
@@ -202,7 +312,7 @@ function Coluna({
                   </div>
                   <ArrowRight className="size-4 shrink-0 text-gray-400" />
                 </div>
-              </Link>
+              </div>
             </li>
           ))}
         </ul>
