@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock, CircleUser, CheckSquare, BarChart3, FileText, Inbox } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock, CircleUser, CheckSquare, BarChart3, FileText, Inbox, Lock } from "lucide-react";
 import { useUserStore } from "@/lib/store";
-import { useCanEdit } from "@/lib/hooks/useUsuario";
+import { useCanEdit, useIsAdmin } from "@/lib/hooks/useUsuario";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import {
   useQuadros, useTarefas, useReordenar, useUsuariosLista, useSalvarTarefa, useAcaoMassa,
-  useMinhasTarefas, useTodosStatus, useNotificacoes, useMarcarLida,
+  useMinhasTarefas, useTodosStatus, useNotificacoes, useMarcarLida, useMeusAcessos,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
   useStatusQuadro, statusPadrao, useCamposQuadro, useEtiquetasQuadro,
   useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner, useTempoQuadro, useAnexosCountQuadro,
@@ -27,6 +27,7 @@ import TempoRelatorioModal from "@/components/gestao/TempoRelatorioModal";
 import EtiquetasManagerModal from "@/components/gestao/EtiquetasManagerModal";
 import FormulariosManagerModal from "@/components/gestao/FormulariosManagerModal";
 import CalendarioModal from "@/components/gestao/CalendarioModal";
+import CompartilharModal from "@/components/gestao/CompartilharModal";
 import TarefaCard from "@/components/gestao/TarefaCard";
 import FiltrosPanel from "@/components/gestao/FiltrosPanel";
 import MinhasTarefas from "@/components/gestao/MinhasTarefas";
@@ -54,7 +55,10 @@ const VISTAS: { value: VistaGestao; label: string; icon: typeof KanbanSquare }[]
 export default function GestaoChabraPage() {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
-  const podeEditar = useCanEdit();
+  const canEditGlobal = useCanEdit();
+  const isAdmin = useIsAdmin();
+  const { data: meusAcessos } = useMeusAcessos();
+  const podeEditarGlobal = isAdmin || canEditGlobal;
   const { data: configs } = useConfiguracoes();
   const { data: quadros = [], isLoading: loadingQuadros } = useQuadros();
   const { data: espacos = [] } = useEspacos();
@@ -64,6 +68,8 @@ export default function GestaoChabraPage() {
 
   const [quadroId, setQuadroId] = useState<string | null>(null);
   const quadro = quadros.find((q) => q.id_quadro === quadroId) ?? quadros[0] ?? null;
+  // Permissão de edição da lista selecionada (admin sempre; aberta = global; restrita = papel editor).
+  const podeEditar = !quadro ? podeEditarGlobal : isAdmin ? true : !quadro.restrito ? canEditGlobal : meusAcessos?.get(quadro.id_quadro) === "editor";
   useEffect(() => {
     if (!quadroId && quadros.length) setQuadroId(quadros[0].id_quadro);
   }, [quadros, quadroId]);
@@ -105,6 +111,7 @@ export default function GestaoChabraPage() {
   const [etiquetasOpen, setEtiquetasOpen] = useState(false);
   const [formulariosOpen, setFormulariosOpen] = useState(false);
   const [calendarioOpen, setCalendarioOpen] = useState(false);
+  const [compartilharOpen, setCompartilharOpen] = useState(false);
   const [quadroAgrupar, setQuadroAgrupar] = useState<"status" | "responsavel" | "prioridade" | "etiqueta">("status");
   const [online, setOnline] = useState(true);
   const [boardScrolled, setBoardScrolled] = useState(false);
@@ -329,7 +336,7 @@ export default function GestaoChabraPage() {
         </Link>
         <div className="flex-1 overflow-y-auto px-2 py-2">
           <p className="mb-1 px-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/30">Espaços</p>
-          <GestaoSidebar espacos={espacos} pastas={pastas} quadros={quadros} quadroId={minhasView || painelView || inboxView ? null : (quadro?.id_quadro ?? null)} onSelect={(id) => { setQuadroId(id); setMinhasView(false); setPainelView(false); setInboxView(false); }} podeEditar={podeEditar} minhasAtivo={minhasView} onMinhas={() => { setMinhasView(true); setPainelView(false); setInboxView(false); }} painelAtivo={painelView} onPainel={() => { setPainelView(true); setMinhasView(false); setInboxView(false); }} inboxAtivo={inboxView} onInbox={() => { setInboxView(true); setMinhasView(false); setPainelView(false); }} inboxCount={inboxCount} />
+          <GestaoSidebar espacos={espacos} pastas={pastas} quadros={quadros} quadroId={minhasView || painelView || inboxView ? null : (quadro?.id_quadro ?? null)} onSelect={(id) => { setQuadroId(id); setMinhasView(false); setPainelView(false); setInboxView(false); }} podeEditar={podeEditarGlobal} minhasAtivo={minhasView} onMinhas={() => { setMinhasView(true); setPainelView(false); setInboxView(false); }} painelAtivo={painelView} onPainel={() => { setPainelView(true); setMinhasView(false); setInboxView(false); }} inboxAtivo={inboxView} onInbox={() => { setInboxView(true); setMinhasView(false); setPainelView(false); }} inboxCount={inboxCount} />
         </div>
       </aside>
 
@@ -444,6 +451,7 @@ export default function GestaoChabraPage() {
                     <button type="button" onClick={() => { setConfigOpen(false); setAutoOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Zap className="size-4 text-gray-400" /> Automações</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setFormulariosOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><FileText className="size-4 text-gray-400" /> Formulários</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setCalendarioOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><CalendarDays className="size-4 text-gray-400" /> Assinar calendário</button>
+                    <button type="button" onClick={() => { setConfigOpen(false); setCompartilharOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Lock className="size-4 text-gray-400" /> Compartilhar / acesso</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setRelatorioOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Clock className="size-4 text-gray-400" /> Relatório de tempo</button>
                   </div>
                 </>
@@ -680,6 +688,15 @@ export default function GestaoChabraPage() {
         <CalendarioModal
           open={calendarioOpen}
           onClose={() => setCalendarioOpen(false)}
+          quadro={quadro}
+          podeEditar={podeEditar}
+        />
+      )}
+
+      {quadro && (
+        <CompartilharModal
+          open={compartilharOpen}
+          onClose={() => setCompartilharOpen(false)}
           quadro={quadro}
           podeEditar={podeEditar}
         />

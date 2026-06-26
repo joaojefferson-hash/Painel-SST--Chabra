@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Folder, List, Layers, CircleUser, BarChart3, Inbox } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Folder, List, Layers, CircleUser, BarChart3, Inbox, Lock } from "lucide-react";
 import {
   useSalvarEspaco, useExcluirEspaco, useSalvarPasta, useExcluirPasta,
   useCriarQuadro, useRenomearQuadro, useExcluirQuadro,
@@ -189,6 +189,7 @@ function ItemLista({ q, ativo, editando, onSelect, podeEditar, onRenomearStart, 
           onKeyDown={(e) => { if (e.key === "Enter") onRenomear((e.target as HTMLInputElement).value); }}
           className="min-w-0 flex-1 rounded border border-white/40 bg-white/10 px-1 py-0.5 text-sm text-white focus:outline-none" />
       ) : <span className="min-w-0 flex-1 truncate">{q.nome}</span>}
+      {q.restrito && !editando && <Lock className="size-3 shrink-0 text-amber-300/90" aria-label="Lista restrita" />}
       {podeEditar && !editando && (
         <div className="ml-auto flex shrink-0 items-center opacity-0 transition group-hover:opacity-100">
           <button type="button" title="Renomear" onClick={(e) => { e.stopPropagation(); onRenomearStart(); }} className="rounded p-0.5 text-white/40 hover:text-white"><Pencil className="size-3" /></button>

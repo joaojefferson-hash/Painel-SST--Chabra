@@ -37,6 +37,7 @@ export interface GestaoQuadro {
   id_pasta: string | null;
   ordem: number;
   ics_token: string | null;
+  restrito: boolean;
 }
 
 export interface GestaoStatus {
@@ -1329,6 +1330,92 @@ export function useExcluirFormulario() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-formularios"] }),
     onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir o formulário.")),
+  });
+}
+
+// ---- Acessos por lista (permissões finas) ----
+export interface GestaoAcesso {
+  id: string;
+  id_quadro: string;
+  usuario_email: string;
+  papel: "viewer" | "editor";
+  created_at: string;
+}
+
+/** Acessos cadastrados numa lista (para o modal Compartilhar). */
+export function useAcessosQuadro(idQuadro: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gestao-acessos", idQuadro],
+    enabled: !!idQuadro,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_acessos").select("*").eq("id_quadro", idQuadro!).order("usuario_email", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoAcesso[];
+    },
+  });
+}
+
+/** Papel do usuário logado por lista (Map id_quadro → papel). */
+export function useMeusAcessos() {
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useQuery({
+    queryKey: ["gestao-meus-acessos", email],
+    enabled: !!email,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_acessos").select("id_quadro,papel").eq("usuario_email", email!.toLowerCase());
+      if (error) throw error;
+      const m = new Map<string, "viewer" | "editor">();
+      for (const r of (data ?? []) as { id_quadro: string; papel: "viewer" | "editor" }[]) m.set(r.id_quadro, r.papel);
+      return m;
+    },
+  });
+}
+
+async function upsertAcesso(idQuadro: string, email: string, papel: "viewer" | "editor") {
+  const sb = createSupabaseBrowserClient();
+  const lower = email.toLowerCase();
+  const { data: ex } = await sb.from("gestao_acessos").select("id").eq("id_quadro", idQuadro).eq("usuario_email", lower).maybeSingle();
+  if (ex) { const { error } = await sb.from("gestao_acessos").update({ papel } as never).eq("id", (ex as { id: string }).id); if (error) throw error; }
+  else { const { error } = await sb.from("gestao_acessos").insert({ id: crypto.randomUUID(), id_quadro: idQuadro, usuario_email: lower, papel } as never); if (error) throw error; }
+}
+
+export function useSalvarAcesso() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (p: { id_quadro: string; email: string; papel: "viewer" | "editor" }) => upsertAcesso(p.id_quadro, p.email, p.papel),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-acessos"] }); qc.invalidateQueries({ queryKey: ["gestao-meus-acessos"] }); },
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível salvar o acesso.")),
+  });
+}
+
+export function useExcluirAcesso() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gestao_acessos").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-acessos"] }); qc.invalidateQueries({ queryKey: ["gestao-meus-acessos"] }); },
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível remover o acesso.")),
+  });
+}
+
+/** Liga/desliga "lista restrita". Ao ligar, garante o usuário atual como editor ANTES (não se trancar fora). */
+export function useToggleRestrito() {
+  const qc = useQueryClient();
+  const email = useUserStore((s) => s.user?.email ?? null);
+  return useMutation({
+    mutationFn: async (p: { id_quadro: string; restrito: boolean }) => {
+      const sb = createSupabaseBrowserClient();
+      if (p.restrito && email) await upsertAcesso(p.id_quadro, email, "editor");
+      const { error } = await sb.from("gestao_quadros").update({ restrito: p.restrito } as never).eq("id_quadro", p.id_quadro);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-quadros"] }); qc.invalidateQueries({ queryKey: ["gestao-acessos"] }); qc.invalidateQueries({ queryKey: ["gestao-meus-acessos"] }); },
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível alterar a restrição.")),
   });
 }
 
