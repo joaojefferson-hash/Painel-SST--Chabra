@@ -26,6 +26,7 @@ import AutomacoesManagerModal from "@/components/gestao/AutomacoesManagerModal";
 import TempoRelatorioModal from "@/components/gestao/TempoRelatorioModal";
 import EtiquetasManagerModal from "@/components/gestao/EtiquetasManagerModal";
 import FormulariosManagerModal from "@/components/gestao/FormulariosManagerModal";
+import CalendarioModal from "@/components/gestao/CalendarioModal";
 import TarefaCard from "@/components/gestao/TarefaCard";
 import FiltrosPanel from "@/components/gestao/FiltrosPanel";
 import MinhasTarefas from "@/components/gestao/MinhasTarefas";
@@ -103,6 +104,7 @@ export default function GestaoChabraPage() {
   const [relatorioOpen, setRelatorioOpen] = useState(false);
   const [etiquetasOpen, setEtiquetasOpen] = useState(false);
   const [formulariosOpen, setFormulariosOpen] = useState(false);
+  const [calendarioOpen, setCalendarioOpen] = useState(false);
   const [quadroAgrupar, setQuadroAgrupar] = useState<"status" | "responsavel" | "prioridade" | "etiqueta">("status");
   const [online, setOnline] = useState(true);
   const [boardScrolled, setBoardScrolled] = useState(false);
@@ -441,6 +443,7 @@ export default function GestaoChabraPage() {
                     <button type="button" onClick={() => { setConfigOpen(false); setEtiquetasOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Tag className="size-4 text-gray-400" /> Etiquetas</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setAutoOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Zap className="size-4 text-gray-400" /> Automações</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setFormulariosOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><FileText className="size-4 text-gray-400" /> Formulários</button>
+                    <button type="button" onClick={() => { setConfigOpen(false); setCalendarioOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><CalendarDays className="size-4 text-gray-400" /> Assinar calendário</button>
                     <button type="button" onClick={() => { setConfigOpen(false); setRelatorioOpen(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><Clock className="size-4 text-gray-400" /> Relatório de tempo</button>
                   </div>
                 </>
@@ -669,6 +672,15 @@ export default function GestaoChabraPage() {
           statuses={statuses}
           etiquetas={etiquetasCat}
           usuarios={usuarios}
+          podeEditar={podeEditar}
+        />
+      )}
+
+      {quadro && (
+        <CalendarioModal
+          open={calendarioOpen}
+          onClose={() => setCalendarioOpen(false)}
+          quadro={quadro}
           podeEditar={podeEditar}
         />
       )}

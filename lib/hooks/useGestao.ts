@@ -36,6 +36,7 @@ export interface GestaoQuadro {
   id_espaco: string | null;
   id_pasta: string | null;
   ordem: number;
+  ics_token: string | null;
 }
 
 export interface GestaoStatus {
@@ -1328,6 +1329,22 @@ export function useExcluirFormulario() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-formularios"] }),
     onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir o formulário.")),
+  });
+}
+
+/** Gera/regenera (ou remove) o token do feed ICS de uma lista. */
+export function useDefinirIcsToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id_quadro: string; remover?: boolean }) => {
+      const sb = createSupabaseBrowserClient();
+      const token = p.remover ? null : (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "").slice(0, 24);
+      const { error } = await sb.from("gestao_quadros").update({ ics_token: token } as never).eq("id_quadro", p.id_quadro);
+      if (error) throw error;
+      return token;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-quadros"] }),
+    onError: (e) => toast.error(mensagemErro(e, "Não foi possível atualizar o calendário.")),
   });
 }
 
