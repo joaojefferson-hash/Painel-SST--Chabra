@@ -10,7 +10,7 @@ import {
   useSalvarTarefa, useExcluirTarefa, useUsuariosLista,
   useComentarios, useAddComentario, useExcluirComentario,
   useDependencias, useAddDependencia, useExcluirDependencia,
-  useUsuarios, useCriarNotificacao, detectarMencoes, gerarIaGestao,
+  useUsuarios, useCriarNotificacao, detectarMencoes, gerarIaGestao, useRegistrarAtividade,
   iniciais, corAvatar,
   PRIORIDADES,
   type GestaoTarefa, type StatusTarefa, type PrioridadeTarefa, type Subtarefa, type GestaoStatus, type GestaoCampo,
@@ -18,6 +18,7 @@ import {
 import CampoInput from "@/components/gestao/CampoInput";
 import TempoTracker from "@/components/gestao/TempoTracker";
 import AnexosTarefa from "@/components/gestao/AnexosTarefa";
+import HistoricoTarefa from "@/components/gestao/HistoricoTarefa";
 import { confirmar } from "@/components/ui/confirm";
 
 function quando(iso: string): string {
@@ -79,6 +80,7 @@ export default function TarefaModal({
   const userEmail = useUserStore((s) => s.user?.email ?? null);
   const { data: usuariosFull = [] } = useUsuarios();
   const criarNotif = useCriarNotificacao();
+  const registrarAtiv = useRegistrarAtividade();
   const emailDe = (nome: string | null) => (nome ? usuariosFull.find((u) => u.nome === nome)?.email ?? null : null);
   const { data: comentarios = [] } = useComentarios(tarefa?.id_tarefa);
   const addComentario = useAddComentario();
@@ -198,6 +200,20 @@ export default function TarefaModal({
     if (tarefa && !respMudou && status !== tarefa.status && respEmail && respEmail !== userEmail) {
       criarNotif.mutate({ destinatario: respEmail, tipo: "status", titulo: `"${titulo.trim()}" mudou para ${statusNome}`, id_tarefa: idSalvo, id_quadro: idQuadro });
     }
+
+    // Histórico de atividades
+    const nomeStatus = (slug: string) => statuses.find((s) => s.slug === slug)?.nome ?? slug;
+    const eventos: { acao: string; payload?: Record<string, unknown> }[] = [];
+    if (!tarefa) {
+      eventos.push({ acao: "criada" });
+    } else {
+      if (status !== tarefa.status) eventos.push({ acao: "status", payload: { de: nomeStatus(tarefa.status), para: nomeStatus(status) } });
+      if (respNome !== (tarefa.responsavel ?? null)) eventos.push({ acao: "responsavel", payload: { de: tarefa.responsavel ?? "—", para: respNome ?? "—" } });
+      if ((prazo || null) !== (tarefa.prazo ?? null)) eventos.push({ acao: "prazo", payload: { de: tarefa.prazo ?? "—", para: prazo || "—" } });
+      if (prioridade !== tarefa.prioridade) eventos.push({ acao: "prioridade", payload: { de: tarefa.prioridade, para: prioridade } });
+      if (titulo.trim() !== tarefa.titulo) eventos.push({ acao: "titulo", payload: { de: tarefa.titulo, para: titulo.trim() } });
+    }
+    if (eventos.length) registrarAtiv.mutate({ id_tarefa: idSalvo, ator: userNome, eventos });
 
     // Automações (gatilhos imediatos)
     const tNova = { ...(tarefa ?? {}), id_tarefa: idSalvo, id_quadro: idQuadro, titulo: titulo.trim(), status, responsavel: respNome } as GestaoTarefa;
@@ -400,6 +416,12 @@ export default function TarefaModal({
         {tarefa && (
           <Secao titulo="Tempo">
             <TempoTracker idTarefa={tarefa.id_tarefa} podeEditar={podeEditar} />
+          </Secao>
+        )}
+
+        {tarefa && (
+          <Secao titulo="Histórico">
+            <HistoricoTarefa idTarefa={tarefa.id_tarefa} />
           </Secao>
         )}
 

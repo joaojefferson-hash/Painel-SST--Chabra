@@ -759,6 +759,44 @@ async function registrarAtividade(sb: ReturnType<typeof createSupabaseBrowserCli
   await sb.from("gestao_atividades").insert({ id: crypto.randomUUID(), ator, acao, id_tarefa: idTarefa, payload } as never);
 }
 
+export interface GestaoAtividade {
+  id: string;
+  ator: string | null;
+  acao: string;
+  id_tarefa: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+/** Histórico de atividades de uma tarefa (mais recente primeiro). */
+export function useAtividades(idTarefa: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gestao-atividades", idTarefa],
+    enabled: !!idTarefa,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("gestao_atividades").select("*").eq("id_tarefa", idTarefa!).order("created_at", { ascending: false }).limit(80);
+      if (error) throw error;
+      return (data ?? []) as unknown as GestaoAtividade[];
+    },
+  });
+}
+
+/** Registra um ou mais eventos no histórico da tarefa (best-effort). */
+export function useRegistrarAtividade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { id_tarefa: string; ator: string | null; eventos: { acao: string; payload?: Record<string, unknown> }[] }) => {
+      if (!p.eventos.length) return;
+      const sb = createSupabaseBrowserClient();
+      const rows = p.eventos.map((e) => ({ id: crypto.randomUUID(), ator: p.ator, acao: e.acao, id_tarefa: p.id_tarefa, payload: e.payload ?? {} }));
+      const { error } = await sb.from("gestao_atividades").insert(rows as never);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-atividades"] }),
+  });
+}
+
 export function useTempoTarefa(idTarefa: string | null | undefined) {
   return useQuery({
     queryKey: ["gestao-tempo", idTarefa],
