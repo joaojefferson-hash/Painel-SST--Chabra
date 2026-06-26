@@ -98,7 +98,14 @@ function makePostgrestClient(
       const token = await getAccessToken();
       const headers = new Headers(init?.headers);
       headers.set("apikey", anonKey); // paridade supabase-js; PostgREST puro ignora
-      headers.set("Authorization", token ? `Bearer ${token}` : `Bearer ${anonKey}`);
+      // Com usuario: Bearer = access_token ES256 (validado pelo JWKS).
+      // Sem usuario (anon): NAO mandar Authorization -- o anon key e HS256 e o
+      // PostgREST (JWKS ES256) o rejeitaria com 401; sem header ele usa o role anon.
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      } else {
+        headers.delete("Authorization");
+      }
       return fetch(input, { ...init, headers });
     },
   });

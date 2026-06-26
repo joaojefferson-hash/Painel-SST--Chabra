@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_PATHS = ["/login", "/f/"];
+// /api/health: liberado p/ o healthcheck do container.
+// /api/rest/v1: proxy same-origin do PostgREST -- a auth e feita la (JWT -> RLS);
+//   rodar getUser() aqui por request de dados seria lento e redundante. CF Access
+//   e o gate externo do app.
+const PUBLIC_PATHS = ["/login", "/f/", "/api/health", "/api/rest/v1"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
