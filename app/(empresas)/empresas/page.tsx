@@ -11,7 +11,6 @@ import { excluirComLixeira } from "@/lib/hooks/useLixeira";
 import EmpresaCard from "@/components/empresas/EmpresaCard";
 import EmpresaForm from "@/components/empresas/EmpresaForm";
 import ImportarEmpresasModal from "@/components/empresas/ImportarEmpresasModal";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useCanCreate, useCanDelete, useCanEdit } from "@/lib/hooks/useUsuario";
 import type { Empresa } from "@/lib/supabase/types";
@@ -123,9 +122,9 @@ function EmpresasInner() {
 
       {isLoading && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <LoadingSkeleton rows={1} className="h-44" />
-          <LoadingSkeleton rows={1} className="h-44" />
-          <LoadingSkeleton rows={1} className="h-44" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="skeleton-shimmer h-44 rounded-2xl" style={{ opacity: 1 - i * 0.08 }} />
+          ))}
         </div>
       )}
 

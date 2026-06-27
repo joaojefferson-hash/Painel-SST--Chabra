@@ -15,6 +15,7 @@ import { useUnidades } from "@/lib/hooks/useUnidades";
 import EmpresaForm from "@/components/empresas/EmpresaForm";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { EmpresaDetalheSkeleton } from "@/components/empresas/EmpresaSkeletons";
 import StatusBadge from "@/components/inspecoes/StatusBadge";
 import { fmtData, cn } from "@/lib/utils";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
@@ -84,7 +85,7 @@ export default function EmpresaDetalhePage({ params }: Props) {
 
   const pdfsFiltrados = filtroMod ? pdfs.filter((p) => p.modulo === filtroMod) : pdfs;
 
-  if (isLoading) return <LoadingSkeleton rows={6} />;
+  if (isLoading) return <EmpresaDetalheSkeleton />;
   if (!empresa) {
     return (
       <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
