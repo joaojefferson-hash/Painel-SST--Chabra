@@ -1,5 +1,7 @@
 "use client";
 
+import { EditorSkeleton } from "@/components/ui/PageSkeletons";
+
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -344,13 +346,7 @@ export default function AepSetoresPage({
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="size-6 animate-spin text-emerald-600" />
-      </div>
-    );
-  }
+  if (isLoading) return <EditorSkeleton />;
 
   const empresa = rel?.empresas as { nome_empresa?: string } | null;
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { EditorSkeleton } from "@/components/ui/PageSkeletons";
+
 import { use, useState, useEffect } from "react";
 import { Brain, ChevronDown, ChevronUp, Loader2, Save, Sparkles } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -355,13 +357,7 @@ export default function PsicossocialPage({
 
   // ─── Loading ──────────────────────────────────────────────────────────────
 
-  if (loadingRel || loadingFatores || loadingMeta) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-gray-400" />
-      </div>
-    );
-  }
+  if (loadingRel || loadingFatores || loadingMeta) return <EditorSkeleton />;
 
   // ─── Render ───────────────────────────────────────────────────────────────
 

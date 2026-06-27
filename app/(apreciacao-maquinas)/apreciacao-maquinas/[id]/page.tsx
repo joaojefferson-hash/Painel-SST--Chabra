@@ -1,5 +1,7 @@
 "use client";
 
+import { EditorSkeleton } from "@/components/ui/PageSkeletons";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -439,13 +441,7 @@ export default function DetalheApreciacaoPage() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-gray-500">
-        <Loader2 className="size-5 animate-spin" />
-      </div>
-    );
-  }
+  if (isLoading) return <EditorSkeleton />;
 
   if (error || !apreciacao) {
     return (

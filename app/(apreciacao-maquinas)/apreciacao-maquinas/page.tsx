@@ -1,12 +1,13 @@
 "use client";
 
+import { LinhasSkeleton } from "@/components/ui/PageSkeletons";
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Cog,
   Plus,
   ArrowLeft,
-  Loader2,
   ShieldCheck,
   ShieldAlert,
   ClipboardList,
@@ -139,9 +140,7 @@ export default function ApreciacaoMaquinasPage() {
       {/* Lista */}
       <section>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8 text-gray-500">
-            <Loader2 className="size-4 animate-spin" />
-          </div>
+          <LinhasSkeleton linhas={5} />
         ) : filtradas.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-500">
             {apreciacoes.length === 0 ? (
