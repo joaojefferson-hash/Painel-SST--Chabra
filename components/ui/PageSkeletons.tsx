@@ -62,10 +62,11 @@ export function EditorSkeleton() {
   );
 }
 
-/** Lista de linhas (ícone + 2 textos) — espelha listas em <li>/cards de linha. */
-export function LinhasSkeleton({ linhas = 5 }: { linhas?: number }) {
+/** Lista de linhas (ícone + 2 textos) — espelha listas em <li>/cards de linha.
+    `bare` remove a borda/fundo (para usar dentro de um card já existente). */
+export function LinhasSkeleton({ linhas = 5, bare = false }: { linhas?: number; bare?: boolean }) {
   return (
-    <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
+    <div className={bare ? "divide-y divide-gray-100" : "divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white"}>
       {Array.from({ length: linhas }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ opacity: 1 - i * 0.08 }}>
           <div className="skeleton-shimmer size-4 shrink-0 rounded-full" />

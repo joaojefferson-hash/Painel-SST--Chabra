@@ -1,5 +1,7 @@
 "use client";
 
+import { EditorSkeleton } from "@/components/ui/PageSkeletons";
+
 import { use, useState, useEffect, useRef } from "react";
 import { Loader2, Save, Trash2, Plus, Workflow, AlertTriangle, ChevronDown, Check } from "lucide-react";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
@@ -64,13 +66,7 @@ export default function PlanoAcaoPage({
     });
   }
 
-  if (loadRel || loadLinhas || loadResp) {
-    return (
-      <div className="flex items-center justify-center py-16 text-gray-500">
-        <Loader2 className="size-5 animate-spin" />
-      </div>
-    );
-  }
+  if (loadRel || loadLinhas || loadResp) return <EditorSkeleton />;
 
   if (!relatorio) {
     return (
