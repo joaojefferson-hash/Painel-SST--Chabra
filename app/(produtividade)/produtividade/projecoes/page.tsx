@@ -7,8 +7,9 @@ import {
 } from "recharts";
 import {
   AlertTriangle, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
-  FileText, Globe, Info, MapPin, Save, Users, Wrench,
+  FileText, Globe, Info, MapPin, Save, Users, Wrench, Download, Printer, Building2,
 } from "lucide-react";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import {
   useProdUnidades,
@@ -86,7 +87,7 @@ type Tipo = "geral" | "por_unidade";
 
 export default function ProjecoesPage() {
   const canEdit                       = useCanEdit();
-  const { data: unidades = [] }       = useProdUnidades();
+  const { data: unidades = [], isLoading: loadUnid } = useProdUnidades();
   const { data: colaboradores = [] }  = useProdColaboradores();
   const { data: alocacoes = [] }      = useProdAlocacoes();
   const salvarMutation                = useSalvarProjecao();
@@ -344,6 +345,8 @@ export default function ProjecoesPage() {
       tecs_necessarios:  calc.tecsNec,
       adms_adicionais:   calc.admsAdd,
       tecs_adicionais:   calc.tecsAdd,
+      mes,
+      ano,
     });
     toast.success("Projeção salva com sucesso!");
     setTitulo("");
@@ -351,17 +354,98 @@ export default function ProjecoesPage() {
     setComentarios("");
   }
 
+  // ── Exportar CSV (independente do pipeline de laudo) ────────────────────────
+  function exportarCSV() {
+    const dpa = num(docsPorAdm, 5), ipa = num(inspPorTec, 3), diasN = num(diasUteis, 60);
+    const linhas: (string | number)[][] = [
+      ["Projeção", titulo || `${MESES_LABEL[mes - 1]}/${ano}`],
+      ["Mês de referência", `${MESES_LABEL[mes - 1]}/${ano}`],
+      ["Janela (dias úteis)", diasN],
+      ["Conclui até", fmtDataCurta(dataAlvo)],
+      ["Equipe (ADMs / Técnicos)", `${calc.admsEfet} / ${calc.tecsEfet}${calc.simAdms || calc.simTecs ? " (simulado)" : ""}`],
+      [],
+      ["Unidade", "Clientes", "Pend. Inspeção", "Pend. Docs", "ADMs Nec.", "ADMs Cad.", "Déficit ADM", "Técs Nec.", "Técs Cad.", "Déficit Téc."],
+    ];
+    const baseUnidades = unidades.length > 0 ? unidades : [];
+    for (const u of baseUnidades) {
+      const d = getDados(u.id);
+      const pInsp = num(d.pendInspecao), pDocs = num(d.pendDocs);
+      const admsNec = dpa * diasN > 0 ? Math.ceil(pDocs / (dpa * diasN)) : 0;
+      const tecsNec = ipa * diasN > 0 ? Math.ceil(pInsp / (ipa * diasN)) : 0;
+      const cadA = Math.round((cadPorUnidade[u.id]?.adms ?? 0) * 10) / 10;
+      const cadT = Math.round((cadPorUnidade[u.id]?.tecs ?? 0) * 10) / 10;
+      linhas.push([u.nome, num(d.totalClientes), pInsp, pDocs, admsNec, cadA, Math.max(0, Math.ceil(admsNec - cadA - 0.05)), tecsNec, cadT, Math.max(0, Math.ceil(tecsNec - cadT - 0.05))]);
+    }
+    linhas.push(["TOTAL", totais.totalClientes, totais.pendInsp, totais.pendDocs, calc.admsNec, calc.cadAdms, faltaAdm, calc.tecsNec, calc.cadTecs, faltaTec]);
+    const csv = linhas.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\r\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `projecao-${String(mes).padStart(2, "0")}-${ano}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // ── JSX ───────────────────────────────────────────────────────────────────
+
+  const cabecalho = (
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900">Projeção de Necessidade de Equipe</h1>
+      <p className="mt-0.5 text-sm text-gray-500">
+        Calcule quantos ADMs e técnicos são necessários para zerar as pendências dentro da janela de trabalho
+      </p>
+    </div>
+  );
+
+  // Estados de carregando / vazio.
+  if (loadUnid) {
+    return (
+      <div className="space-y-8">
+        {cabecalho}
+        <div className="space-y-3 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-14 animate-pulse rounded-lg bg-gray-100" />)}
+        </div>
+      </div>
+    );
+  }
+  if (unidades.length === 0) {
+    return (
+      <div className="space-y-8">
+        {cabecalho}
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
+          <Building2 className="size-8 text-gray-300" />
+          <p className="text-sm font-medium text-gray-700">Nenhuma unidade cadastrada</p>
+          <p className="max-w-md text-xs text-gray-500">Cadastre as unidades e a equipe para a projeção calcular a necessidade de ADMs e técnicos.</p>
+          {canEdit && (
+            <Link href="/produtividade/unidades" className="mt-1 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">
+              Ir para Unidades e Equipe
+            </Link>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
 
       {/* Cabeçalho */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Projeção de Necessidade de Equipe</h1>
-        <p className="mt-0.5 text-sm text-gray-500">
-          Calcule quantos ADMs e técnicos são necessários para zerar as pendências dentro da janela de trabalho
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Projeção de Necessidade de Equipe</h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            Calcule quantos ADMs e técnicos são necessários para zerar as pendências dentro da janela de trabalho
+          </p>
+        </div>
+        <div className="flex items-center gap-2 print:hidden">
+          <button type="button" onClick={exportarCSV} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+            <Download className="size-4" /> Exportar CSV
+          </button>
+          <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+            <Printer className="size-4" /> Imprimir / PDF
+          </button>
+        </div>
       </div>
 
       {/* ── Resumo executivo ─────────────────────────────────────────────────── */}
@@ -502,6 +586,11 @@ export default function ProjecoesPage() {
             <p className="mt-0.5 text-xs text-gray-400">
               Carregado do <strong>Controle Mensal</strong> de {MESES_LABEL[mes - 1]}/{ano} — edite para simular cenários
             </p>
+            {snapshots.length === 0 && (
+              <p className="mt-0.5 text-xs font-medium text-amber-600">
+                Sem dados no Controle Mensal de {MESES_LABEL[mes - 1]}/{ano} — preencha lá ou edite os valores manualmente abaixo.
+              </p>
+            )}
             {tipo === "por_unidade" && idUnidadeSel && (
               <p className="mt-0.5 text-xs text-teal-600 font-medium">
                 {unidadesVisiveis.length > 1 ? `Grupo (equipe compartilhada): ${grupoLabel}` : `Exibindo apenas: ${unidades.find((u) => u.id === idUnidadeSel)?.nome}`}
@@ -934,7 +1023,7 @@ Técs: max(0, ${calc.tecsNec} − ${calc.tecsEfet}) = ${calc.tecsAdd}`}
 
       {/* ── Salvar Projeção (apenas quem pode editar) ────────────────────────── */}
       {canEdit && (
-      <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5 space-y-4">
+      <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5 space-y-4 print:hidden">
         <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">Salvar Projeção</h2>
 
         <div>
