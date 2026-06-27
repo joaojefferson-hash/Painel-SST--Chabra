@@ -24,10 +24,29 @@ const MESES_LABEL = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
+/** Dias úteis por mês (premissa de conversão dias úteis → meses). */
+const DIAS_UTEIS_MES = 22;
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function num(v: string | number, fallback = 0) {
   return Math.max(0, Number(v) || fallback);
+}
+
+/** Soma N dias ÚTEIS (pula sábado/domingo) a partir de uma data base. */
+function addDiasUteis(base: Date, n: number): Date {
+  const d = new Date(base);
+  let add = 0;
+  while (add < n) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) add += 1;
+  }
+  return d;
+}
+
+function fmtDataCurta(d: Date): string {
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function Field({
@@ -44,6 +63,7 @@ function Field({
         type="number" min={0} value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
+        aria-label={label}
         className={`rounded-lg border border-gray-200 px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 ${small ? "w-28" : "w-full"}`}
       />
     </div>
@@ -71,17 +91,29 @@ export default function ProjecoesPage() {
   const { data: alocacoes = [] }      = useProdAlocacoes();
   const salvarMutation                = useSalvarProjecao();
 
-  // Lookup: unidadeId → { adms, tecs } com base nos colaboradores cadastrados
-  const colabsPorUnidade = useMemo(() => {
+  // Lookup: unidadeId → { adms, tecs } CADASTRADOS, rateados pelas alocações (mesmo
+  // modelo do cálculo geral) — colaborador sem rateio conta 100% na unidade-sede.
+  // Assim o breakdown por unidade bate com o total mesmo com equipe compartilhada.
+  const cadPorUnidade = useMemo(() => {
+    const porColab = new Map<string, { id_unidade: string; percentual: number }[]>();
+    for (const a of alocacoes) {
+      if (!porColab.has(a.id_colaborador)) porColab.set(a.id_colaborador, []);
+      porColab.get(a.id_colaborador)!.push({ id_unidade: a.id_unidade, percentual: a.percentual });
+    }
     const map: Record<string, { adms: number; tecs: number }> = {};
+    const add = (uid: string, tipo: string, frac: number) => {
+      if (!map[uid]) map[uid] = { adms: 0, tecs: 0 };
+      if (tipo === "documentos") map[uid].adms += frac;
+      if (tipo === "tecnico_campo") map[uid].tecs += frac;
+    };
     for (const c of colaboradores) {
       if (!c.ativo) continue;
-      if (!map[c.id_unidade]) map[c.id_unidade] = { adms: 0, tecs: 0 };
-      if (c.tipo === "documentos")    map[c.id_unidade].adms += 1;
-      if (c.tipo === "tecnico_campo") map[c.id_unidade].tecs += 1;
+      const rateio = porColab.get(c.id);
+      if (rateio && rateio.length > 0) for (const r of rateio) add(r.id_unidade, c.tipo, r.percentual / 100);
+      else add(c.id_unidade, c.tipo, 1);
     }
     return map;
-  }, [colaboradores]);
+  }, [colaboradores, alocacoes]);
 
   // Tipo de projeção
   const [tipo, setTipo]                               = useState<Tipo>("geral");
@@ -184,8 +216,8 @@ export default function ProjecoesPage() {
     const { admsCount, tecsCount, capDocsMes, capInspMes } = equipeVisivel;
     setAdmsAtuais(String(Math.round(admsCount * 10) / 10));
     setTecsAtuais(String(Math.round(tecsCount * 10) / 10));
-    if (admsCount > 0 && capDocsMes > 0) setDocsPorAdm(String(Math.round((capDocsMes / admsCount / 22) * 10) / 10));
-    if (tecsCount > 0 && capInspMes > 0) setInspPorTec(String(Math.round((capInspMes / tecsCount / 22) * 10) / 10));
+    if (admsCount > 0 && capDocsMes > 0) setDocsPorAdm(String(Math.round((capDocsMes / admsCount / DIAS_UTEIS_MES) * 10) / 10));
+    if (tecsCount > 0 && capInspMes > 0) setInspPorTec(String(Math.round((capInspMes / tecsCount / DIAS_UTEIS_MES) * 10) / 10));
   }, [equipeVisivel]);
 
   // ── Totais ────────────────────────────────────────────────────────────────
@@ -258,6 +290,17 @@ export default function ProjecoesPage() {
   const dias    = num(diasUteis, 60);
   const semanas = Math.round(dias / 5);
 
+  // Datas-alvo (em vez de "X dias úteis" abstrato).
+  const dataAlvo = useMemo(() => addDiasUteis(new Date(), dias), [dias]);
+  const dataDocs = Number.isFinite(calc.diasNecDocs) ? addDiasUteis(new Date(), calc.diasNecDocs) : null;
+  const dataInsp = Number.isFinite(calc.diasNecInsp) ? addDiasUteis(new Date(), calc.diasNecInsp) : null;
+  const faltaAdm = Math.ceil(calc.admsAdd);
+  const faltaTec = Math.ceil(calc.tecsAdd);
+  const partesDeficit = [
+    faltaAdm > 0 ? `+${faltaAdm} ADM${faltaAdm > 1 ? "s" : ""}` : null,
+    faltaTec > 0 ? `+${faltaTec} técnico${faltaTec > 1 ? "s" : ""}` : null,
+  ].filter(Boolean) as string[];
+
   // ── Salvar ────────────────────────────────────────────────────────────────
   async function handleSalvar() {
     if (!titulo.trim()) {
@@ -304,6 +347,28 @@ export default function ProjecoesPage() {
           Calcule quantos ADMs e técnicos são necessários para zerar as pendências dentro da janela de trabalho
         </p>
       </div>
+
+      {/* ── Resumo executivo ─────────────────────────────────────────────────── */}
+      {totais.totalPend > 0 && (
+        partesDeficit.length > 0 ? (
+          <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-5">
+            <AlertTriangle className="mt-0.5 size-6 shrink-0 text-red-600" />
+            <p className="text-base text-red-900">
+              Para zerar as <strong>{totais.totalPend.toLocaleString()}</strong> pendências em{" "}
+              <strong>{dias} dias úteis</strong> (até <strong>{fmtDataCurta(dataAlvo)}</strong>),
+              faltam <strong className="text-red-700">{partesDeficit.join(" e ")}</strong> além da equipe atual.
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-5">
+            <CheckCircle2 className="mt-0.5 size-6 shrink-0 text-green-600" />
+            <p className="text-base text-green-900">
+              A equipe atual zera as <strong>{totais.totalPend.toLocaleString()}</strong> pendências
+              dentro da janela — conclusão prevista até <strong>{fmtDataCurta(dataAlvo)}</strong>.
+            </p>
+          </div>
+        )
+      )}
 
       {/* ── Tipo de projeção ─────────────────────────────────────────────────── */}
       <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
@@ -358,7 +423,7 @@ export default function ProjecoesPage() {
           <div>
             <Field label="Dias úteis disponíveis" value={diasUteis} onChange={setDiasUteis} small disabled={!canEdit} />
             <p className="mt-1.5 text-xs text-gray-400">
-              ≈ <strong className="text-gray-600">{semanas} semanas</strong> / <strong className="text-gray-600">{Math.round(dias / 22)} meses</strong> — calculado com 5 dias úteis/semana e 22 dias úteis/mês
+              ≈ <strong className="text-gray-600">{semanas} semanas</strong> / <strong className="text-gray-600">{Math.round(dias / DIAS_UTEIS_MES)} meses</strong> — calculado com 5 dias úteis/semana e {DIAS_UTEIS_MES} dias úteis/mês · conclui em <strong className="text-gray-600">{fmtDataCurta(dataAlvo)}</strong>
             </p>
           </div>
         </div>
@@ -367,7 +432,9 @@ export default function ProjecoesPage() {
           <p className="mb-1 text-xs font-semibold text-gray-600">Equipe atual</p>
           <p className="mb-3 text-[11px] text-gray-400">
             Somada do cadastro em <strong>Unidades e Equipe</strong>
-            {tipo === "por_unidade" ? " (apenas a unidade selecionada)" : " (todas as unidades)"}
+            {tipo === "por_unidade"
+              ? (unidadesVisiveis.length > 1 ? " (grupo de equipe compartilhada)" : " (apenas a unidade selecionada)")
+              : " (todas as unidades)"}
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
@@ -408,13 +475,13 @@ export default function ProjecoesPage() {
             )}
           </div>
           <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-1.5 ring-1 ring-black/5">
-            <button type="button" onClick={prevMes} className="rounded p-1 hover:bg-gray-200">
+            <button type="button" onClick={prevMes} aria-label="Mês anterior" className="rounded p-1 hover:bg-gray-200">
               <ChevronLeft className="size-4 text-gray-500" />
             </button>
             <p className="min-w-[120px] text-center text-xs font-bold text-gray-700">
               {MESES_LABEL[mes - 1]} de {ano}
             </p>
-            <button type="button" onClick={nextMes} className="rounded p-1 hover:bg-gray-200">
+            <button type="button" onClick={nextMes} aria-label="Próximo mês" className="rounded p-1 hover:bg-gray-200">
               <ChevronRight className="size-4 text-gray-500" />
             </button>
           </div>
@@ -458,6 +525,7 @@ export default function ProjecoesPage() {
                       <input type="number" min={0} value={d.totalClientes}
                         onChange={(e) => setDado(u.id, "totalClientes", e.target.value)}
                         disabled={!canEdit}
+                        aria-label={`Total de clientes — ${u.nome}`}
                         className="w-24 rounded border border-gray-200 px-2 py-1.5 text-center text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                       />
                     </td>
@@ -465,6 +533,7 @@ export default function ProjecoesPage() {
                       <input type="number" min={0} value={d.pendInspecao}
                         onChange={(e) => setDado(u.id, "pendInspecao", e.target.value)}
                         disabled={!canEdit}
+                        aria-label={`Pendências de inspeção — ${u.nome}`}
                         className="w-24 rounded border border-orange-200 bg-orange-50/50 px-2 py-1.5 text-center text-sm font-mono text-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                       />
                     </td>
@@ -472,6 +541,7 @@ export default function ProjecoesPage() {
                       <input type="number" min={0} value={d.pendDocs}
                         onChange={(e) => setDado(u.id, "pendDocs", e.target.value)}
                         disabled={!canEdit}
+                        aria-label={`Pendências de documentos — ${u.nome}`}
                         className="w-24 rounded border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-center text-sm font-mono text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                       />
                     </td>
@@ -513,7 +583,7 @@ export default function ProjecoesPage() {
       {/* ── Step 3: Resultado ───────────────────────────────────────────────── */}
       <div>
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
-          3. Resultado — Janela de {diasUteis} dias úteis
+          3. Resultado — Janela de {diasUteis} dias úteis (até {fmtDataCurta(dataAlvo)})
           {tipo === "por_unidade" && idUnidadeSel && (
             <span className="ml-2 normal-case font-normal text-teal-600">
               · {unidades.find((u) => u.id === idUnidadeSel)?.nome}
@@ -573,7 +643,7 @@ export default function ProjecoesPage() {
                 </p>
               ) : (
                 <p className="text-sm text-red-700">
-                  Leva <strong>{calc.diasNecDocs === Infinity ? "∞" : `${calc.diasNecDocs} dias`}</strong> com equipe atual — necessário <strong className="text-red-800">{calc.admsNec} ADMs</strong> (+{calc.admsAdd} a contratar)
+                  Leva <strong>{calc.diasNecDocs === Infinity ? "∞" : `${calc.diasNecDocs} dias`}</strong> com equipe atual{dataDocs ? ` (conclui em ${fmtDataCurta(dataDocs)})` : ""} — necessário <strong className="text-red-800">{calc.admsNec} ADMs</strong> (+{faltaAdm} a contratar)
                 </p>
               )}
             </div>
@@ -616,7 +686,7 @@ export default function ProjecoesPage() {
                 </p>
               ) : (
                 <p className="text-sm text-red-700">
-                  Leva <strong>{calc.diasNecInsp === Infinity ? "∞" : `${calc.diasNecInsp} dias`}</strong> com equipe atual — necessário <strong className="text-red-800">{calc.tecsNec} técnicos</strong> (+{calc.tecsAdd} a contratar)
+                  Leva <strong>{calc.diasNecInsp === Infinity ? "∞" : `${calc.diasNecInsp} dias`}</strong> com equipe atual{dataInsp ? ` (conclui em ${fmtDataCurta(dataInsp)})` : ""} — necessário <strong className="text-red-800">{calc.tecsNec} técnicos</strong> (+{faltaTec} a contratar)
                 </p>
               )}
             </div>
@@ -708,10 +778,12 @@ export default function ProjecoesPage() {
                   const diasN     = num(diasUteis, 60);
                   const admsNec   = dpa * diasN > 0 ? Math.ceil(pDocs / (dpa * diasN)) : 0;
                   const tecsNec   = ipa * diasN > 0 ? Math.ceil(pInsp / (ipa * diasN)) : 0;
-                  const cadADMs   = colabsPorUnidade[u.id]?.adms ?? 0;
-                  const cadTecs   = colabsPorUnidade[u.id]?.tecs ?? 0;
-                  const defADM    = admsNec - cadADMs;
-                  const defTec    = tecsNec - cadTecs;
+                  const cadADMs   = cadPorUnidade[u.id]?.adms ?? 0;
+                  const cadTecs   = cadPorUnidade[u.id]?.tecs ?? 0;
+                  const cadADMsFmt = Math.round(cadADMs * 10) / 10;
+                  const cadTecsFmt = Math.round(cadTecs * 10) / 10;
+                  const defADM    = Math.ceil(admsNec - cadADMs - 0.05);
+                  const defTec    = Math.ceil(tecsNec - cadTecs - 0.05);
                   return (
                     <tr key={u.id} className="hover:bg-gray-50/50">
                       <td className="px-5 py-3 font-medium text-gray-800">{u.nome}</td>
@@ -723,19 +795,19 @@ export default function ProjecoesPage() {
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${pDocs > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400"}`}>{pDocs}</span>
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-blue-700">{admsNec}</td>
-                      <td className="px-4 py-3 text-right text-gray-500">{cadADMs}</td>
+                      <td className="px-4 py-3 text-right text-gray-500">{cadADMsFmt}</td>
                       <td className="px-4 py-3 text-right">
                         {defADM > 0
                           ? <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">+{defADM}</span>
-                          : <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">✓ {Math.abs(defADM) > 0 ? `+${Math.abs(defADM)}` : "ok"}</span>
+                          : <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700" title={cadADMsFmt - admsNec > 0 ? `${Math.round((cadADMsFmt - admsNec) * 10) / 10} de folga` : undefined}>ok</span>
                         }
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-orange-700">{tecsNec}</td>
-                      <td className="px-4 py-3 text-right text-gray-500">{cadTecs}</td>
+                      <td className="px-4 py-3 text-right text-gray-500">{cadTecsFmt}</td>
                       <td className="px-4 py-3 text-right">
                         {defTec > 0
                           ? <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">+{defTec}</span>
-                          : <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">✓ {Math.abs(defTec) > 0 ? `+${Math.abs(defTec)}` : "ok"}</span>
+                          : <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700" title={cadTecsFmt - tecsNec > 0 ? `${Math.round((cadTecsFmt - tecsNec) * 10) / 10} de folga` : undefined}>ok</span>
                         }
                       </td>
                     </tr>
