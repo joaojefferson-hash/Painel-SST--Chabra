@@ -39,6 +39,46 @@ export function DetalheSkeleton() {
   );
 }
 
+/** Editor/detalhe sem abas: Voltar + cabeçalho com ações + dois blocos de conteúdo. */
+export function EditorSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="skeleton-shimmer h-4 w-20" />
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 space-y-2">
+            <div className="skeleton-shimmer h-7 w-64 rounded" />
+            <div className="skeleton-shimmer h-4 w-44 rounded" />
+          </div>
+          <div className="flex gap-1.5">
+            <div className="skeleton-shimmer h-8 w-24 rounded-md" />
+            <div className="skeleton-shimmer h-8 w-24 rounded-md" />
+          </div>
+        </div>
+      </div>
+      <div className="skeleton-shimmer h-40 rounded-xl" />
+      <div className="skeleton-shimmer h-64 rounded-xl" />
+    </div>
+  );
+}
+
+/** Lista de linhas (ícone + 2 textos) — espelha listas em <li>/cards de linha. */
+export function LinhasSkeleton({ linhas = 5 }: { linhas?: number }) {
+  return (
+    <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
+      {Array.from({ length: linhas }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ opacity: 1 - i * 0.08 }}>
+          <div className="skeleton-shimmer size-4 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-1.5">
+            <div className="skeleton-shimmer h-3.5 w-1/2 rounded" />
+            <div className="skeleton-shimmer h-3 w-2/3 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Tabela/lista: cabeçalho + N linhas (espelha listas em tabela). */
 export function TabelaSkeleton({ linhas = 6 }: { linhas?: number }) {
   return (

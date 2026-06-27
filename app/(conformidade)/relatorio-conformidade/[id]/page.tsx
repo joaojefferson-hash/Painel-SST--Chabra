@@ -1,5 +1,7 @@
 "use client";
 
+import { EditorSkeleton } from "@/components/ui/PageSkeletons";
+
 import { use, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -79,13 +81,7 @@ export default function DetalheConformidadePage({
   const [crossRefAberto, setCrossRefAberto] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ title: string; desc?: string; fn: () => void } | null>(null);
 
-  if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center text-gray-500">
-        <Loader2 className="size-5 animate-spin" /> Carregando...
-      </div>
-    );
-  }
+  if (isLoading) return <EditorSkeleton />;
 
   if (error || !data) {
     return (
