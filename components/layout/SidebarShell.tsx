@@ -314,8 +314,9 @@ export default function SidebarShell({
         <Menu className="size-5" />
       </button>
 
-      {/* Sidebar desktop */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[220px] flex-col md:flex print:hidden" style={{ background: "linear-gradient(180deg, #1a3d26 0%, #112a1a 60%, #0d2016 100%)" }}>
+      {/* Sidebar desktop — view-transition-name fixo: o shell não cruza entre páginas,
+          só a área de conteúdo transiciona (ver globals.css). */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[220px] flex-col md:flex print:hidden" style={{ background: "linear-gradient(180deg, #1a3d26 0%, #112a1a 60%, #0d2016 100%)", viewTransitionName: "sidebar" }}>
         {Content}
       </aside>
 
