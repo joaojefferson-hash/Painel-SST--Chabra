@@ -16,7 +16,7 @@ import { useEmpresas } from "@/lib/hooks/useEmpresas";
 import { useAcoes, useDeleteAcao } from "@/lib/hooks/useAcoes";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import { usePagination } from "@/lib/hooks/usePagination";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { TabelaSkeleton } from "@/components/ui/PageSkeletons";
 import Pagination from "@/components/ui/Pagination";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import AcaoForm from "@/components/acoes/AcaoForm";
@@ -207,7 +207,7 @@ export default function AcoesPage() {
       <div className="reveal-up overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         {isLoading ? (
           <div className="p-5">
-            <LoadingSkeleton rows={5} />
+            <TabelaSkeleton linhas={5} />
           </div>
         ) : filtradas.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-14 text-center">

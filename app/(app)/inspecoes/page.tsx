@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import EmpresaSelect from "@/components/empresas/EmpresaSelect";
 import InspecaoRow from "@/components/inspecoes/InspecaoRow";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { TabelaSkeleton } from "@/components/ui/PageSkeletons";
 import Pagination from "@/components/ui/Pagination";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import {
@@ -264,7 +264,7 @@ function InspecoesInner() {
       )}>
         {isLoading ? (
           <div className="p-5">
-            <LoadingSkeleton rows={6} />
+            <TabelaSkeleton linhas={6} />
           </div>
         ) : items.length === 0 ? (
           <div className="p-14 text-center text-sm text-gray-500">
