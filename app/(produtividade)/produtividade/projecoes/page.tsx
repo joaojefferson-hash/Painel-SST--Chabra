@@ -134,6 +134,8 @@ export default function ProjecoesPage() {
 
   // Dados por unidade (semeados do snapshot do mês; editáveis para simulação)
   const [dados, setDados] = useState<Record<string, DadosUnidade>>({});
+  // Baseline = dados originais do snapshot (para detectar edição e restaurar).
+  const [baselineDados, setBaselineDados] = useState<Record<string, DadosUnidade>>({});
 
   // Semeia/atualiza os dados por unidade a partir do snapshot do mês selecionado.
   // Carga de documentos = vencidos + vencendo; pend. inspeção = inspeção pendente;
@@ -148,7 +150,15 @@ export default function ProjecoesPage() {
       };
     }
     setDados(next);
+    setBaselineDados(next);
   }, [snapshots, mes, ano]);
+
+  // True quando o usuário editou os dados em relação ao snapshot do mês.
+  const dadosEditados = useMemo(
+    () => JSON.stringify(dados) !== JSON.stringify(baselineDados),
+    [dados, baselineDados],
+  );
+  function restaurarDadosDoMes() { setDados(baselineDados); }
 
   function prevMes() { if (mes === 1) { setMes(12); setAno((a) => a - 1); } else setMes((m) => m - 1); }
   function nextMes() { if (mes === 12) { setMes(1); setAno((a) => a + 1); } else setMes((m) => m + 1); }
@@ -244,10 +254,14 @@ export default function ProjecoesPage() {
     const dpa  = num(docsPorAdm, 5);
     const ipa  = num(inspPorTec, 3);
 
-    // Equipe efetiva = colaboradores cadastrados nas unidades visíveis (somados).
-    const usesReg    = equipeVisivel.admsCount > 0 || equipeVisivel.tecsCount > 0;
-    const admsEfet   = usesReg ? equipeVisivel.admsCount : num(admsAtuais);
-    const tecsEfet   = usesReg ? equipeVisivel.tecsCount : num(tecsAtuais);
+    // Equipe EFETIVA = campos editáveis (simulação). Por padrão valem o cadastro
+    // (sincronizado pelo useEffect); o usuário pode sobrescrever para simular cenários.
+    const cadAdms    = Math.round(equipeVisivel.admsCount * 10) / 10;
+    const cadTecs    = Math.round(equipeVisivel.tecsCount * 10) / 10;
+    const admsEfet   = num(admsAtuais);
+    const tecsEfet   = num(tecsAtuais);
+    const simAdms    = Math.abs(admsEfet - cadAdms) > 0.05;
+    const simTecs    = Math.abs(tecsEfet - cadTecs) > 0.05;
 
     const capDocs = admsEfet * dpa * dias;
     const capInsp = tecsEfet * ipa * dias;
@@ -283,7 +297,7 @@ export default function ProjecoesPage() {
       graficoDocs,
       okDocs: admsAdd === 0,
       okInsp: tecsAdd === 0,
-      admsEfet, tecsEfet, usesReg,
+      admsEfet, tecsEfet, cadAdms, cadTecs, simAdms, simTecs,
     };
   }, [totais, diasUteis, admsAtuais, tecsAtuais, docsPorAdm, inspPorTec, equipeVisivel]);
 
@@ -294,6 +308,8 @@ export default function ProjecoesPage() {
   const dataAlvo = useMemo(() => addDiasUteis(new Date(), dias), [dias]);
   const dataDocs = Number.isFinite(calc.diasNecDocs) ? addDiasUteis(new Date(), calc.diasNecDocs) : null;
   const dataInsp = Number.isFinite(calc.diasNecInsp) ? addDiasUteis(new Date(), calc.diasNecInsp) : null;
+  // Conclusão real = a mais tardia das duas frentes (quando ambas zeram).
+  const dataConclusao = dataDocs && dataInsp ? (dataDocs > dataInsp ? dataDocs : dataInsp) : (dataDocs ?? dataInsp ?? dataAlvo);
   const faltaAdm = Math.ceil(calc.admsAdd);
   const faltaTec = Math.ceil(calc.tecsAdd);
   const partesDeficit = [
@@ -364,7 +380,7 @@ export default function ProjecoesPage() {
             <CheckCircle2 className="mt-0.5 size-6 shrink-0 text-green-600" />
             <p className="text-base text-green-900">
               A equipe atual zera as <strong>{totais.totalPend.toLocaleString()}</strong> pendências
-              dentro da janela — conclusão prevista até <strong>{fmtDataCurta(dataAlvo)}</strong>.
+              dentro da janela — conclusão prevista até <strong>{fmtDataCurta(dataConclusao)}</strong>.
             </p>
           </div>
         )
@@ -429,29 +445,37 @@ export default function ProjecoesPage() {
         </div>
 
         <div>
-          <p className="mb-1 text-xs font-semibold text-gray-600">Equipe atual</p>
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold text-gray-600">Equipe atual (edite para simular)</p>
+            {(calc.simAdms || calc.simTecs) && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">simulação</span>
+            )}
+          </div>
           <p className="mb-3 text-[11px] text-gray-400">
-            Somada do cadastro em <strong>Unidades e Equipe</strong>
+            Pré-preenchida do cadastro em <strong>Unidades e Equipe</strong>
             {tipo === "por_unidade"
               ? (unidadesVisiveis.length > 1 ? " (grupo de equipe compartilhada)" : " (apenas a unidade selecionada)")
-              : " (todas as unidades)"}
+              : " (todas as unidades)"} — altere os valores para simular cenários de contratação.
           </p>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
-              <p className="text-xs font-semibold text-gray-700">ADMs (geradores de docs)</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900">{Math.round(equipeVisivel.admsCount * 10) / 10}</p>
-            </div>
-            <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
-              <p className="text-xs font-semibold text-gray-700">Técnicos de campo</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900">{Math.round(equipeVisivel.tecsCount * 10) / 10}</p>
-            </div>
+          <div className="grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="ADMs (geradores de docs)" sub={`Cadastrados: ${calc.cadAdms}`} value={admsAtuais} onChange={setAdmsAtuais} disabled={!canEdit} />
+            <Field label="Técnicos de campo" sub={`Cadastrados: ${calc.cadTecs}`} value={tecsAtuais} onChange={setTecsAtuais} disabled={!canEdit} />
+            {canEdit && (calc.simAdms || calc.simTecs) && (
+              <button
+                type="button"
+                onClick={() => { setAdmsAtuais(String(calc.cadAdms)); setTecsAtuais(String(calc.cadTecs)); }}
+                className="h-fit rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Restaurar do cadastro
+              </button>
+            )}
           </div>
         </div>
 
         <div>
           <p className="mb-1 text-xs font-semibold text-gray-600">Produtividade diária</p>
           <p className="mb-3 text-[11px] text-gray-400">
-            Pré-preenchida pela capacidade média cadastrada por colaborador ÷ 22 dias úteis — ajuste se quiser
+            Pré-preenchida pela capacidade média cadastrada por colaborador ÷ {DIAS_UTEIS_MES} dias úteis — ajuste se quiser
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Docs por ADM por dia"         sub="Documentos finalizados em 1 dia útil"    value={docsPorAdm} onChange={setDocsPorAdm} disabled={!canEdit} />
@@ -464,7 +488,17 @@ export default function ProjecoesPage() {
       <div className="rounded-2xl bg-white shadow-sm ring-1 ring-black/5 overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">2. Clientes por Unidade</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">2. Clientes por Unidade</h2>
+              {dadosEditados && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">editado</span>
+              )}
+              {canEdit && dadosEditados && (
+                <button type="button" onClick={restaurarDadosDoMes} className="text-[11px] font-medium text-teal-600 hover:underline">
+                  Restaurar dados do mês
+                </button>
+              )}
+            </div>
             <p className="mt-0.5 text-xs text-gray-400">
               Carregado do <strong>Controle Mensal</strong> de {MESES_LABEL[mes - 1]}/{ano} — edite para simular cenários
             </p>
@@ -620,7 +654,7 @@ export default function ProjecoesPage() {
                 <p className="text-xs text-gray-400">Capacidade atual em {diasUteis}d</p>
                 <p className="mt-1 text-xl font-bold text-gray-800">{calc.capDocs.toLocaleString()}</p>
                 <p className="text-xs text-gray-400">
-                  {calc.admsEfet} ADMs{calc.usesReg ? " (cadastrados)" : " (manual)"} × {num(docsPorAdm, 5)} docs/dia × {diasUteis}d
+                  {calc.admsEfet} ADMs{calc.simAdms ? " (simulado)" : " (cadastro)"} × {num(docsPorAdm, 5)} docs/dia × {diasUteis}d
                 </p>
               </div>
             </div>
@@ -663,7 +697,7 @@ export default function ProjecoesPage() {
                 <p className="text-xs text-gray-400">Capacidade atual em {diasUteis}d</p>
                 <p className="mt-1 text-xl font-bold text-gray-800">{calc.capInsp.toLocaleString()}</p>
                 <p className="text-xs text-gray-400">
-                  {calc.tecsEfet} técs{calc.usesReg ? " (cadastrados)" : " (manual)"} × {num(inspPorTec, 3)} insp/dia × {diasUteis}d
+                  {calc.tecsEfet} técs{calc.simTecs ? " (simulado)" : " (cadastro)"} × {num(inspPorTec, 3)} insp/dia × {diasUteis}d
                 </p>
               </div>
             </div>
@@ -706,9 +740,9 @@ export default function ProjecoesPage() {
                       <p className="text-xs text-gray-500">ADMs necessários</p>
                       <p className="mt-0.5 text-2xl font-bold text-blue-700">{calc.admsNec} <span className="text-sm font-normal text-gray-500">total</span></p>
                       <p className="mt-0.5 text-sm">
-                        <span className="font-semibold text-gray-700">{calc.admsEfet} atual{calc.usesReg ? " (cad.)" : ""}</span>
+                        <span className="font-semibold text-gray-700">{calc.admsEfet} atual{calc.simAdms ? " (simulado)" : " (cad.)"}</span>
                         <span className="mx-1 text-gray-400">+</span>
-                        <span className="font-bold text-red-700">{calc.admsAdd} a contratar</span>
+                        <span className="font-bold text-red-700">{faltaAdm} a contratar</span>
                       </p>
                     </div>
                   )}
@@ -717,13 +751,22 @@ export default function ProjecoesPage() {
                       <p className="text-xs text-gray-500">Técnicos necessários</p>
                       <p className="mt-0.5 text-2xl font-bold text-orange-700">{calc.tecsNec} <span className="text-sm font-normal text-gray-500">total</span></p>
                       <p className="mt-0.5 text-sm">
-                        <span className="font-semibold text-gray-700">{calc.tecsEfet} atual{calc.usesReg ? " (cad.)" : ""}</span>
+                        <span className="font-semibold text-gray-700">{calc.tecsEfet} atual{calc.simTecs ? " (simulado)" : " (cad.)"}</span>
                         <span className="mx-1 text-gray-400">+</span>
-                        <span className="font-bold text-red-700">{calc.tecsAdd} a contratar</span>
+                        <span className="font-bold text-red-700">{faltaTec} a contratar</span>
                       </p>
                     </div>
                   )}
                 </div>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => { setAdmsAtuais(String(calc.admsNec)); setTecsAtuais(String(calc.tecsNec)); }}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+                  >
+                    Simular com a equipe necessária →
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -823,7 +866,7 @@ export default function ProjecoesPage() {
       {calc.admsEfet > 0 && totais.pendDocs > 0 && (
         <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/5">
           <h2 className="mb-1 text-sm font-semibold text-gray-700">Progresso semanal — Documentos pendentes</h2>
-          <p className="mb-4 text-xs text-gray-400">Com {calc.admsEfet} ADMs{calc.usesReg ? " (cadastrados)" : " (manual)"} fazendo {num(docsPorAdm, 5)} docs/dia</p>
+          <p className="mb-4 text-xs text-gray-400">Com {calc.admsEfet} ADMs{calc.simAdms ? " (simulado)" : " (cadastro)"} fazendo {num(docsPorAdm, 5)} docs/dia</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={calc.graficoDocs} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
