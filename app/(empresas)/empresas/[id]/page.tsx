@@ -1,7 +1,6 @@
 "use client";
 
 import { use, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Pencil, ClipboardList, Building2, ChartBar,
   FileText, Download, BadgeCheck, MapPin, ShieldAlert,
@@ -51,7 +50,6 @@ interface Props {
 
 export default function EmpresaDetalhePage({ params }: Props) {
   const { id } = use(params);
-  const router = useRouter();
   const canEdit = useCanEdit();
   const [editOpen, setEditOpen] = useState(false);
   const [aba, setAba] = useState<Aba>("geral");
@@ -99,13 +97,12 @@ export default function EmpresaDetalhePage({ params }: Props) {
 
   return (
     <div className="space-y-5">
-      <button
-        type="button"
-        onClick={() => router.push("/empresas")}
+      <Link
+        href="/empresas"
         className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft className="size-4" /> Voltar
-      </button>
+      </Link>
 
       {/* Cabeçalho rico */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
