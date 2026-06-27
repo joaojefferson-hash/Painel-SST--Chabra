@@ -19,36 +19,16 @@ import {
   useSalvarProjecao,
 } from "@/lib/hooks/useProdutividade";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
+import {
+  DIAS_UTEIS_MES, num, addDiasUteis, fmtDataCurta, calcularProjecao, calcularUnidade,
+} from "@/lib/produtividade/projecao";
 
 const MESES_LABEL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
-/** Dias úteis por mês (premissa de conversão dias úteis → meses). */
-const DIAS_UTEIS_MES = 22;
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function num(v: string | number, fallback = 0) {
-  return Math.max(0, Number(v) || fallback);
-}
-
-/** Soma N dias ÚTEIS (pula sábado/domingo) a partir de uma data base. */
-function addDiasUteis(base: Date, n: number): Date {
-  const d = new Date(base);
-  let add = 0;
-  while (add < n) {
-    d.setDate(d.getDate() + 1);
-    const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) add += 1;
-  }
-  return d;
-}
-
-function fmtDataCurta(d: Date): string {
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
+// ── Helpers de UI ──────────────────────────────────────────────────────────
 
 function Field({
   label, sub, value, onChange, small, disabled,
@@ -250,6 +230,8 @@ export default function ProjecoesPage() {
   }, [dados, unidadesVisiveis]);
 
   // ── Cálculos ──────────────────────────────────────────────────────────────
+  // O cálculo "puro" vive em lib/produtividade/projecao.ts (testável). Aqui só
+  // montamos os inputs e juntamos os metadados de equipe (cadastro vs. simulação).
   const calc = useMemo(() => {
     const dias = num(diasUteis, 60);
     const dpa  = num(docsPorAdm, 5);
@@ -257,50 +239,46 @@ export default function ProjecoesPage() {
 
     // Equipe EFETIVA = campos editáveis (simulação). Por padrão valem o cadastro
     // (sincronizado pelo useEffect); o usuário pode sobrescrever para simular cenários.
-    const cadAdms    = Math.round(equipeVisivel.admsCount * 10) / 10;
-    const cadTecs    = Math.round(equipeVisivel.tecsCount * 10) / 10;
-    const admsEfet   = num(admsAtuais);
-    const tecsEfet   = num(tecsAtuais);
-    const simAdms    = Math.abs(admsEfet - cadAdms) > 0.05;
-    const simTecs    = Math.abs(tecsEfet - cadTecs) > 0.05;
+    const cadAdms  = Math.round(equipeVisivel.admsCount * 10) / 10;
+    const cadTecs  = Math.round(equipeVisivel.tecsCount * 10) / 10;
+    const admsEfet = num(admsAtuais);
+    const tecsEfet = num(tecsAtuais);
 
-    const capDocs = admsEfet * dpa * dias;
-    const capInsp = tecsEfet * ipa * dias;
-
-    const admsNec = dpa * dias > 0 ? Math.ceil(totais.pendDocs / (dpa * dias)) : 0;
-    const tecsNec = ipa * dias > 0 ? Math.ceil(totais.pendInsp / (ipa * dias)) : 0;
-    const admsAdd = Math.max(0, admsNec - admsEfet);
-    const tecsAdd = Math.max(0, tecsNec - tecsEfet);
-
-    const diasNecDocs = dpa > 0 && admsEfet > 0 ? Math.ceil(totais.pendDocs / (admsEfet * dpa)) : Infinity;
-    const diasNecInsp = ipa > 0 && tecsEfet > 0 ? Math.ceil(totais.pendInsp / (tecsEfet * ipa)) : Infinity;
-
-    const pctDocs = totais.pendDocs > 0 ? Math.min(100, Math.round((capDocs / totais.pendDocs) * 100)) : 100;
-    const pctInsp = totais.pendInsp > 0 ? Math.min(100, Math.round((capInsp / totais.pendInsp) * 100)) : 100;
-
-    const semanas = [1, 2, 3, 4, 6, 8, 10, 12].filter((s) => s * 5 <= dias + 10);
-    const graficoDocs = semanas.map((s) => {
-      const diasS   = Math.min(s * 5, dias);
-      const capAcum = admsEfet * dpa * diasS;
-      return {
-        semana: `S${s}`,
-        restante:    Math.max(0, totais.pendDocs - capAcum),
-        processado:  Math.min(capAcum, totais.pendDocs),
-      };
+    const r = calcularProjecao({
+      pendDocs: totais.pendDocs,
+      pendInsp: totais.pendInsp,
+      admsEfet, tecsEfet, dpa, ipa, dias,
     });
 
     return {
-      capDocs, capInsp,
-      admsNec, tecsNec,
-      admsAdd, tecsAdd,
-      diasNecDocs, diasNecInsp,
-      pctDocs, pctInsp,
-      graficoDocs,
-      okDocs: admsAdd === 0,
-      okInsp: tecsAdd === 0,
-      admsEfet, tecsEfet, cadAdms, cadTecs, simAdms, simTecs,
+      ...r,
+      admsEfet, tecsEfet, cadAdms, cadTecs,
+      simAdms: Math.abs(admsEfet - cadAdms) > 0.05,
+      simTecs: Math.abs(tecsEfet - cadTecs) > 0.05,
     };
   }, [totais, diasUteis, admsAtuais, tecsAtuais, docsPorAdm, inspPorTec, equipeVisivel]);
+
+  // Breakdown por unidade (modo Geral) — ordenado pela unidade mais crítica (maior déficit).
+  const linhasBreakdown = useMemo(() => {
+    const dpa = num(docsPorAdm, 5), ipa = num(inspPorTec, 3), diasN = num(diasUteis, 60);
+    return unidades
+      .map((u) => {
+        const d = getDados(u.id);
+        const pInsp = num(d.pendInspecao), pDocs = num(d.pendDocs);
+        const cadADMs = cadPorUnidade[u.id]?.adms ?? 0;
+        const cadTecs = cadPorUnidade[u.id]?.tecs ?? 0;
+        const r = calcularUnidade(pDocs, pInsp, cadADMs, cadTecs, dpa, ipa, diasN);
+        return {
+          id: u.id, nome: u.nome,
+          totalClientes: num(d.totalClientes), pInsp, pDocs,
+          cadADMsFmt: Math.round(cadADMs * 10) / 10,
+          cadTecsFmt: Math.round(cadTecs * 10) / 10,
+          ...r,
+        };
+      })
+      .sort((a, b) => b.critico - a.critico || a.nome.localeCompare(b.nome, "pt-BR"));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unidades, dados, cadPorUnidade, docsPorAdm, inspPorTec, diasUteis]);
 
   const dias    = num(diasUteis, 60);
   const semanas = Math.round(dias / 5);
@@ -610,10 +588,10 @@ export default function ProjecoesPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="max-h-[70vh] overflow-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50 text-[11px] uppercase text-gray-400">
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-gray-100 bg-gray-50 text-[11px] uppercase text-gray-400 [&>th]:bg-gray-50">
                 <th className="px-5 py-3 text-left">Unidade</th>
                 <th className="px-5 py-3 text-center">Total de Clientes</th>
                 <th className="px-5 py-3 text-center">
@@ -685,8 +663,8 @@ export default function ProjecoesPage() {
                 );
               })}
 
-              {/* Totais */}
-              <tr className="border-t-2 border-gray-200 bg-gray-50 text-xs font-bold">
+              {/* Totais (fixo no rodapé da tabela rolável) */}
+              <tr className="sticky bottom-0 z-10 border-t-2 border-gray-200 bg-gray-50 text-xs font-bold [&>td]:bg-gray-50">
                 <td className="px-5 py-3 uppercase tracking-wide text-gray-500">Total</td>
                 <td className="px-5 py-3 text-center text-gray-900">{totais.totalClientes}</td>
                 <td className="px-5 py-3 text-center text-orange-700">{totais.pendInsp}</td>
@@ -882,69 +860,53 @@ export default function ProjecoesPage() {
             </h2>
           </div>
           <p className="px-5 pb-2 text-[11px] text-gray-400">
-            &ldquo;Cadastrados&rdquo; = colaboradores ativos do tipo <em>Geração de documentos SST</em> (ADMs) e <em>Técnico de campo</em> (técnicos) registrados em Unidades e Equipe.
+            &ldquo;Cadastrados&rdquo; = colaboradores ativos do tipo <em>Geração de documentos SST</em> (ADMs) e <em>Técnico de campo</em> (técnicos) registrados em Unidades e Equipe. Ordenado pela unidade mais crítica.
           </p>
-          <div className="overflow-x-auto">
+          <div className="max-h-[70vh] overflow-auto">
             <table className="w-full text-sm">
-              <thead>
+              <thead className="sticky top-0 z-10">
                 <tr className="border-b border-gray-100 bg-gray-50 text-[11px] uppercase text-gray-400">
-                  <th className="px-5 py-3 text-left">Unidade</th>
-                  <th className="px-5 py-3 text-right">Clientes</th>
-                  <th className="px-5 py-3 text-right text-orange-600">Pend. Inspeção</th>
-                  <th className="px-5 py-3 text-right text-blue-600">Pend. Docs</th>
-                  <th className="px-4 py-3 text-right text-blue-700">ADMs Nec.</th>
-                  <th className="px-4 py-3 text-right text-gray-500">ADMs Cad.</th>
-                  <th className="px-4 py-3 text-right">Déficit ADM</th>
-                  <th className="px-4 py-3 text-right text-orange-700">Técs. Nec.</th>
-                  <th className="px-4 py-3 text-right text-gray-500">Técs. Cad.</th>
-                  <th className="px-4 py-3 text-right">Déficit Téc.</th>
+                  <th className="bg-gray-50 px-5 py-3 text-left">Unidade</th>
+                  <th className="bg-gray-50 px-5 py-3 text-right">Clientes</th>
+                  <th className="bg-gray-50 px-5 py-3 text-right text-orange-600">Pend. Inspeção</th>
+                  <th className="bg-gray-50 px-5 py-3 text-right text-blue-600">Pend. Docs</th>
+                  <th className="bg-gray-50 px-4 py-3 text-right text-blue-700">ADMs Nec.</th>
+                  <th className="bg-gray-50 px-4 py-3 text-right text-gray-500">ADMs Cad.</th>
+                  <th className="bg-gray-50 px-4 py-3 text-right">Déficit ADM</th>
+                  <th className="bg-gray-50 px-4 py-3 text-right text-orange-700">Técs. Nec.</th>
+                  <th className="bg-gray-50 px-4 py-3 text-right text-gray-500">Técs. Cad.</th>
+                  <th className="bg-gray-50 px-4 py-3 text-right">Déficit Téc.</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {unidades.map((u) => {
-                  const d         = getDados(u.id);
-                  const pInsp     = num(d.pendInspecao);
-                  const pDocs     = num(d.pendDocs);
-                  const dpa       = num(docsPorAdm, 5);
-                  const ipa       = num(inspPorTec, 3);
-                  const diasN     = num(diasUteis, 60);
-                  const admsNec   = dpa * diasN > 0 ? Math.ceil(pDocs / (dpa * diasN)) : 0;
-                  const tecsNec   = ipa * diasN > 0 ? Math.ceil(pInsp / (ipa * diasN)) : 0;
-                  const cadADMs   = cadPorUnidade[u.id]?.adms ?? 0;
-                  const cadTecs   = cadPorUnidade[u.id]?.tecs ?? 0;
-                  const cadADMsFmt = Math.round(cadADMs * 10) / 10;
-                  const cadTecsFmt = Math.round(cadTecs * 10) / 10;
-                  const defADM    = Math.ceil(admsNec - cadADMs - 0.05);
-                  const defTec    = Math.ceil(tecsNec - cadTecs - 0.05);
-                  return (
-                    <tr key={u.id} className="hover:bg-gray-50/50">
-                      <td className="px-5 py-3 font-medium text-gray-800">{u.nome}</td>
-                      <td className="px-5 py-3 text-right text-gray-600">{num(d.totalClientes)}</td>
-                      <td className="px-5 py-3 text-right">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${pInsp > 0 ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-400"}`}>{pInsp}</span>
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${pDocs > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400"}`}>{pDocs}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-blue-700">{admsNec}</td>
-                      <td className="px-4 py-3 text-right text-gray-500">{cadADMsFmt}</td>
-                      <td className="px-4 py-3 text-right">
-                        {defADM > 0
-                          ? <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">+{defADM}</span>
-                          : <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700" title={cadADMsFmt - admsNec > 0 ? `${Math.round((cadADMsFmt - admsNec) * 10) / 10} de folga` : undefined}>ok</span>
-                        }
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-orange-700">{tecsNec}</td>
-                      <td className="px-4 py-3 text-right text-gray-500">{cadTecsFmt}</td>
-                      <td className="px-4 py-3 text-right">
-                        {defTec > 0
-                          ? <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">+{defTec}</span>
-                          : <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700" title={cadTecsFmt - tecsNec > 0 ? `${Math.round((cadTecsFmt - tecsNec) * 10) / 10} de folga` : undefined}>ok</span>
-                        }
-                      </td>
-                    </tr>
-                  );
-                })}
+                {linhasBreakdown.map((row) => (
+                  <tr key={row.id} className={row.critico > 0 ? "bg-red-50/40 hover:bg-red-50/70" : "hover:bg-gray-50/50"}>
+                    <td className="px-5 py-3 font-medium text-gray-800">{row.nome}</td>
+                    <td className="px-5 py-3 text-right text-gray-600">{row.totalClientes}</td>
+                    <td className="px-5 py-3 text-right">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${row.pInsp > 0 ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-400"}`}>{row.pInsp}</span>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${row.pDocs > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400"}`}>{row.pDocs}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-blue-700">{row.admsNec}</td>
+                    <td className="px-4 py-3 text-right text-gray-500">{row.cadADMsFmt}</td>
+                    <td className="px-4 py-3 text-right">
+                      {row.defADM > 0
+                        ? <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">+{row.defADM}</span>
+                        : <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700" title={row.cadADMsFmt - row.admsNec > 0 ? `${Math.round((row.cadADMsFmt - row.admsNec) * 10) / 10} de folga` : undefined}>ok</span>
+                      }
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-orange-700">{row.tecsNec}</td>
+                    <td className="px-4 py-3 text-right text-gray-500">{row.cadTecsFmt}</td>
+                    <td className="px-4 py-3 text-right">
+                      {row.defTec > 0
+                        ? <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">+{row.defTec}</span>
+                        : <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700" title={row.cadTecsFmt - row.tecsNec > 0 ? `${Math.round((row.cadTecsFmt - row.tecsNec) * 10) / 10} de folga` : undefined}>ok</span>
+                      }
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
