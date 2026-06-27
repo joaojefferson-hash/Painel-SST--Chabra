@@ -51,6 +51,37 @@ export function TabelaSkeleton({ linhas = 6 }: { linhas?: number }) {
   );
 }
 
+/** Dashboard: linha de KPIs + dois blocos de gráfico + tabela recente. */
+export function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="skeleton-shimmer h-28 rounded-2xl" />
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="skeleton-shimmer h-64 rounded-2xl lg:col-span-2" />
+        <div className="skeleton-shimmer h-64 rounded-2xl" />
+      </div>
+      <div className="skeleton-shimmer h-56 rounded-2xl" />
+    </div>
+  );
+}
+
+/** Página de gráfico/relatório: cabeçalho + bloco de gráfico + tabela. */
+export function GraficoPageSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="skeleton-shimmer h-7 w-64 rounded" />
+      <div className="skeleton-shimmer h-64 rounded-2xl" />
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <TabelaSkeleton linhas={5} />
+      </div>
+    </div>
+  );
+}
+
 /** Página de lista completa (com barra de busca) — para loading.tsx de rotas de lista. */
 export function ListaSkeleton({ linhas = 6 }: { linhas?: number }) {
   return (
