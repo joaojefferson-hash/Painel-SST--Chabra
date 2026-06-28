@@ -77,12 +77,15 @@ export default function UsuariosPage() {
 
   const excluir = useMutation({
     mutationFn: async (u: Usuario) => {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.rpc(
-        "excluir_usuario_admin" as never,
-        { p_email: u.email } as never
-      );
-      if (error) throw error;
+      const resp = await fetch("/api/usuarios/excluir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_usuario: u.id_usuario, email: u.email }),
+      });
+      const data = (await resp.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+      if (!resp.ok || !data?.ok) throw new Error(data?.error ?? "Falha ao excluir");
     },
     onSuccess: () => {
       qcGlobal.invalidateQueries({ queryKey: ["usuarios"] });
@@ -429,34 +432,26 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
         const emailAntigo = usuario.email.toLowerCase();
         const emailNovo = form.email.trim().toLowerCase();
 
-        // 1) Se email mudou → chama RPC que sincroniza auth.users + identities
-        if (emailNovo !== emailAntigo) {
-          const { error: errEmail } = await supabase.rpc(
-            "atualizar_email_admin" as never,
-            {
-              p_email_antigo: emailAntigo,
-              p_email_novo: emailNovo,
-            } as never
-          );
-          if (errEmail) {
-            throw new Error(errEmail.message || "Falha ao atualizar e-mail");
-          }
-        }
-
-        // 2) Se senha foi preenchida → chama RPC pra redefinir
-        if (form.senha && form.senha.length > 0) {
-          if (form.senha.length < 6) {
+        // 1+2) Email e/ou senha -> rota que usa a Admin API do GoTrue (.107)
+        if (emailNovo !== emailAntigo || (form.senha && form.senha.length > 0)) {
+          if (form.senha && form.senha.length > 0 && form.senha.length < 6) {
             throw new Error("A nova senha deve ter ao menos 6 caracteres");
           }
-          const { error: errSenha } = await supabase.rpc(
-            "redefinir_senha_admin" as never,
-            {
-              p_email: emailNovo,
-              p_nova_senha: form.senha,
-            } as never
-          );
-          if (errSenha) {
-            throw new Error(errSenha.message || "Falha ao redefinir senha");
+          const resp = await fetch("/api/usuarios/credenciais", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id_usuario: usuario.id_usuario,
+              email_atual: emailAntigo,
+              email_novo: emailNovo !== emailAntigo ? emailNovo : undefined,
+              nova_senha: form.senha && form.senha.length > 0 ? form.senha : undefined,
+            }),
+          });
+          const data = (await resp.json().catch(() => null)) as
+            | { ok?: boolean; error?: string }
+            | null;
+          if (!resp.ok || !data?.ok) {
+            throw new Error(data?.error ?? "Falha ao atualizar credenciais");
           }
         }
 
@@ -496,10 +491,10 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
 
       // AUTH-01: criação via Edge Function service_role — a sessão do admin
       // nunca é substituída (sem signUp() client-side).
-      const { data: fnData, error: fnErr } = await supabase.functions.invoke(
-        "criar-usuario-admin",
-        {
-          body: {
+      const resp = await fetch("/api/usuarios/criar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
             email: form.email.trim().toLowerCase(),
             senha: form.senha,
             id_usuario: gerarId("USR"),
@@ -523,15 +518,13 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
             crp: form.crp || null,
             crm: form.crm || null,
             registro_mte: form.registro_mte || null,
-          },
-        }
-      );
-      if (fnErr || !(fnData as { ok?: boolean } | null)?.ok) {
-        throw new Error(
-          (fnData as { error?: string } | null)?.error ??
-            fnErr?.message ??
-            "Falha ao criar usuário"
-        );
+          }),
+        });
+      const fnData = (await resp.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+      if (!resp.ok || !fnData?.ok) {
+        throw new Error(fnData?.error ?? "Falha ao criar usuário");
       }
 
       // E-mail de boas-vindas — não bloqueia se a Edge Function não estiver
