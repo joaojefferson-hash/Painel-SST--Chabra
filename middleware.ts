@@ -5,7 +5,9 @@ import { createServerClient } from "@supabase/ssr";
 // /api/rest/v1: proxy same-origin do PostgREST -- a auth e feita la (JWT -> RLS);
 //   rodar getUser() aqui por request de dados seria lento e redundante. CF Access
 //   e o gate externo do app.
-const PUBLIC_PATHS = ["/login", "/f/", "/api/health", "/api/rest/v1"];
+// /auth/v1: proxy same-origin do GoTrue (Bloco H). O middleware roda ANTES do
+//   rewrite -- sem isto, login/refresh (sem sessao ainda) cairiam em /login.
+const PUBLIC_PATHS = ["/login", "/f/", "/api/health", "/api/rest/v1", "/auth/v1"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

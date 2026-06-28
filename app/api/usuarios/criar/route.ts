@@ -3,8 +3,8 @@ import { cookies } from "next/headers";
 import {
   createSupabaseServerClient,
   createSupabaseServiceClient,
-  createSupabaseAuthAdminClient,
 } from "@/lib/supabase/client";
+import { createSupabaseAuthAdminClient } from "@/lib/supabase/auth-admin";
 
 export const dynamic = "force-dynamic";
 

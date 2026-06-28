@@ -7,6 +7,11 @@ import { version } from "./package.json";
 // reescreve para o container interno. SSR fala o interno direto (ver client.ts).
 const postgrestInternal =
   process.env.POSTGREST_INTERNAL_URL ?? "http://painel-sst-postgrest:3000";
+// Auth self-host (Bloco H): o browser chama /auth/v1/* (same-origin, pois
+// NEXT_PUBLIC_SUPABASE_URL = host do app) e o Next reescreve para o GoTrue
+// interno, que serve na raiz (/token, /user, /admin/*) -- por isso tira /auth/v1.
+const gotrueInternal =
+  process.env.GOTRUE_INTERNAL_URL ?? "http://painel-sst-gotrue:9999";
 
 const nextConfig: NextConfig = {
   env: {
@@ -27,6 +32,11 @@ const nextConfig: NextConfig = {
         // PostgREST puro serve as tabelas na raiz -> sem /rest/v1 no destino.
         source: "/api/rest/v1/:path*",
         destination: `${postgrestInternal}/:path*`,
+      },
+      {
+        // GoTrue self-host: /auth/v1/* (same-origin) -> raiz do GoTrue interno.
+        source: "/auth/v1/:path*",
+        destination: `${gotrueInternal}/:path*`,
       },
     ];
   },
