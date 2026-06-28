@@ -37,11 +37,21 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const browserPostgrestBase = process.env.NEXT_PUBLIC_POSTGREST_URL ?? supabaseUrl;
 const serverPostgrestBase = process.env.POSTGREST_INTERNAL_URL ?? browserPostgrestBase;
 
-// Auth no SERVIDOR (SSR/middleware/rotas): NAO usar a URL publica -- o CF Access
-// bloqueia chamadas server-to-server (devolve o HTML de login). Fala o GoTrue
-// pelo proprio app (porta interna) -> rewrite /auth/v1/* -> painel-sst-gotrue.
-// O browser segue na URL publica same-origin (tem o cookie do CF Access).
+// Auth no SERVIDOR (SSR/middleware/rotas): a chamada de rede ao GoTrue NAO pode
+// usar a URL publica -- o CF Access bloqueia server-to-server (devolve o HTML de
+// login). Mas a URL passada ao supabase-js precisa CONTINUAR sendo a publica,
+// senao o nome do cookie de sessao (derivado do hostname) deixa de bater com o do
+// browser. Solucao: URL = publica; um fetch custom reescreve so o destino p/ a
+// porta interna do app (-> rewrite /auth/v1 -> painel-sst-gotrue).
 const serverAuthUrl = process.env.AUTH_INTERNAL_URL ?? "http://127.0.0.1:3000";
+const serverAuthFetch: typeof fetch = (input, init) => {
+  const toInternal = (u: string) =>
+    supabaseUrl && u.startsWith(supabaseUrl) ? serverAuthUrl + u.slice(supabaseUrl.length) : u;
+  if (typeof input === "string") return fetch(toInternal(input), init);
+  if (input instanceof URL) return fetch(toInternal(input.href), init);
+  const r = input as Request;
+  return fetch(new Request(toInternal(r.url), r), init);
+};
 
 // Storage (MinIO). Endpoint publico p/ ambos (presigned URLs precisam ser
 // alcancaveis pelo browser); o que muda sao as CREDENCIAIS por contexto.
@@ -159,7 +169,8 @@ type CookieStore = {
 };
 
 export function createSupabaseServerClient(cookieStore: CookieStore): ComposedSupabaseClient {
-  const auth = createServerClient<Database>(serverAuthUrl, anonKey, {
+  const auth = createServerClient<Database>(supabaseUrl, anonKey, {
+    global: { fetch: serverAuthFetch },
     cookies: {
       getAll() {
         return cookieStore.getAll();

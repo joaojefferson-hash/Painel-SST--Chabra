@@ -31,10 +31,19 @@ export async function middleware(request: NextRequest) {
 
   const response = NextResponse.next({ request });
 
-  // Auth no servidor fala o GoTrue pela porta interna do app (rewrite /auth/v1),
-  // nao a URL publica -- o CF Access bloqueia chamada server-to-server.
-  const authUrl = process.env.AUTH_INTERNAL_URL ?? "http://127.0.0.1:3000";
-  const supabase = createServerClient(authUrl, key, {
+  // Auth no servidor: URL publica (p/ o nome do cookie de sessao bater com o do
+  // browser) mas a chamada de rede vai pra porta interna do app -- o CF Access
+  // bloqueia server-to-server na URL publica.
+  const internalAuthBase = process.env.AUTH_INTERNAL_URL ?? "http://127.0.0.1:3000";
+  const authFetch: typeof fetch = (input, init) => {
+    const rw = (u: string) => (url && u.startsWith(url) ? internalAuthBase + u.slice(url.length) : u);
+    if (typeof input === "string") return fetch(rw(input), init);
+    if (input instanceof URL) return fetch(rw(input.href), init);
+    const r = input as Request;
+    return fetch(new Request(rw(r.url), r), init);
+  };
+  const supabase = createServerClient(url, key, {
+    global: { fetch: authFetch },
     cookies: {
       getAll() {
         return request.cookies.getAll();
