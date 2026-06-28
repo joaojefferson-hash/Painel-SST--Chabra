@@ -231,6 +231,10 @@ export default function SidebarShell({
             alt="Logo"
             className="h-8 w-auto max-w-[36px] rounded-md bg-white object-contain p-0.5 shadow"
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement;
+              if (!img.src.endsWith("/logo-chabra.png")) img.src = "/logo-chabra.png";
+            }}
           />
         ) : (
           <div className="flex size-8 items-center justify-center rounded-md bg-verde-primary text-white shadow">

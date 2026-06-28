@@ -58,6 +58,12 @@ const srvSecret = process.env.STORAGE_SECRET_ACCESS_KEY ?? pubSecret;
 const serviceToken =
   process.env.POSTGREST_SERVICE_TOKEN ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
+// Key de ADMIN do provedor de Auth (Supabase SaaS hoje; GoTrue self-host na .107
+// no Bloco H). Habilita auth.admin.* (createUser/updateUserById/deleteUser).
+// SERVER-ONLY. Aceita o formato novo (sb_secret_) ou a service_role legada.
+const authAdminKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY ?? "";
+
 if (!supabaseUrl || !anonKey) {
   if (typeof window !== "undefined") {
     console.warn(
@@ -182,6 +188,23 @@ export function createSupabaseServerClient(cookieStore: CookieStore): ComposedSu
     rpc: postgrest.rpc.bind(postgrest),
     storage,
   };
+}
+
+// ------------------------------------------------------------
+// Auth Admin client -- SERVER-ONLY. Fala o provedor de Auth (Supabase/GoTrue)
+// com a SECRET key p/ operacoes admin (criar/editar/excluir identidade) sem
+// tocar a sessao do chamador. Validar autorizacao (Admin) ANTES de usar.
+// ------------------------------------------------------------
+
+export function createSupabaseAuthAdminClient() {
+  if (!authAdminKey) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY (admin de Auth) nao configurado no servidor."
+    );
+  }
+  return createClient<Database>(supabaseUrl, authAdminKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 // ------------------------------------------------------------

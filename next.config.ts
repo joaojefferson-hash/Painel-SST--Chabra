@@ -30,6 +30,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        // Reorg de rotas (2026-06-28): a "Visão geral" virou a HOME (/inicio).
+        // 307 (permanent:false) enquanto estabiliza, p/ não cravar no cache do browser.
+        source: "/visao-geral",
+        destination: "/inicio",
+        permanent: false,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       // Storage self-host (MinIO via tunnel CF).

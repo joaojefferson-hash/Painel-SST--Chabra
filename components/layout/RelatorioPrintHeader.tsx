@@ -41,6 +41,10 @@ export default function RelatorioPrintHeader({
             alt="Chabra"
             className="h-14 w-auto max-w-[70px] object-contain print:h-16 print:max-w-[80px]"
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement;
+              if (!img.src.endsWith("/logo-chabra.png")) img.src = "/logo-chabra.png";
+            }}
           />
         ) : (
           <div className="flex size-12 items-center justify-center rounded-md bg-verde-primary text-white print:size-14">

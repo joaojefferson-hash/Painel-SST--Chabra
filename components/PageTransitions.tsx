@@ -7,8 +7,8 @@ type DocWithVT = Document & {
   startViewTransition?: (cb: () => void | Promise<void>) => { finished: Promise<void> };
 };
 
-/** Página principal (hub). Ir PARA ela = "voltar"; sair DELA = "avançar". */
-const HUB = "/visao-geral";
+/** Página principal (home). Ir PARA ela = "voltar"; sair DELA = "avançar". */
+const HUB = "/inicio";
 
 /**
  * Transição suave entre páginas via View Transitions API (Chromium/Electron).

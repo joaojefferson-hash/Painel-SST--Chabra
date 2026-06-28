@@ -157,7 +157,7 @@ export default function GraficosVisaoGeral({
         <DonutCard
           titulo="Composição dos laudos"
           unidade="laudos"
-          link={{ href: "/inicio", label: "Ver módulos" }}
+          link={{ href: "/modulos", label: "Ver módulos" }}
           fatias={laudoFatias}
         />
       </section>

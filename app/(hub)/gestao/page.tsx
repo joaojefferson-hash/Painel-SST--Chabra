@@ -322,7 +322,7 @@ export default function GestaoChabraPage() {
     <div className="min-h-screen bg-[#f6f5f2]">
       {/* Menu lateral fixo (verde, igual ao app) */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col lg:flex print:hidden" style={{ background: "linear-gradient(180deg, #1a3d26 0%, #112a1a 60%, #0d2016 100%)" }}>
-        <Link href="/visao-geral" className="flex items-center gap-2.5 border-b border-white/[0.09] px-4 py-3.5 transition-colors hover:bg-white/[0.05]">
+        <Link href="/inicio" className="flex items-center gap-2.5 border-b border-white/[0.09] px-4 py-3.5 transition-colors hover:bg-white/[0.05]">
           {configs?.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={configs.logo_url} alt="Logo Chabra" className="h-8 w-auto max-w-[36px] shrink-0 rounded-md bg-white object-contain p-0.5 shadow" referrerPolicy="no-referrer" />
@@ -348,7 +348,7 @@ export default function GestaoChabraPage() {
               Sem conexão — as alterações podem não ser salvas até reconectar.
             </div>
           )}
-          <Link href="/visao-geral" className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 lg:hidden">
+          <Link href="/inicio" className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 lg:hidden">
             <ArrowLeft className="size-4" /> Visão geral
           </Link>
 
