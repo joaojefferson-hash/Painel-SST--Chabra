@@ -31,7 +31,10 @@ export async function middleware(request: NextRequest) {
 
   const response = NextResponse.next({ request });
 
-  const supabase = createServerClient(url, key, {
+  // Auth no servidor fala o GoTrue pela porta interna do app (rewrite /auth/v1),
+  // nao a URL publica -- o CF Access bloqueia chamada server-to-server.
+  const authUrl = process.env.AUTH_INTERNAL_URL ?? "http://127.0.0.1:3000";
+  const supabase = createServerClient(authUrl, key, {
     cookies: {
       getAll() {
         return request.cookies.getAll();

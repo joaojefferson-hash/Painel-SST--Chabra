@@ -11,7 +11,9 @@ import crypto from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+// Admin API roda no servidor: usa a porta interna do app (rewrite /auth/v1 ->
+// GoTrue), nao a URL publica (CF Access bloqueia server-to-server).
+const supabaseUrl = process.env.AUTH_INTERNAL_URL ?? "http://127.0.0.1:3000";
 const gotrueSecret = process.env.GOTRUE_JWT_SECRET ?? "";
 const legacyKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 

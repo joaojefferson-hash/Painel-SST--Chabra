@@ -37,6 +37,12 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const browserPostgrestBase = process.env.NEXT_PUBLIC_POSTGREST_URL ?? supabaseUrl;
 const serverPostgrestBase = process.env.POSTGREST_INTERNAL_URL ?? browserPostgrestBase;
 
+// Auth no SERVIDOR (SSR/middleware/rotas): NAO usar a URL publica -- o CF Access
+// bloqueia chamadas server-to-server (devolve o HTML de login). Fala o GoTrue
+// pelo proprio app (porta interna) -> rewrite /auth/v1/* -> painel-sst-gotrue.
+// O browser segue na URL publica same-origin (tem o cookie do CF Access).
+const serverAuthUrl = process.env.AUTH_INTERNAL_URL ?? "http://127.0.0.1:3000";
+
 // Storage (MinIO). Endpoint publico p/ ambos (presigned URLs precisam ser
 // alcancaveis pelo browser); o que muda sao as CREDENCIAIS por contexto.
 const storageEndpoint = process.env.NEXT_PUBLIC_STORAGE_ENDPOINT ?? "";
@@ -153,7 +159,7 @@ type CookieStore = {
 };
 
 export function createSupabaseServerClient(cookieStore: CookieStore): ComposedSupabaseClient {
-  const auth = createServerClient<Database>(supabaseUrl, anonKey, {
+  const auth = createServerClient<Database>(serverAuthUrl, anonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
