@@ -2,6 +2,7 @@
  * Wrapper centralizado de geração de PDF via Puppeteer.
  *
  * Vercel serverless:    puppeteer-core + @sparticuz/chromium
+ * Self-host .107:       idem, via PDF_USE_SPARTICUZ=1 (binario ja bundled no standalone)
  * Dev local / Electron: puppeteer-core + Chrome ou Edge do sistema
  *
  * Usar apenas em route handlers Node.js (nunca em Client Components ou Edge).
@@ -100,8 +101,8 @@ export async function gerarPdf(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let browser: { newPage(): Promise<any>; close(): Promise<void> }
 
-  if (process.env.VERCEL) {
-    // Vercel serverless: @sparticuz/chromium (binário baixado no build via camada)
+  if (process.env.VERCEL || process.env.PDF_USE_SPARTICUZ === "1") {
+    // Vercel serverless / self-host .107: @sparticuz/chromium (binário bundled)
     const [{ default: chromium }, { default: puppeteer }] = await Promise.all([
       import('@sparticuz/chromium'),
       import('puppeteer-core'),
