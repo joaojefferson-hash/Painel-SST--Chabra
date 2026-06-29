@@ -7,7 +7,7 @@ import { createServerClient } from "@supabase/ssr";
 //   e o gate externo do app.
 // /auth/v1: proxy same-origin do GoTrue (Bloco H). O middleware roda ANTES do
 //   rewrite -- sem isto, login/refresh (sem sessao ainda) cairiam em /login.
-const PUBLIC_PATHS = ["/login", "/f/", "/api/health", "/api/rest/v1", "/auth/v1"];
+const PUBLIC_PATHS = ["/login", "/f/", "/api/health", "/api/rest/v1", "/auth/v1", "/api/gestao"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

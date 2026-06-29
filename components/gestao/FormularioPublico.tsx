@@ -20,10 +20,9 @@ interface FormDef {
   perguntas: { label: string; obrigatorio: boolean }[];
 }
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-const ENDPOINT = `${URL}/functions/v1/gestao-form-submit`;
-const HEADERS = { "Content-Type": "application/json", apikey: ANON, Authorization: `Bearer ${ANON}` };
+// Rota Next same-origin (porta a Edge Function gestao-form-submit p/ a .107).
+const ENDPOINT = "/api/gestao/form";
+const HEADERS = { "Content-Type": "application/json" };
 
 const inputCls = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#006B54] focus:outline-none focus:ring-1 focus:ring-[#006B54]";
 
