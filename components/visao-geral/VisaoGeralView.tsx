@@ -165,7 +165,7 @@ export default function VisaoGeralView({
             .map((u) => (
               <Link
                 key={u.id_unidade}
-                href="/inicio"
+                href="/modulos"
                 onClick={() => setUnidadeAtiva(u.id_unidade!, u.nome)}
               >
                 <NavItem icon={<MapPin className="size-[15px]" />} label={u.nome} badge={u.empresas} />
@@ -466,7 +466,7 @@ function UnidadeCard({ u, delay = 0 }: { u: UnidadeResumo; delay?: number }) {
   const setUnidadeAtiva = useUnidadeAtiva((s) => s.setUnidade);
   // Unidade real → ativa o escopo e vai pro hub de módulos. "Sem unidade" mantém
   // o atalho para as empresas sem unidade (não há escopo de unidade real).
-  const href = semUnidade ? "/empresas?unidade=__sem__" : "/inicio";
+  const href = semUnidade ? "/empresas?unidade=__sem__" : "/modulos";
   const onPick = semUnidade ? undefined : () => setUnidadeAtiva(u.id_unidade!, u.nome);
   return (
     <Link
