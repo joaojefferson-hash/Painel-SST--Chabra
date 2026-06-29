@@ -31,7 +31,7 @@ import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import { useCanEdit, useCurrentUser, useIsAdmin } from "@/lib/hooks/useUsuario";
 import StatusBadge from "@/components/inspecoes/StatusBadge";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { DetalheSkeleton } from "@/components/ui/PageSkeletons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import SetoresTab from "@/components/inspecoes/editor/tabs/SetoresTab";
@@ -100,7 +100,7 @@ export default function InspecaoEditorPage({ params }: Props) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  if (isLoading) return <LoadingSkeleton rows={8} />;
+  if (isLoading) return <DetalheSkeleton />;
   if (error)
     return (
       <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">

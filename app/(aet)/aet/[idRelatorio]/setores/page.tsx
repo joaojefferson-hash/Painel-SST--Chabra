@@ -1,5 +1,7 @@
 "use client";
 
+import { EditorSkeleton } from "@/components/ui/PageSkeletons";
+
 import { useEffect, useState, use } from "react";
 import {
   Plus, Trash2, Save, Loader2, ChevronDown, ChevronUp, X, Camera, Sparkles, Brain,
@@ -661,13 +663,7 @@ export default function AetSetoresPage({
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
-  if (isLoading) {
-    return (
-      <div className="flex h-48 items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-gray-400" />
-      </div>
-    );
-  }
+  if (isLoading) return <EditorSkeleton />;
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">

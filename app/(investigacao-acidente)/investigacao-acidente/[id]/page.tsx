@@ -1,5 +1,7 @@
 "use client";
 
+import { EditorSkeleton } from "@/components/ui/PageSkeletons";
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -151,13 +153,7 @@ export default function EditorInvestigacaoPage() {
     toast.success("Investigação salva");
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 py-20 text-sm text-gray-400">
-        <Loader2 className="size-4 animate-spin" /> Carregando…
-      </div>
-    );
-  }
+  if (isLoading) return <EditorSkeleton />;
   if (isError || !data) {
     return <div className="py-20 text-center text-sm text-gray-500">Investigação não encontrada.</div>;
   }

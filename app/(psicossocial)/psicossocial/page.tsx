@@ -14,6 +14,7 @@ import {
 } from "@/lib/hooks/useDrps";
 import { useEmpresa } from "@/lib/hooks/useEmpresas";
 import { useCanCreate, useCanDelete } from "@/lib/hooks/useUsuario";
+import { useUnidadeAtiva } from "@/lib/store";
 import { fmtData } from "@/lib/utils";
 import type { DrpsRelatorio, StatusRelatorio } from "@/lib/drps/types";
 
@@ -21,6 +22,7 @@ const STATUS_LABEL: Record<StatusRelatorio, string> = {
   RASCUNHO: "Rascunho",
   EM_ANDAMENTO: "Em andamento",
   CONCLUIDO: "Concluído",
+  ENVIADO_CLIENTE: "Enviado p/ cliente",
   DELETADO: "Excluído",
 };
 
@@ -31,12 +33,14 @@ const STATUS_VARIANT: Record<
   RASCUNHO: "muted",
   EM_ANDAMENTO: "info",
   CONCLUIDO: "success",
+  ENVIADO_CLIENTE: "info",
   DELETADO: "warning",
 };
 
 export default function DrpsListaPage() {
   const canDelete = useCanDelete();
   const canCreate = useCanCreate();
+  const unidadeAtivaId = useUnidadeAtiva((s) => s.id);
   const [idEmpresa, setIdEmpresa] = useState<string | null>(null);
   const { data: empresa } = useEmpresa(idEmpresa);
   const { data: relatorios = [], isLoading } = useDrpsRelatorios(idEmpresa);
@@ -65,7 +69,7 @@ export default function DrpsListaPage() {
         </label>
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="flex-1">
-            <EmpresaSelect value={idEmpresa} onChange={setIdEmpresa} modulo="psicossocial" />
+            <EmpresaSelect value={idEmpresa} onChange={setIdEmpresa} modulo="psicossocial" unidadeId={unidadeAtivaId} />
           </div>
           {idEmpresa && empresa && (
             <button

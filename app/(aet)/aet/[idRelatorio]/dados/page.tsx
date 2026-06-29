@@ -1,5 +1,7 @@
 "use client";
 
+import { EditorSkeleton } from "@/components/ui/PageSkeletons";
+
 import { use, useEffect, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import toast from "react-hot-toast";
@@ -94,13 +96,7 @@ export default function AetDadosPage({
   const salvar = useSalvarAet();
   const canEdit = useCanEdit();
 
-  if (isLoading) {
-    return (
-      <div className="flex h-48 items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-gray-400" />
-      </div>
-    );
-  }
+  if (isLoading) return <EditorSkeleton />;
 
   function salvarSecao(key: string, html: string) {
     const textos_secoes = { ...(rel?.textos_secoes ?? {}), [key]: html };

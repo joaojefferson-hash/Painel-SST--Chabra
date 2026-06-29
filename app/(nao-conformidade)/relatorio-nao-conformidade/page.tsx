@@ -1,5 +1,7 @@
 "use client";
 
+import { LinhasSkeleton } from "@/components/ui/PageSkeletons";
+
 import { useMemo } from "react";
 import Link from "next/link";
 import {
@@ -7,18 +9,19 @@ import {
   Plus,
   ListChecks,
   ArrowLeft,
-  FileCheck2,
-  Loader2,
-  ShieldAlert,
+  FileCheck2,  ShieldAlert,
 } from "lucide-react";
 import { useRelatoriosNaoConformidade } from "@/lib/hooks/useRelatoriosNaoConformidade";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
 import { useCanCreate } from "@/lib/hooks/useUsuario";
+import { useUnidadeFiltro } from "@/lib/hooks/useUnidadeFiltro";
 
 export default function VisaoGeralNaoConformidadePage() {
   const canCreate = useCanCreate();
-  const { data: relatorios = [], isLoading } = useRelatoriosNaoConformidade();
+  const { data: relatoriosAll = [], isLoading } = useRelatoriosNaoConformidade();
   const { data: empresas = [] } = useEmpresas();
+  const { inUnidade } = useUnidadeFiltro();
+  const relatorios = useMemo(() => relatoriosAll.filter((r) => inUnidade(r.id_empresa)), [relatoriosAll, inUnidade]);
 
   const empresaMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -98,9 +101,7 @@ export default function VisaoGeralNaoConformidadePage() {
           </Link>
         </div>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8 text-gray-500">
-            <Loader2 className="size-4 animate-spin" />
-          </div>
+          <LinhasSkeleton linhas={5} />
         ) : relatorios.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-500">
             Nenhum relatório criado ainda. Clique em{" "}

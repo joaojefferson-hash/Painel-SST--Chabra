@@ -20,7 +20,7 @@ import Modal from "@/components/ui/Modal";
 import StorageImg from "@/components/ui/StorageImg";
 import { detectRegistroTipo } from "@/lib/registro-profissional";
 import Badge from "@/components/ui/Badge";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { TabelaSkeleton } from "@/components/ui/PageSkeletons";
 import Pagination from "@/components/ui/Pagination";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -143,7 +143,7 @@ export default function UsuariosPage() {
       <div className="reveal-up overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         {isLoading ? (
           <div className="p-4">
-            <LoadingSkeleton rows={5} />
+            <TabelaSkeleton linhas={5} />
           </div>
         ) : filtrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-14 text-center">

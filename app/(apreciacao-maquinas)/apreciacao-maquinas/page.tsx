@@ -1,12 +1,13 @@
 "use client";
 
+import { LinhasSkeleton } from "@/components/ui/PageSkeletons";
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Cog,
   Plus,
   ArrowLeft,
-  Loader2,
   ShieldCheck,
   ShieldAlert,
   ClipboardList,
@@ -15,12 +16,15 @@ import {
 import { useApreciacoesMaquinas } from "@/lib/hooks/useApreciacoesMaquinas";
 import { useEmpresas } from "@/lib/hooks/useEmpresas";
 import { useCanCreate } from "@/lib/hooks/useUsuario";
+import { useUnidadeFiltro } from "@/lib/hooks/useUnidadeFiltro";
 import type { StatusApreciacao } from "@/lib/supabase/types";
 
 export default function ApreciacaoMaquinasPage() {
   const canCreate = useCanCreate();
-  const { data: apreciacoes = [], isLoading } = useApreciacoesMaquinas();
+  const { data: apreciacoesAll = [], isLoading } = useApreciacoesMaquinas();
   const { data: empresas = [] } = useEmpresas();
+  const { inUnidade } = useUnidadeFiltro();
+  const apreciacoes = useMemo(() => apreciacoesAll.filter((a) => inUnidade(a.id_empresa)), [apreciacoesAll, inUnidade]);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<StatusApreciacao | "TODAS">(
     "TODAS"
@@ -139,9 +143,7 @@ export default function ApreciacaoMaquinasPage() {
       {/* Lista */}
       <section>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8 text-gray-500">
-            <Loader2 className="size-4 animate-spin" />
-          </div>
+          <LinhasSkeleton linhas={5} />
         ) : filtradas.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-500">
             {apreciacoes.length === 0 ? (

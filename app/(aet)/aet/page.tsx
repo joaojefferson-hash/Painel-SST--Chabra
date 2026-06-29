@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   ClipboardCheck,
@@ -14,8 +14,9 @@ import { mensagemErro } from "@/lib/errors";
 import { useAetRelatorios, useExcluirAet } from "@/lib/hooks/useAet";
 import { useCanCreate, useCanDelete } from "@/lib/hooks/useUsuario";
 import EmpresaSelect from "@/components/empresas/EmpresaSelect";
+import { useUnidadeFiltro } from "@/lib/hooks/useUnidadeFiltro";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { TabelaSkeleton } from "@/components/ui/PageSkeletons";
 import { cn } from "@/lib/utils";
 import type { AetRelatorio, ClassificacaoRiscoAET } from "@/lib/supabase/types";
 
@@ -65,7 +66,9 @@ export default function AetListPage() {
   const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [confirmDel, setConfirmDel] = useState<AetRelatorio | null>(null);
 
-  const { data: relatorios = [], isLoading } = useAetRelatorios(empresaId);
+  const { data: relatoriosAll = [], isLoading } = useAetRelatorios(empresaId);
+  const { unidadeId, inUnidade } = useUnidadeFiltro();
+  const relatorios = useMemo(() => relatoriosAll.filter((r) => inUnidade(r.id_empresa)), [relatoriosAll, inUnidade]);
   const excluir = useExcluirAet();
   const canCreate = useCanCreate();
   const canDelete = useCanDelete();
@@ -100,7 +103,7 @@ export default function AetListPage() {
           <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-slate-400">
             Filtrar por empresa
           </label>
-          <EmpresaSelect value={empresaId} onChange={setEmpresaId} modulo="sst" />
+          <EmpresaSelect value={empresaId} onChange={setEmpresaId} modulo="sst" unidadeId={unidadeId} />
         </div>
       </div>
 
@@ -108,7 +111,7 @@ export default function AetListPage() {
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm reveal-up card-hover">
         {isLoading ? (
           <div className="p-4">
-            <LoadingSkeleton rows={5} />
+            <TabelaSkeleton linhas={5} />
           </div>
         ) : relatorios.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center">

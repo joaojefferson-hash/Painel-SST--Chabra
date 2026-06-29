@@ -1,5 +1,7 @@
 "use client";
 
+import { LinhasSkeleton } from "@/components/ui/PageSkeletons";
+
 import { useMemo } from "react";
 import Link from "next/link";
 import {
@@ -7,17 +9,19 @@ import {
   Plus,
   ListChecks,
   ArrowLeft,
-  FileCheck2,
-  Loader2,
-  ShieldCheck,
+  FileCheck2,  ShieldCheck,
 } from "lucide-react";
 import { useRelatoriosConformidade } from "@/lib/hooks/useRelatoriosConformidade";
 import { listarNRs } from "@/lib/conformidade/checklists";
 import { useCanCreate } from "@/lib/hooks/useUsuario";
+import { useUnidadeFiltro } from "@/lib/hooks/useUnidadeFiltro";
 
 export default function VisaoGeralConformidadePage() {
   const canCreate = useCanCreate();
-  const { data: relatorios = [], isLoading } = useRelatoriosConformidade();
+  const { data: relatoriosAll = [], isLoading } = useRelatoriosConformidade();
+  const { inUnidade } = useUnidadeFiltro();
+  // Escopo por Unidade ativa: KPIs e lista só das empresas da unidade.
+  const relatorios = useMemo(() => relatoriosAll.filter((r) => inUnidade(r.id_empresa)), [relatoriosAll, inUnidade]);
   const nrs = useMemo(() => listarNRs(), []);
 
   const totalFinalizados = relatorios.filter((r) => r.status === "FINALIZADO").length;
@@ -114,9 +118,7 @@ export default function VisaoGeralConformidadePage() {
           </Link>
         </div>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8 text-gray-500">
-            <Loader2 className="size-4 animate-spin" />
-          </div>
+          <LinhasSkeleton linhas={5} />
         ) : relatorios.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-500">
             Nenhum relatório criado ainda. Clique em <strong>Novo relatório</strong>{" "}

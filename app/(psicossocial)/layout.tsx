@@ -52,6 +52,11 @@ const SECTIONS_LISTA: NavSection[] = [
         icon: ClipboardList,
       },
       {
+        href: "/psicossocial/acoes-plano",
+        label: "Plano de Ação",
+        icon: ClipboardCheck,
+      },
+      {
         href: "/psicossocial/texto-padrao",
         label: "Texto Padrão",
         icon: FileEdit,
@@ -121,6 +126,7 @@ function sectionsRelatorio(idRelatorio: string): NavSection[] {
         { href: `${base}/metadados`, label: "Metadados do Relatório", icon: Building2 },
         { href: "/psicossocial/agravos", label: "Possíveis Agravos", icon: Brain },
         { href: "/psicossocial/medidas-recomendadas", label: "Medidas Recomendadas", icon: ClipboardList },
+        { href: "/psicossocial/acoes-plano", label: "Plano de Ação", icon: ClipboardCheck },
         { href: "/psicossocial/texto-padrao", label: "Texto Padrão", icon: FileEdit },
       ],
     },
@@ -186,7 +192,7 @@ export default function PsicossocialLayout({
       />
       <div className="md:pl-[220px] print:pl-0">
         <ModuleTopbar title={topbarTitle} />
-        <main className="px-4 py-6 md:px-6 print:p-0">{children}</main>
+        <main className="px-4 py-6 md:px-6 print:p-0" style={{ viewTransitionName: "content" }}>{children}</main>
       </div>
     </div>
   );

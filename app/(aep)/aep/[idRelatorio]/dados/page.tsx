@@ -1,5 +1,7 @@
 "use client";
 
+import { EditorSkeleton } from "@/components/ui/PageSkeletons";
+
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
@@ -62,13 +64,7 @@ export default function AepDadosPage({
 
   const empresa = rel?.empresas as { nome_empresa?: string; cnpj?: string | null } | null;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="size-6 animate-spin text-emerald-600" />
-      </div>
-    );
-  }
+  if (isLoading) return <EditorSkeleton />;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

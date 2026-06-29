@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
 import { useUserStore } from "@/lib/store";
+import UnidadeAtivaChip from "@/components/layout/UnidadeAtivaChip";
 
 // ─── Breadcrumb mapping ───────────────────────────────────────────────────────
 
@@ -66,7 +67,7 @@ export default function ModuleTopbar({ title }: { title: string }) {
   return (
     <header
       className="sticky top-0 z-20 flex h-[54px] items-center justify-between border-b border-black/[0.12] px-4 md:px-6 text-white shadow-md print:hidden"
-      style={{ background: "linear-gradient(90deg, #006B54 0%, #00795e 100%)" }}
+      style={{ background: "linear-gradient(90deg, #006B54 0%, #00795e 100%)", viewTransitionName: "topbar" }}
     >
       {/* ── Esquerda: breadcrumb ─────────────────────── */}
       <nav className="ml-12 flex items-center gap-1 md:ml-0" aria-label="breadcrumb">
@@ -95,24 +96,27 @@ export default function ModuleTopbar({ title }: { title: string }) {
         ))}
       </nav>
 
-      {/* ── Direita: usuário ─────────────────────────── */}
-      {user && (
-        <div className="flex items-center gap-2.5">
-          <div className="hidden flex-col items-end sm:flex">
-            <span className="text-[13px] font-semibold leading-tight text-white">
-              {user.nome}
-            </span>
-            <span
-              className={`mt-0.5 inline-flex items-center rounded-full px-1.5 py-px text-[10px] font-semibold ring-1 ${perfilColor}`}
-            >
-              {user.perfil}
-            </span>
+      {/* ── Direita: unidade ativa + usuário ─────────── */}
+      <div className="flex items-center gap-3">
+        <UnidadeAtivaChip variant="topbar" />
+        {user && (
+          <div className="flex items-center gap-2.5">
+            <div className="hidden flex-col items-end sm:flex">
+              <span className="text-[13px] font-semibold leading-tight text-white">
+                {user.nome}
+              </span>
+              <span
+                className={`mt-0.5 inline-flex items-center rounded-full px-1.5 py-px text-[10px] font-semibold ring-1 ${perfilColor}`}
+              >
+                {user.perfil}
+              </span>
+            </div>
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-bold text-white ring-1 ring-white/25">
+              {initials}
+            </div>
           </div>
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-bold text-white ring-1 ring-white/25">
-            {initials}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </header>
   );
 }

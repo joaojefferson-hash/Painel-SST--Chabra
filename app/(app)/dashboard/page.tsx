@@ -27,7 +27,7 @@ import {
 } from "recharts";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import StatusBadge from "@/components/inspecoes/StatusBadge";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { TabelaSkeleton } from "@/components/ui/PageSkeletons";
 import { cn, fmtData } from "@/lib/utils";
 import { useUserStore } from "@/lib/store";
 import type { Inspecao, Empresa } from "@/lib/supabase/types";
@@ -480,7 +480,7 @@ export default function DashboardPage() {
         <div className="glass reveal-up delay-2 overflow-hidden rounded-2xl">
           {loadingRecentes ? (
             <div className="p-4">
-              <LoadingSkeleton rows={6} />
+              <TabelaSkeleton linhas={6} />
             </div>
           ) : !recentes || recentes.length === 0 ? (
             <div className="p-10 text-center text-sm text-gray-500">
