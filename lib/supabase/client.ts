@@ -107,6 +107,34 @@ export interface ComposedSupabaseClient {
 }
 
 // ------------------------------------------------------------
+// Functions client local: as Edge Functions de IA + welcome-email foram portadas
+// p/ rotas Next em /api/fn/<name> (.107). functions.invoke('<name>', {body})
+// passa a chamar a rota same-origin (browser) ou a porta interna do app (server),
+// sem tocar os ~20 call sites. Retorna {data, error} no formato do supabase-js.
+// ------------------------------------------------------------
+function makeLocalFunctions(): FunctionsClient {
+  const base = typeof window !== "undefined" ? "" : serverAuthUrl;
+  const invoke = async (name: string, options?: { body?: unknown }) => {
+    try {
+      const res = await fetch(`${base}/api/fn/${name}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = (data && (data as { error?: string }).error) || `HTTP ${res.status}`;
+        return { data: null, error: new Error(msg) };
+      }
+      return { data, error: null };
+    } catch (e) {
+      return { data: null, error: e instanceof Error ? e : new Error(String(e)) };
+    }
+  };
+  return { invoke } as unknown as FunctionsClient;
+}
+
+// ------------------------------------------------------------
 // Helper: PostgREST com Authorization dinamico.
 // `baseUrl` ja vem completo por contexto -- NAO concatenar /rest/v1 aqui.
 // ------------------------------------------------------------
@@ -152,7 +180,7 @@ export function createSupabaseBrowserClient(): ComposedSupabaseClient {
   });
   return {
     auth: auth.auth,
-    functions: auth.functions,
+    functions: makeLocalFunctions(),
     from: postgrest.from.bind(postgrest),
     rpc: postgrest.rpc.bind(postgrest),
     storage,
@@ -200,7 +228,7 @@ export function createSupabaseServerClient(cookieStore: CookieStore): ComposedSu
   });
   return {
     auth: auth.auth,
-    functions: auth.functions,
+    functions: makeLocalFunctions(),
     from: postgrest.from.bind(postgrest),
     rpc: postgrest.rpc.bind(postgrest),
     storage,
@@ -249,7 +277,7 @@ export function createSupabaseServiceClient(): ComposedSupabaseClient {
   });
   return {
     auth: auth.auth,
-    functions: auth.functions,
+    functions: makeLocalFunctions(),
     from: postgrest.from.bind(postgrest),
     rpc: postgrest.rpc.bind(postgrest),
     storage,

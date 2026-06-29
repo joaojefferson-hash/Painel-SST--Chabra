@@ -1,0 +1,211 @@
+// Rota Next.js (App Router) — Análise de máquina via Groq (visão ou texto) p/ NR-12.
+// Porte fiel da Supabase Edge Function `analisar-maquina-ia` (mesma lógica de
+// negócio, mesmo endpoint/modelo/prompt, mesma camada determinística de parsing
+// e o mesmo shape de resposta esperado pelo app via supabase.functions.invoke).
+//
+// Retorna avaliação NR-12: grau de risco, dispositivos de segurança e parecer técnico.
+// Sem CORS (same-origin). Chave lida de process.env (GROQ_API_KEY).
+
+import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+// llama-3.2-11b-vision-preview foi descontinuado pelo Groq → Llama 4 Scout
+const MODEL_VISION = "meta-llama/llama-4-scout-17b-16e-instruct";
+const MODEL_TEXT = "llama-3.1-8b-instant";
+
+interface MaquinaInput {
+  nome: string;
+  tipo?: string | null;
+  marca?: string | null;
+  modelo?: string | null;
+  potencia?: string | null;
+  tensao?: string | null;
+  observacoes?: string | null;
+}
+
+interface Payload {
+  maquina: MaquinaInput;
+  foto_urls?: string[];
+}
+
+interface AnaliseResult {
+  grau_risco: "BAIXO" | "MEDIO" | "ALTO" | "CRITICO" | null;
+  protecao_fixa: boolean | null;
+  protecao_movel: boolean | null;
+  intertravamento: boolean | null;
+  botao_emergencia: boolean | null;
+  sistema_bloqueio: boolean | null;
+  aterramento: boolean | null;
+  sinalizacao: boolean | null;
+  necessita_adequacao_nr12: boolean;
+  parecer: string;
+  gaps: string[];
+}
+
+const SYSTEM_PROMPT = `Você é um(a) engenheiro(a) de segurança do trabalho especialista em NR-12 (Segurança no Trabalho em Máquinas e Equipamentos).
+
+Analise a máquina descrita (e as fotos, se fornecidas) e retorne EXCLUSIVAMENTE um JSON válido com a seguinte estrutura — sem markdown, sem texto extra:
+
+{
+  "grau_risco": "BAIXO" | "MEDIO" | "ALTO" | "CRITICO",
+  "protecao_fixa": true | false | null,
+  "protecao_movel": true | false | null,
+  "intertravamento": true | false | null,
+  "botao_emergencia": true | false | null,
+  "sistema_bloqueio": true | false | null,
+  "aterramento": true | false | null,
+  "sinalizacao": true | false | null,
+  "necessita_adequacao_nr12": true | false,
+  "parecer": "Parecer técnico detalhado (2 a 5 frases) conforme NR-12",
+  "gaps": ["lista", "de", "não-conformidades", "identificadas"]
+}
+
+CRITÉRIOS DE GRAU DE RISCO NR-12:
+- BAIXO: máquina leve, baixa potência, sem partes móveis expostas significativas, baixo risco de lesões
+- MEDIO: risco moderado de acidentes, algumas proteções presentes, potência intermediária
+- ALTO: máquinas com partes móveis perigosas (prensas, tornos, serras), risco elevado de amputação ou esmagamento
+- CRITICO: equipamentos de alta periculosidade (caldeiras, equipamentos sob pressão, alta tensão, risco de explosão/morte)
+
+DISPOSITIVOS DE SEGURANÇA — use null quando não for possível avaliar pelas informações disponíveis.
+
+PARECER: cite a NR-12 e as exigências específicas aplicáveis. Mencione os requisitos mínimos de proteção para o tipo de máquina.`;
+
+function buildTextPrompt(p: Payload): string {
+  const m = p.maquina;
+  const lines: string[] = ["MÁQUINA/EQUIPAMENTO PARA ANÁLISE NR-12:", ""];
+  lines.push(`Nome: ${m.nome}`);
+  if (m.tipo) lines.push(`Tipo: ${m.tipo}`);
+  if (m.marca) lines.push(`Fabricante/Marca: ${m.marca}`);
+  if (m.modelo) lines.push(`Modelo: ${m.modelo}`);
+  if (m.potencia) lines.push(`Potência: ${m.potencia}`);
+  if (m.tensao) lines.push(`Tensão: ${m.tensao}`);
+  if (m.observacoes) lines.push(`Observações do inspetor: ${m.observacoes}`);
+  if ((p.foto_urls ?? []).length > 0) {
+    lines.push(
+      `\nFotos disponíveis: ${
+        p.foto_urls!.length
+      } foto(s) — analise visualmente os dispositivos de segurança visíveis.`
+    );
+  }
+  lines.push("\nForneça a avaliação NR-12 completa em JSON.");
+  return lines.join("\n");
+}
+
+export async function POST(req: NextRequest) {
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
+
+  if (!GROQ_API_KEY) {
+    return NextResponse.json(
+      { error: "GROQ_API_KEY não configurada." },
+      { status: 500 }
+    );
+  }
+
+  try {
+    const body = (await req.json()) as Payload;
+
+    if (!body?.maquina?.nome) {
+      return NextResponse.json(
+        { error: "Payload inválido: maquina.nome é obrigatório" },
+        { status: 400 }
+      );
+    }
+
+    const fotos = (body.foto_urls ?? []).filter(Boolean);
+    const useVision = fotos.length > 0;
+    const model = useVision ? MODEL_VISION : MODEL_TEXT;
+    const textPrompt = buildTextPrompt(body);
+
+    // monta mensagem do usuário (vision ou texto puro)
+    const userContent = useVision
+      ? [
+          { type: "text", text: textPrompt },
+          ...fotos.slice(0, 3).map((url: string) => ({
+            type: "image_url",
+            image_url: { url, detail: "auto" },
+          })),
+        ]
+      : textPrompt;
+
+    const groqRes = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userContent },
+        ],
+        // response_format não suportado em todos os modelos vision — usamos parsing manual
+        temperature: 0.2,
+        max_tokens: 1200,
+      }),
+    });
+
+    if (!groqRes.ok) {
+      const txt = await groqRes.text();
+      return NextResponse.json(
+        { error: `Groq ${groqRes.status}: ${txt}` },
+        { status: 502 }
+      );
+    }
+
+    const groqData = await groqRes.json();
+    const content: string | undefined = groqData?.choices?.[0]?.message?.content;
+
+    if (!content) {
+      return NextResponse.json(
+        { error: "Resposta vazia do modelo" },
+        { status: 502 }
+      );
+    }
+
+    // extrai JSON do conteúdo (pode vir com markdown fence)
+    let parsed: AnaliseResult;
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("JSON não encontrado na resposta");
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch {
+      return NextResponse.json(
+        { error: "JSON inválido do modelo", raw: content.slice(0, 400) },
+        { status: 502 }
+      );
+    }
+
+    // sanitiza grau_risco
+    const GRAUS = ["BAIXO", "MEDIO", "ALTO", "CRITICO"];
+    const grauRisco = GRAUS.includes(parsed.grau_risco ?? "")
+      ? parsed.grau_risco
+      : null;
+
+    const result: AnaliseResult = {
+      grau_risco: grauRisco as AnaliseResult["grau_risco"],
+      protecao_fixa: parsed.protecao_fixa ?? null,
+      protecao_movel: parsed.protecao_movel ?? null,
+      intertravamento: parsed.intertravamento ?? null,
+      botao_emergencia: parsed.botao_emergencia ?? null,
+      sistema_bloqueio: parsed.sistema_bloqueio ?? null,
+      aterramento: parsed.aterramento ?? null,
+      sinalizacao: parsed.sinalizacao ?? null,
+      necessita_adequacao_nr12: parsed.necessita_adequacao_nr12 ?? false,
+      parecer: String(parsed.parecer ?? "").trim(),
+      gaps: Array.isArray(parsed.gaps)
+        ? parsed.gaps.map((g) => String(g)).filter(Boolean)
+        : [],
+    };
+
+    return NextResponse.json({ data: result }, { status: 200 });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Erro desconhecido" },
+      { status: 500 }
+    );
+  }
+}
