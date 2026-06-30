@@ -87,6 +87,25 @@ export interface InvestigacaoAcidente {
   /** Setores e funções do acidentado (múltiplos). `setor`/`acidentado_cargo` (single) ficam de legado. */
   setores: string[];
   acidentado_funcoes: string[];
+  // Ficha completa do acidentado (Bloco 1 / Item 6)
+  acidentado_cpf: string | null;
+  acidentado_pis: string | null;
+  acidentado_estado_civil: string | null;
+  acidentado_nascimento: string | null;
+  acidentado_escolaridade: string | null;
+  acidentado_telefone: string | null;
+  acidentado_endereco: string | null;
+  acidentado_cbo: string | null;
+  acidentado_tempo_funcao: string | null;
+  acidentado_tempo_empresa: string | null;
+  acidentado_jornada: string | null;
+  acidentado_tempo_apos_inicio: string | null;
+  // Dados do acidente (Bloco 1 / Item 5)
+  qtd_acidentados: number | null;
+  /** Consequências graves (checklist). */
+  consequencias: string[];
+  /** Fator de morbi/mortalidade (checklist). */
+  fatores_morbi: string[];
   // Descrição
   descricao: string | null;
   agente_causador: string | null;
