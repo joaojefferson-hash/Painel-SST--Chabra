@@ -3,7 +3,7 @@ import FolhaAssinaturas, { type Signatario } from "@/components/pdf/FolhaAssinat
 import { SecaoIdentificacaoEmpresa } from "@/components/pdf/SecoesComuns";
 import BodyMapStatic from "@/components/investigacao/BodyMapStatic";
 import { ISHIKAWA_CATS } from "@/lib/investigacao/ishikawa";
-import type { Empresa, InvestigacaoAcidente } from "@/lib/supabase/types";
+import type { Empresa, InvestigacaoAcidente, InvestigacaoAcao } from "@/lib/supabase/types";
 
 export interface InvestigacaoTemplateProps {
   inv: InvestigacaoAcidente;
@@ -12,6 +12,8 @@ export interface InvestigacaoTemplateProps {
   folhaEmpresa: { razaoSocial: string; cnpj: string } | null;
   dataHoraAssinatura: string;
   identificadorDocumento: string;
+  /** Ações 5W2H do plano de ação (tabela investigacao_acoes). */
+  acoes?: InvestigacaoAcao[];
   /** URLs absolutas ou data URIs das silhuetas (para o Puppeteer). */
   silhuetaFrente?: string;
   silhuetaCostas?: string;
@@ -69,6 +71,52 @@ const FATOR_LABEL: Record<string, string> = {
   agentes: "Agentes de risco conhecidos e não controlados",
 };
 const FATOR_RESP: Record<string, string> = { sim: "Sim", nao: "Não", parcial: "Parcial", na: "N/A" };
+const PRIO_COR: Record<string, { bg: string; fg: string }> = {
+  Critica: { bg: "#fee2e2", fg: "#b91c1c" },
+  Alta: { bg: "#ffedd5", fg: "#c2410c" },
+  Media: { bg: "#fef3c7", fg: "#b45309" },
+  Baixa: { bg: "#d1fae5", fg: "#047857" },
+};
+const STATUS_COR: Record<string, { bg: string; fg: string; bd: string }> = {
+  Pendente: { bg: "#fef3c7", fg: "#b45309", bd: "#fde68a" },
+  "Em Andamento": { bg: "#dbeafe", fg: "#1d4ed8", bd: "#bfdbfe" },
+  Concluida: { bg: "#d1fae5", fg: "#047857", bd: "#a7f3d0" },
+  Cancelada: { bg: "#f3f4f6", fg: "#6b7280", bd: "#e5e7eb" },
+};
+
+function PlanoAcaoSection({ acoes }: { acoes: InvestigacaoAcao[] }) {
+  if (!acoes || acoes.length === 0) return null;
+  return (
+    <section>
+      <p className="ia-sec">Plano de ação (5W2H)</p>
+      {acoes.map((a) => {
+        const cp = PRIO_COR[a.prioridade] ?? PRIO_COR.Media;
+        const cs = STATUS_COR[a.status] ?? STATUS_COR.Pendente;
+        const prazo = a.when_prazo ? new Date(a.when_prazo + "T00:00").toLocaleDateString("pt-BR") : null;
+        const detalhes = [
+          a.why_justificativa && `Por quê: ${a.why_justificativa}`,
+          a.how_metodo && `Como: ${a.how_metodo}`,
+          a.where_local && `Onde: ${a.where_local}`,
+          a.who_responsavel && `Quem: ${a.who_responsavel}`,
+          prazo && `Quando: ${prazo}`,
+          a.how_much_custo && `Quanto: ${a.how_much_custo}`,
+        ].filter(Boolean);
+        return (
+          <div key={a.id_acao} style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "6px 8px", marginBottom: 6, pageBreakInside: "avoid" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ background: cp.bg, color: cp.fg, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px" }}>{a.prioridade}</span>
+              <span style={{ flex: 1, fontSize: "11pt", fontWeight: 600, color: "#111827" }}>{a.what_acao}</span>
+              <span style={{ background: cs.bg, color: cs.fg, border: `1px solid ${cs.bd}`, fontSize: 8, fontWeight: 700, borderRadius: 999, padding: "1px 6px" }}>{a.status}</span>
+            </div>
+            {detalhes.length > 0 && (
+              <p style={{ fontSize: "9.5pt", color: "#374151", margin: "3px 0 0" }}>{detalhes.join(" · ")}</p>
+            )}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
 
 function fmt(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -134,6 +182,7 @@ export default function InvestigacaoAcidenteTemplate({
   folhaEmpresa,
   dataHoraAssinatura,
   identificadorDocumento,
+  acoes = [],
   silhuetaFrente,
   silhuetaCostas,
 }: InvestigacaoTemplateProps) {
@@ -401,6 +450,8 @@ export default function InvestigacaoAcidenteTemplate({
           <Bloco rot="Conclusão / parecer técnico" val={inv.conclusao} />
         </section>
       )}
+
+      <PlanoAcaoSection acoes={acoes} />
 
       {(inv.cronogramas ?? []).length > 0 && (
         <section>
