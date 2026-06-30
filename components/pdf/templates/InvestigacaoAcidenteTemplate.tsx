@@ -86,34 +86,46 @@ const STATUS_COR: Record<string, { bg: string; fg: string; bd: string }> = {
 
 function PlanoAcaoSection({ acoes }: { acoes: InvestigacaoAcao[] }) {
   if (!acoes || acoes.length === 0) return null;
+  const TH: React.CSSProperties = {
+    borderBottom: `1.5px solid ${VERDE}`, borderRight: "1px solid #e5e7eb", padding: "4px 5px",
+    textAlign: "left", color: VERDE, fontSize: 7.5, fontWeight: 700, textTransform: "uppercase",
+    letterSpacing: ".02em", background: "#f0fdf4",
+  };
+  const TD: React.CSSProperties = {
+    borderBottom: "1px solid #eef0f2", borderRight: "1px solid #f3f4f6", padding: "4px 5px",
+    color: "#111827", fontSize: 8, verticalAlign: "top", wordBreak: "break-word",
+  };
+  const cols = ["6%", "17%", "15%", "14%", "9%", "10%", "9%", "10%", "10%"];
+  const heads = ["Prior.", "O quê", "Por quê", "Como", "Onde", "Quem", "Quando", "Quanto", "Status"];
   return (
     <section>
       <p className="ia-sec">Plano de ação (5W2H)</p>
-      {acoes.map((a) => {
-        const cp = PRIO_COR[a.prioridade] ?? PRIO_COR.Media;
-        const cs = STATUS_COR[a.status] ?? STATUS_COR.Pendente;
-        const prazo = a.when_prazo ? new Date(a.when_prazo + "T00:00").toLocaleDateString("pt-BR") : null;
-        const detalhes = [
-          a.why_justificativa && `Por quê: ${a.why_justificativa}`,
-          a.how_metodo && `Como: ${a.how_metodo}`,
-          a.where_local && `Onde: ${a.where_local}`,
-          a.who_responsavel && `Quem: ${a.who_responsavel}`,
-          prazo && `Quando: ${prazo}`,
-          a.how_much_custo && `Quanto: ${a.how_much_custo}`,
-        ].filter(Boolean);
-        return (
-          <div key={a.id_acao} style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "6px 8px", marginBottom: 6, pageBreakInside: "avoid" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ background: cp.bg, color: cp.fg, fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "1px 5px" }}>{a.prioridade}</span>
-              <span style={{ flex: 1, fontSize: "11pt", fontWeight: 600, color: "#111827" }}>{a.what_acao}</span>
-              <span style={{ background: cs.bg, color: cs.fg, border: `1px solid ${cs.bd}`, fontSize: 8, fontWeight: 700, borderRadius: 999, padding: "1px 6px" }}>{a.status}</span>
-            </div>
-            {detalhes.length > 0 && (
-              <p style={{ fontSize: "9.5pt", color: "#374151", margin: "3px 0 0" }}>{detalhes.join(" · ")}</p>
-            )}
-          </div>
-        );
-      })}
+      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", marginTop: 4 }}>
+        <colgroup>{cols.map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
+        <thead>
+          <tr>{heads.map((h) => <th key={h} style={TH}>{h}</th>)}</tr>
+        </thead>
+        <tbody>
+          {acoes.map((a) => {
+            const cp = PRIO_COR[a.prioridade] ?? PRIO_COR.Media;
+            const cs = STATUS_COR[a.status] ?? STATUS_COR.Pendente;
+            const prazo = a.when_prazo ? new Date(a.when_prazo + "T00:00").toLocaleDateString("pt-BR") : "—";
+            return (
+              <tr key={a.id_acao} style={{ pageBreakInside: "avoid" }}>
+                <td style={{ ...TD, color: cp.fg, fontWeight: 700 }}>{a.prioridade}</td>
+                <td style={{ ...TD, fontWeight: 600 }}>{a.what_acao}</td>
+                <td style={TD}>{a.why_justificativa || "—"}</td>
+                <td style={TD}>{a.how_metodo || "—"}</td>
+                <td style={TD}>{a.where_local || "—"}</td>
+                <td style={TD}>{a.who_responsavel || "—"}</td>
+                <td style={TD}>{prazo}</td>
+                <td style={TD}>{a.how_much_custo || "—"}</td>
+                <td style={{ ...TD, color: cs.fg, fontWeight: 700 }}>{a.status}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </section>
   );
 }
