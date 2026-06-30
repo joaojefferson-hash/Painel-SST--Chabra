@@ -32,6 +32,21 @@ interface FormState {
   acidentado_nome: string;
   acidentado_funcoes: string[];
   acidentado_admissao: string;
+  acidentado_cpf: string;
+  acidentado_pis: string;
+  acidentado_estado_civil: string;
+  acidentado_nascimento: string;
+  acidentado_escolaridade: string;
+  acidentado_telefone: string;
+  acidentado_endereco: string;
+  acidentado_cbo: string;
+  acidentado_tempo_funcao: string;
+  acidentado_tempo_empresa: string;
+  acidentado_jornada: string;
+  acidentado_tempo_apos_inicio: string;
+  qtd_acidentados: string;
+  consequencias: string[];
+  fatores_morbi: string[];
   tipo_acidente: string;
   houve_afastamento: boolean;
   dias_afastamento: string;
@@ -56,11 +71,29 @@ const VAZIO: FormState = {
   data_acidente: "", hora_acidente: "", local_acidente: "", setores: [],
   data_investigacao: "", responsavel_tecnico: "", numero_cat: "", data_cat: "",
   acidentado_nome: "", acidentado_funcoes: [], acidentado_admissao: "",
+  acidentado_cpf: "", acidentado_pis: "", acidentado_estado_civil: "", acidentado_nascimento: "",
+  acidentado_escolaridade: "", acidentado_telefone: "", acidentado_endereco: "", acidentado_cbo: "",
+  acidentado_tempo_funcao: "", acidentado_tempo_empresa: "", acidentado_jornada: "", acidentado_tempo_apos_inicio: "",
+  qtd_acidentados: "", consequencias: [], fatores_morbi: [],
   tipo_acidente: "", houve_afastamento: false, dias_afastamento: "", gravidade: "",
   descricao: "", agente_causador: "", partes_corpo: [], natureza_lesao: "", cid: "",
   testemunhas: [], causas_imediatas: "", causas_basicas: "", cinco_porques: [],
   ishikawa: {}, medidas: "", conclusao: "", status: "RASCUNHO", data_validade: "",
 };
+
+const ESTADO_CIVIL = ["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)", "União estável", "Outro"];
+const ESCOLARIDADE = [
+  "Fundamental incompleto", "Fundamental completo", "Médio incompleto", "Médio completo",
+  "Superior incompleto", "Superior completo", "Pós-graduação",
+];
+const CONSEQUENCIAS = [
+  "Óbito", "Amputação", "Esmagamento", "Perda de visão", "Perda permanente de função",
+  "Fratura com cirurgia", "Queimadura >30% da superfície corporal", "Afastamento >30 dias",
+];
+const FATORES_MORBI = [
+  "Agente químico", "Agente físico", "Agente biológico", "Queda", "Corrente elétrica",
+  "Soterramento", "Impacto", "Colisão", "Transporte", "Incêndio", "Explosão", "Máquinas", "Outros",
+];
 
 export default function EditorInvestigacaoPage() {
   const { id } = useParams<{ id: string }>();
@@ -89,6 +122,21 @@ export default function EditorInvestigacaoPage() {
       acidentado_nome: data.acidentado_nome ?? "",
       acidentado_funcoes: data.acidentado_funcoes ?? [],
       acidentado_admissao: data.acidentado_admissao ?? "",
+      acidentado_cpf: data.acidentado_cpf ?? "",
+      acidentado_pis: data.acidentado_pis ?? "",
+      acidentado_estado_civil: data.acidentado_estado_civil ?? "",
+      acidentado_nascimento: data.acidentado_nascimento ?? "",
+      acidentado_escolaridade: data.acidentado_escolaridade ?? "",
+      acidentado_telefone: data.acidentado_telefone ?? "",
+      acidentado_endereco: data.acidentado_endereco ?? "",
+      acidentado_cbo: data.acidentado_cbo ?? "",
+      acidentado_tempo_funcao: data.acidentado_tempo_funcao ?? "",
+      acidentado_tempo_empresa: data.acidentado_tempo_empresa ?? "",
+      acidentado_jornada: data.acidentado_jornada ?? "",
+      acidentado_tempo_apos_inicio: data.acidentado_tempo_apos_inicio ?? "",
+      qtd_acidentados: data.qtd_acidentados != null ? String(data.qtd_acidentados) : "",
+      consequencias: data.consequencias ?? [],
+      fatores_morbi: data.fatores_morbi ?? [],
       tipo_acidente: data.tipo_acidente ?? "",
       houve_afastamento: data.houve_afastamento ?? false,
       dias_afastamento: data.dias_afastamento != null ? String(data.dias_afastamento) : "",
@@ -130,6 +178,21 @@ export default function EditorInvestigacaoPage() {
       acidentado_nome: form.acidentado_nome || null,
       acidentado_funcoes: form.acidentado_funcoes,
       acidentado_admissao: form.acidentado_admissao || null,
+      acidentado_cpf: form.acidentado_cpf || null,
+      acidentado_pis: form.acidentado_pis || null,
+      acidentado_estado_civil: form.acidentado_estado_civil || null,
+      acidentado_nascimento: form.acidentado_nascimento || null,
+      acidentado_escolaridade: form.acidentado_escolaridade || null,
+      acidentado_telefone: form.acidentado_telefone || null,
+      acidentado_endereco: form.acidentado_endereco || null,
+      acidentado_cbo: form.acidentado_cbo || null,
+      acidentado_tempo_funcao: form.acidentado_tempo_funcao || null,
+      acidentado_tempo_empresa: form.acidentado_tempo_empresa || null,
+      acidentado_jornada: form.acidentado_jornada || null,
+      acidentado_tempo_apos_inicio: form.acidentado_tempo_apos_inicio || null,
+      qtd_acidentados: form.qtd_acidentados ? parseInt(form.qtd_acidentados, 10) : null,
+      consequencias: form.consequencias,
+      fatores_morbi: form.fatores_morbi,
       tipo_acidente: (form.tipo_acidente || null) as never,
       houve_afastamento: form.houve_afastamento,
       dias_afastamento: form.dias_afastamento ? parseInt(form.dias_afastamento, 10) : null,
@@ -210,6 +273,20 @@ export default function EditorInvestigacaoPage() {
             <MultiChipInput value={form.acidentado_funcoes} onChange={(v) => set("acidentado_funcoes", v)} sugestoes={catalogo?.cargos ?? []} placeholder="Adicionar cargo/função…" ro={ro} />
           </div>
           <Campo label="Admissão" type="date" value={form.acidentado_admissao} onChange={(v) => set("acidentado_admissao", v)} ro={ro} />
+          <Campo label="CPF" value={form.acidentado_cpf} onChange={(v) => set("acidentado_cpf", v)} ro={ro} />
+          <Campo label="PIS" value={form.acidentado_pis} onChange={(v) => set("acidentado_pis", v)} ro={ro} />
+          <Campo label="Data de nascimento" type="date" value={form.acidentado_nascimento} onChange={(v) => set("acidentado_nascimento", v)} ro={ro} />
+          <Sel label="Estado civil" value={form.acidentado_estado_civil} onChange={(v) => set("acidentado_estado_civil", v)} ro={ro}
+            opcoes={[["", "—"], ...ESTADO_CIVIL.map((x) => [x, x] as [string, string])]} />
+          <Sel label="Escolaridade" value={form.acidentado_escolaridade} onChange={(v) => set("acidentado_escolaridade", v)} ro={ro}
+            opcoes={[["", "—"], ...ESCOLARIDADE.map((x) => [x, x] as [string, string])]} />
+          <Campo label="CBO" value={form.acidentado_cbo} onChange={(v) => set("acidentado_cbo", v)} ro={ro} placeholder="Código CBO" />
+          <Campo label="Telefone" value={form.acidentado_telefone} onChange={(v) => set("acidentado_telefone", v)} ro={ro} />
+          <Campo label="Endereço" value={form.acidentado_endereco} onChange={(v) => set("acidentado_endereco", v)} ro={ro} />
+          <Campo label="Tempo na função" value={form.acidentado_tempo_funcao} onChange={(v) => set("acidentado_tempo_funcao", v)} ro={ro} placeholder="ex.: 2 anos" />
+          <Campo label="Tempo na empresa" value={form.acidentado_tempo_empresa} onChange={(v) => set("acidentado_tempo_empresa", v)} ro={ro} placeholder="ex.: 5 anos" />
+          <Campo label="Jornada de trabalho" value={form.acidentado_jornada} onChange={(v) => set("acidentado_jornada", v)} ro={ro} placeholder="ex.: 8h/dia · 44h/sem" />
+          <Campo label="Tempo do acidente após início da jornada" value={form.acidentado_tempo_apos_inicio} onChange={(v) => set("acidentado_tempo_apos_inicio", v)} ro={ro} placeholder="ex.: 3h30" />
           <Sel label="Tipo de acidente" value={form.tipo_acidente} onChange={(v) => set("tipo_acidente", v)} ro={ro}
             opcoes={[["", "—"], ["TIPICO", "Típico"], ["TRAJETO", "Trajeto"], ["DOENCA", "Doença ocupacional"]]} />
           <Sel label="Gravidade" value={form.gravidade} onChange={(v) => set("gravidade", v)} ro={ro}
@@ -224,6 +301,15 @@ export default function EditorInvestigacaoPage() {
             )}
           </div>
         </Grid>
+      </Secao>
+
+      {/* Dados do acidente (Bloco 1 / Item 5) */}
+      <Secao titulo="Dados do acidente">
+        <Grid>
+          <Campo label="Quantidade de acidentados" type="number" value={form.qtd_acidentados} onChange={(v) => set("qtd_acidentados", v)} ro={ro} className="w-40" />
+        </Grid>
+        <Checklist label="Consequência(s) do acidente" opcoes={CONSEQUENCIAS} value={form.consequencias} onChange={(v) => set("consequencias", v)} ro={ro} />
+        <Checklist label="Fator de morbi/mortalidade" opcoes={FATORES_MORBI} value={form.fatores_morbi} onChange={(v) => set("fatores_morbi", v)} ro={ro} />
       </Secao>
 
       {/* 3. Descrição */}
@@ -458,6 +544,42 @@ function Area({
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30 disabled:bg-gray-50"
       />
+    </div>
+  );
+}
+
+function Checklist({
+  label, opcoes, value, onChange, ro,
+}: {
+  label: string; opcoes: string[]; value: string[]; onChange: (v: string[]) => void; ro?: boolean;
+}) {
+  function toggle(op: string) {
+    if (ro) return;
+    onChange(value.includes(op) ? value.filter((x) => x !== op) : [...value, op]);
+  }
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium text-gray-600">{label}</label>
+      <div className="flex flex-wrap gap-2">
+        {opcoes.map((op) => {
+          const on = value.includes(op);
+          return (
+            <button
+              key={op}
+              type="button"
+              disabled={ro}
+              onClick={() => toggle(op)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                on
+                  ? "border-verde-primary bg-verde-primary/10 text-verde-primary"
+                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+              } disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              {op}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -155,11 +155,34 @@ export default function InvestigacaoAcidenteTemplate({
           <Campo rot="Nome" val={inv.acidentado_nome} />
           <Campo rot="Cargo / função" val={(inv.acidentado_funcoes ?? []).join(", ")} />
           <Campo rot="Admissão" val={fmt(inv.acidentado_admissao)} />
+          {inv.acidentado_cpf && <Campo rot="CPF" val={inv.acidentado_cpf} />}
+          {inv.acidentado_pis && <Campo rot="PIS" val={inv.acidentado_pis} />}
+          {inv.acidentado_nascimento && <Campo rot="Nascimento" val={fmt(inv.acidentado_nascimento)} />}
+          {inv.acidentado_estado_civil && <Campo rot="Estado civil" val={inv.acidentado_estado_civil} />}
+          {inv.acidentado_escolaridade && <Campo rot="Escolaridade" val={inv.acidentado_escolaridade} />}
+          {inv.acidentado_cbo && <Campo rot="CBO" val={inv.acidentado_cbo} />}
+          {inv.acidentado_telefone && <Campo rot="Telefone" val={inv.acidentado_telefone} />}
+          {inv.acidentado_endereco && <Campo rot="Endereço" val={inv.acidentado_endereco} full />}
+          {inv.acidentado_tempo_funcao && <Campo rot="Tempo na função" val={inv.acidentado_tempo_funcao} />}
+          {inv.acidentado_tempo_empresa && <Campo rot="Tempo na empresa" val={inv.acidentado_tempo_empresa} />}
+          {inv.acidentado_jornada && <Campo rot="Jornada" val={inv.acidentado_jornada} />}
+          {inv.acidentado_tempo_apos_inicio && <Campo rot="Tempo após início da jornada" val={inv.acidentado_tempo_apos_inicio} />}
           <Campo rot="Tipo de acidente" val={inv.tipo_acidente ? TIPO_LABEL[inv.tipo_acidente] : "—"} />
           <Campo rot="Gravidade" val={inv.gravidade ? GRAV_LABEL[inv.gravidade] : "—"} />
           <Campo rot="Houve afastamento" val={afast} />
         </div>
       </section>
+
+      {(inv.qtd_acidentados != null || (inv.consequencias ?? []).length > 0 || (inv.fatores_morbi ?? []).length > 0) && (
+        <section>
+          <p className="ia-sec">Dados do acidente</p>
+          <div className="ia-grid">
+            {inv.qtd_acidentados != null && <Campo rot="Quantidade de acidentados" val={String(inv.qtd_acidentados)} />}
+            {(inv.consequencias ?? []).length > 0 && <Campo rot="Consequência(s)" val={inv.consequencias.join(", ")} full />}
+            {(inv.fatores_morbi ?? []).length > 0 && <Campo rot="Fator de morbi/mortalidade" val={inv.fatores_morbi.join(", ")} full />}
+          </div>
+        </section>
+      )}
 
       <section>
         <p className="ia-sec">3. Descrição do acidente</p>
