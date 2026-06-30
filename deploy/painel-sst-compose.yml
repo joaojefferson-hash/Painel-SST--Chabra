@@ -1,0 +1,82 @@
+# painel-sst-compose.yml -- stack do Painel SST no self-host .107.
+# Rede EXTERNA = a do db-messages (alcanca db-messages-postgres + db-messages-minio
+# por DNS). Ambos os servicos sao loopback-only (127.0.0.1); o ingress publico
+# (painel-sst.chabra.com.br) vem do tunnel CF, nao daqui.
+#
+# Subir (env montado pelo 107-deploy-painel-stack.ps1):
+#   docker compose -f painel-sst-compose.yml --env-file C:\temp\painel-sst\.env.painel up -d
+
+services:
+  painel-sst-postgrest:
+    image: postgrest/postgrest:v12.2.12
+    container_name: painel-sst-postgrest
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: "postgresql://authenticator:${AUTHENTICATOR_PWD}@db-messages-postgres:5432/painel_sst"
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: "@/jwks.json"
+      PGRST_JWT_AUD: authenticated
+      PGRST_DB_POOL: "5"
+    volumes:
+      - type: bind
+        source: C:\temp\painel-sst\jwks-combined.json
+        target: /jwks.json
+        read_only: true
+    # Sem porta no host: interno-only (o app fala painel-sst-postgrest:3000 por DNS;
+    # o smoke test passa pelo proxy /api/rest/v1 do app).
+    networks: [dbnet]
+    mem_limit: 384m
+
+  painel-sst-app:
+    image: painel-sst-app:latest
+    container_name: painel-sst-app
+    restart: unless-stopped
+    depends_on: [painel-sst-postgrest]
+    environment:
+      NODE_ENV: production
+      # Auth self-host (Bloco H -- GoTrue na .107). NEXT_PUBLIC_SUPABASE_URL = host
+      # do app: o browser fala /auth/v1/* same-origin -> rewrite -> painel-sst-gotrue.
+      NEXT_PUBLIC_SUPABASE_URL: "https://painel-sst.chabra.com.br"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
+      # Segredo HS256 do GoTrue -- a rota /api/usuarios/criar minta um JWT
+      # service_role com ele p/ a Admin API do GoTrue.
+      GOTRUE_JWT_SECRET: "${GOTRUE_JWT_SECRET}"
+      # Dados (PostgREST) -- browser same-origin / SSR interno
+      NEXT_PUBLIC_POSTGREST_URL: "https://painel-sst.chabra.com.br/api/rest/v1"
+      POSTGREST_INTERNAL_URL: "http://painel-sst-postgrest:3000"
+      # Storage (MinIO)
+      NEXT_PUBLIC_STORAGE_ENDPOINT: "https://storage.chabra.com.br"
+      NEXT_PUBLIC_STORAGE_PUBLIC_ENDPOINT: "https://storage.chabra.com.br"
+      NEXT_PUBLIC_STORAGE_BUCKET: "fotos"
+      # Server-only (fora do bundle): le buckets privados + bypass RLS
+      STORAGE_ACCESS_KEY_ID: "${STORAGE_ACCESS_KEY_ID}"
+      STORAGE_SECRET_ACCESS_KEY: "${STORAGE_SECRET_ACCESS_KEY}"
+      POSTGREST_SERVICE_TOKEN: "${POSTGREST_SERVICE_TOKEN}"
+      # Admin do provedor de Auth (Supabase SaaS hoje; GoTrue self-host no Bloco H).
+      # Habilita auth.admin.* na rota /api/usuarios/criar (cria identidade s/ trocar
+      # a sessao do admin). Formato novo sb_secret_ ou service_role legada.
+      SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"
+      # Edge Functions portadas p/ rotas Next: IA (Groq) em /api/fn/* + welcome-email (Resend).
+      GROQ_API_KEY: "${GROQ_API_KEY}"
+      RESEND_API_KEY: "${RESEND_API_KEY}"
+      # Geração de PDF (rotas /api/pdf/*) via @sparticuz/chromium bundled no standalone,
+      # em vez de procurar Chrome/Edge do sistema (que nao existe no container).
+      PDF_USE_SPARTICUZ: "1"
+    ports:
+      - "127.0.0.1:3003:3000"
+    networks: [dbnet]
+    # 2g: a geração de PDF (@sparticuz/chromium) é spiky em memória (launch do Chromium
+    # por request); folga p/ laudos grandes sem OOM. A .107 tem ~6 GB livres.
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  dbnet:
+    external: true
+    name: db-messages-main_db-messages-network

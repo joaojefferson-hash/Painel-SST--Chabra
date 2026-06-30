@@ -1,0 +1,51 @@
+name: Deploy painel-sst (.107)
+
+# Build + deploy automatico na .107 a cada push na branch de cutover.
+# Runner: chabra-107 (host mode) -> usa docker + PowerShell do host.
+# Segredos: Settings -> Actions -> Secrets (populados a partir do .env.painel).
+on:
+  push:
+    branches:
+      - cutover/2026-06-26
+
+# Um deploy por vez (cancela builds antigos da mesma branch).
+concurrency:
+  group: deploy-107
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: chabra-107
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build da imagem
+        shell: powershell
+        env:
+          ANON: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          UPID: ${{ secrets.NEXT_PUBLIC_STORAGE_ACCESS_KEY_ID }}
+          UPSEC: ${{ secrets.NEXT_PUBLIC_STORAGE_SECRET_ACCESS_KEY }}
+        run: .\deploy\build.ps1
+
+      - name: Migrations pendentes
+        shell: powershell
+        run: .\deploy\migrate.ps1
+
+      - name: Deploy (compose up)
+        shell: powershell
+        env:
+          AUTHENTICATOR_PWD: ${{ secrets.AUTHENTICATOR_PWD }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
+          STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
+          POSTGREST_SERVICE_TOKEN: ${{ secrets.POSTGREST_SERVICE_TOKEN }}
+          GOTRUE_JWT_SECRET: ${{ secrets.GOTRUE_JWT_SECRET }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: .\deploy\deploy.ps1
+
+      - name: Health gate (+ rollback)
+        shell: powershell
+        run: .\deploy\healthcheck.ps1
