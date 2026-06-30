@@ -15,6 +15,13 @@ $envFile = "$dir\.env.painel"
   "RESEND_API_KEY=$env:RESEND_API_KEY"
 ) | Set-Content -Encoding ascii $envFile
 
+# Remove um painel-sst-app preso de deploy manual / projeto compose anterior. O
+# runner roda em working dir variavel -> nome de projeto compose diferente -> o
+# container vira "orfao" (nao pertence a este projeto) e o compose tenta CRIAR,
+# batendo em "name already in use". Idempotente (no-op se nao existir). So o app
+# (stateless) e tocado: postgrest/gotrue/DB sao stacks separados e ficam de pe.
+docker rm -f painel-sst-app *> $null
+
 docker compose -f "deploy\painel-sst-compose.yml" --env-file $envFile up -d --no-deps --force-recreate painel-sst-app
 if ($LASTEXITCODE -ne 0) { throw "docker compose up falhou" }
 Write-Output "DEPLOY_OK"
