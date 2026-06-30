@@ -50,6 +50,13 @@ const GRAV_LABEL: Record<string, string> = {
   GRAVE: "Grave",
   FATAL: "Fatal",
 };
+const VINCULO_LABEL: Record<string, string> = {
+  equipe: "Equipe",
+  chefia_direta: "Chefia direta",
+  chefia_indireta: "Chefia indireta",
+  comando: "Comando / organograma",
+};
+const TD_PESSOA = { borderBottom: "1px solid #f0f0f0", padding: "3px 6px", color: "#111827" } as const;
 
 function fmt(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -214,6 +221,64 @@ export default function InvestigacaoAcidenteTemplate({
             <div key={i} className="ia-test">
               <div className="nome">{t.nome || "—"}</div>
               {t.depoimento && <div className="dep">{t.depoimento}</div>}
+            </div>
+          ))}
+        </section>
+      )}
+
+      {(inv.pessoas_envolvidas ?? []).length > 0 && (
+        <section>
+          <p className="ia-sec">Pessoas envolvidas / organograma</p>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10pt", marginTop: 4 }}>
+            <thead>
+              <tr>
+                {["Nome", "Função", "CPF", "Telefone", "E-mail", "Vínculo"].map((h) => (
+                  <th key={h} style={{ textAlign: "left", borderBottom: "1px solid #d1d5db", padding: "3px 6px", color: "#6b7280", fontSize: 8, textTransform: "uppercase", letterSpacing: ".04em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {inv.pessoas_envolvidas.map((p, i) => (
+                <tr key={i}>
+                  <td style={TD_PESSOA}>{p.nome || "—"}</td>
+                  <td style={TD_PESSOA}>{p.funcao || "—"}</td>
+                  <td style={TD_PESSOA}>{p.cpf || "—"}</td>
+                  <td style={TD_PESSOA}>{p.telefone || "—"}</td>
+                  <td style={TD_PESSOA}>{p.email || "—"}</td>
+                  <td style={TD_PESSOA}>{VINCULO_LABEL[p.vinculo] ?? p.vinculo}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {inv.organizacao_trabalho && Object.values(inv.organizacao_trabalho).some((x) => x?.trim()) && (
+        <section>
+          <p className="ia-sec">Organização do trabalho da tarefa</p>
+          <Bloco rot="Planejamento" val={inv.organizacao_trabalho.planejamento} />
+          <Bloco rot="Orientação de execução" val={inv.organizacao_trabalho.orientacao} />
+          <Bloco rot="Materiais, máquinas, ferramentas, EPI/EPC" val={inv.organizacao_trabalho.recursos} />
+          <Bloco rot="Processos e controle de tempo" val={inv.organizacao_trabalho.processos} />
+          <Bloco rot="Sinalização" val={inv.organizacao_trabalho.sinalizacao} />
+          <Bloco rot="Hierarquia" val={inv.organizacao_trabalho.hierarquia} />
+        </section>
+      )}
+
+      {inv.atividade_momento?.trim() && (
+        <section>
+          <p className="ia-sec">Atividade no momento do acidente</p>
+          <Bloco rot="Atividade executada" val={inv.atividade_momento} />
+        </section>
+      )}
+
+      {(inv.relatos_envolvidos ?? []).length > 0 && (
+        <section>
+          <p className="ia-sec">Descrição sob o ponto de vista dos envolvidos</p>
+          {inv.relatos_envolvidos.map((r, i) => (
+            <div key={i} className="ia-test">
+              <div className="nome">{r.pessoa || "—"}</div>
+              {r.relato && <div className="dep">{r.relato}</div>}
             </div>
           ))}
         </section>

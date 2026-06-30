@@ -64,6 +64,34 @@ export interface TestemunhaAcidente {
   depoimento: string;
 }
 
+export type VinculoPessoa = "equipe" | "chefia_direta" | "chefia_indireta" | "comando";
+
+/** Pessoa envolvida no acidente (equipe, chefia, comando) — Item 8. */
+export interface PessoaEnvolvida {
+  nome: string;
+  cpf: string;
+  funcao: string;
+  telefone: string;
+  email: string;
+  vinculo: VinculoPessoa;
+}
+
+/** Relato de uma pessoa envolvida (ponto de vista) — Item 11. */
+export interface RelatoEnvolvido {
+  pessoa: string;
+  relato: string;
+}
+
+/** Organização do trabalho da tarefa — Item 9 (campos por aspecto). */
+export interface OrganizacaoTrabalho {
+  planejamento?: string;
+  orientacao?: string;
+  recursos?: string;       // materiais, máquinas, ferramentas, EPI/EPC
+  processos?: string;      // processos e controle de tempo
+  sinalizacao?: string;
+  hierarquia?: string;
+}
+
 export interface InvestigacaoAcidente {
   id_investigacao: string;
   id_empresa: string;
@@ -106,6 +134,11 @@ export interface InvestigacaoAcidente {
   consequencias: string[];
   /** Fator de morbi/mortalidade (checklist). */
   fatores_morbi: string[];
+  // Local, pessoas e organização (Bloco 2 / Itens 8-11)
+  pessoas_envolvidas: PessoaEnvolvida[];
+  organizacao_trabalho: OrganizacaoTrabalho;
+  atividade_momento: string | null;
+  relatos_envolvidos: RelatoEnvolvido[];
   // Descrição
   descricao: string | null;
   agente_causador: string | null;

@@ -18,7 +18,9 @@ import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import MultiChipInput from "@/components/ui/MultiChipInput";
 import BodyMap from "@/components/investigacao/BodyMap";
 import { ISHIKAWA_CATS } from "@/lib/investigacao/ishikawa";
-import type { TestemunhaAcidente } from "@/lib/supabase/types";
+import type {
+  TestemunhaAcidente, PessoaEnvolvida, RelatoEnvolvido, OrganizacaoTrabalho, VinculoPessoa,
+} from "@/lib/supabase/types";
 
 interface FormState {
   data_acidente: string;
@@ -47,6 +49,10 @@ interface FormState {
   qtd_acidentados: string;
   consequencias: string[];
   fatores_morbi: string[];
+  pessoas_envolvidas: PessoaEnvolvida[];
+  organizacao_trabalho: OrganizacaoTrabalho;
+  atividade_momento: string;
+  relatos_envolvidos: RelatoEnvolvido[];
   tipo_acidente: string;
   houve_afastamento: boolean;
   dias_afastamento: string;
@@ -75,6 +81,7 @@ const VAZIO: FormState = {
   acidentado_escolaridade: "", acidentado_telefone: "", acidentado_endereco: "", acidentado_cbo: "",
   acidentado_tempo_funcao: "", acidentado_tempo_empresa: "", acidentado_jornada: "", acidentado_tempo_apos_inicio: "",
   qtd_acidentados: "", consequencias: [], fatores_morbi: [],
+  pessoas_envolvidas: [], organizacao_trabalho: {}, atividade_momento: "", relatos_envolvidos: [],
   tipo_acidente: "", houve_afastamento: false, dias_afastamento: "", gravidade: "",
   descricao: "", agente_causador: "", partes_corpo: [], natureza_lesao: "", cid: "",
   testemunhas: [], causas_imediatas: "", causas_basicas: "", cinco_porques: [],
@@ -137,6 +144,10 @@ export default function EditorInvestigacaoPage() {
       qtd_acidentados: data.qtd_acidentados != null ? String(data.qtd_acidentados) : "",
       consequencias: data.consequencias ?? [],
       fatores_morbi: data.fatores_morbi ?? [],
+      pessoas_envolvidas: data.pessoas_envolvidas ?? [],
+      organizacao_trabalho: data.organizacao_trabalho ?? {},
+      atividade_momento: data.atividade_momento ?? "",
+      relatos_envolvidos: data.relatos_envolvidos ?? [],
       tipo_acidente: data.tipo_acidente ?? "",
       houve_afastamento: data.houve_afastamento ?? false,
       dias_afastamento: data.dias_afastamento != null ? String(data.dias_afastamento) : "",
@@ -162,6 +173,22 @@ export default function EditorInvestigacaoPage() {
   function set<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm((f) => ({ ...f, [k]: v }));
     setDirty(true);
+  }
+
+  const inputCls =
+    "w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30 disabled:bg-gray-50";
+  function updPessoa<K extends keyof PessoaEnvolvida>(i: number, k: K, v: PessoaEnvolvida[K]) {
+    const arr = [...form.pessoas_envolvidas];
+    arr[i] = { ...arr[i], [k]: v };
+    set("pessoas_envolvidas", arr);
+  }
+  function updRelato<K extends keyof RelatoEnvolvido>(i: number, k: K, v: RelatoEnvolvido[K]) {
+    const arr = [...form.relatos_envolvidos];
+    arr[i] = { ...arr[i], [k]: v };
+    set("relatos_envolvidos", arr);
+  }
+  function setOrg(k: keyof OrganizacaoTrabalho, v: string) {
+    set("organizacao_trabalho", { ...form.organizacao_trabalho, [k]: v });
   }
 
   async function handleSalvar() {
@@ -193,6 +220,10 @@ export default function EditorInvestigacaoPage() {
       qtd_acidentados: form.qtd_acidentados ? parseInt(form.qtd_acidentados, 10) : null,
       consequencias: form.consequencias,
       fatores_morbi: form.fatores_morbi,
+      pessoas_envolvidas: form.pessoas_envolvidas.filter((p) => p.nome.trim() || p.cpf.trim() || p.funcao.trim()),
+      organizacao_trabalho: form.organizacao_trabalho,
+      atividade_momento: form.atividade_momento || null,
+      relatos_envolvidos: form.relatos_envolvidos.filter((r) => r.pessoa.trim() || r.relato.trim()),
       tipo_acidente: (form.tipo_acidente || null) as never,
       houve_afastamento: form.houve_afastamento,
       dias_afastamento: form.dias_afastamento ? parseInt(form.dias_afastamento, 10) : null,
@@ -366,6 +397,80 @@ export default function EditorInvestigacaoPage() {
           {!ro && (
             <button type="button" onClick={() => set("testemunhas", [...form.testemunhas, { nome: "", depoimento: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
               <Plus className="size-4" /> Adicionar testemunha
+            </button>
+          )}
+        </div>
+      </Secao>
+
+      {/* Pessoas envolvidas (Bloco 2 / Item 8) */}
+      <Secao titulo="Pessoas envolvidas / organograma">
+        <div className="space-y-3">
+          {form.pessoas_envolvidas.map((p, i) => (
+            <div key={i} className="space-y-2 rounded-lg border border-gray-200 p-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <input disabled={ro} value={p.nome} onChange={(e) => updPessoa(i, "nome", e.target.value)} placeholder="Nome" className={inputCls} />
+                <input disabled={ro} value={p.funcao} onChange={(e) => updPessoa(i, "funcao", e.target.value)} placeholder="Função" className={inputCls} />
+                <input disabled={ro} value={p.cpf} onChange={(e) => updPessoa(i, "cpf", e.target.value)} placeholder="CPF" className={inputCls} />
+                <input disabled={ro} value={p.telefone} onChange={(e) => updPessoa(i, "telefone", e.target.value)} placeholder="Telefone" className={inputCls} />
+                <input disabled={ro} value={p.email} onChange={(e) => updPessoa(i, "email", e.target.value)} placeholder="E-mail" className={inputCls} />
+                <select disabled={ro} value={p.vinculo} onChange={(e) => updPessoa(i, "vinculo", e.target.value as VinculoPessoa)} className={inputCls}>
+                  <option value="equipe">Equipe</option>
+                  <option value="chefia_direta">Chefia direta</option>
+                  <option value="chefia_indireta">Chefia indireta</option>
+                  <option value="comando">Comando / organograma</option>
+                </select>
+              </div>
+              {!ro && (
+                <div className="flex justify-end">
+                  <button type="button" onClick={() => set("pessoas_envolvidas", form.pessoas_envolvidas.filter((_, j) => j !== i))} className="flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600">
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+          {!ro && (
+            <button type="button" onClick={() => set("pessoas_envolvidas", [...form.pessoas_envolvidas, { nome: "", cpf: "", funcao: "", telefone: "", email: "", vinculo: "equipe" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <Plus className="size-4" /> Adicionar pessoa
+            </button>
+          )}
+        </div>
+      </Secao>
+
+      {/* Organização do trabalho (Item 9) */}
+      <Secao titulo="Organização do trabalho da tarefa">
+        <Area label="Planejamento" value={form.organizacao_trabalho.planejamento ?? ""} onChange={(v) => setOrg("planejamento", v)} ro={ro} rows={2} />
+        <Area label="Orientação de execução" value={form.organizacao_trabalho.orientacao ?? ""} onChange={(v) => setOrg("orientacao", v)} ro={ro} rows={2} />
+        <Area label="Materiais, máquinas, ferramentas, EPI/EPC" value={form.organizacao_trabalho.recursos ?? ""} onChange={(v) => setOrg("recursos", v)} ro={ro} rows={2} />
+        <Area label="Processos e controle de tempo" value={form.organizacao_trabalho.processos ?? ""} onChange={(v) => setOrg("processos", v)} ro={ro} rows={2} />
+        <Area label="Sinalização" value={form.organizacao_trabalho.sinalizacao ?? ""} onChange={(v) => setOrg("sinalizacao", v)} ro={ro} rows={2} />
+        <Area label="Hierarquia" value={form.organizacao_trabalho.hierarquia ?? ""} onChange={(v) => setOrg("hierarquia", v)} ro={ro} rows={2} />
+      </Secao>
+
+      {/* Atividade no momento (Item 10) */}
+      <Secao titulo="Atividade executada no momento do acidente">
+        <Area label="Descreva a atividade exata que estava sendo executada" value={form.atividade_momento} onChange={(v) => set("atividade_momento", v)} ro={ro} rows={3} />
+      </Secao>
+
+      {/* Relatos dos envolvidos (Item 11) */}
+      <Secao titulo="Descrição sob o ponto de vista dos envolvidos">
+        <div className="space-y-3">
+          {form.relatos_envolvidos.map((r, i) => (
+            <div key={i} className="rounded-lg border border-gray-200 p-3">
+              <div className="flex items-center gap-2">
+                <input disabled={ro} value={r.pessoa} onChange={(e) => updRelato(i, "pessoa", e.target.value)} placeholder="Pessoa" className={inputCls} />
+                {!ro && (
+                  <button type="button" onClick={() => set("relatos_envolvidos", form.relatos_envolvidos.filter((_, j) => j !== i))} className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600">
+                    <Trash2 className="size-4" />
+                  </button>
+                )}
+              </div>
+              <textarea disabled={ro} value={r.relato} onChange={(e) => updRelato(i, "relato", e.target.value)} placeholder="Relato sob o ponto de vista desta pessoa" rows={2} className="mt-2 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30 disabled:bg-gray-50" />
+            </div>
+          ))}
+          {!ro && (
+            <button type="button" onClick={() => set("relatos_envolvidos", [...form.relatos_envolvidos, { pessoa: "", relato: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <Plus className="size-4" /> Adicionar relato
             </button>
           )}
         </div>
