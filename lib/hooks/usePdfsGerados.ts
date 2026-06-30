@@ -84,17 +84,18 @@ export function usePdfsGerados(filtros?: { modulo?: string; limit?: number }) {
       // Gera URLs assinadas (1h) para PDFs no bucket privado.
       // Registros antigos (path começa com "pdfs-gerados/") estão no bucket
       // público "fotos" e mantêm a URL pública armazenada.
-      const comUrls = await Promise.all(
-        rows.map(async (row) => {
-          if (!row.pdf_storage_path || row.pdf_storage_path.startsWith("pdfs-gerados/")) {
-            return row;
-          }
-          const { data: signed } = await supabase.storage
-            .from("pdfs-gerados")
-            .createSignedUrl(row.pdf_storage_path, 3600);
-          return { ...row, pdf_url: signed?.signedUrl ?? null };
-        })
-      );
+      // Bucket privado: pdf_url aponta p/ a rota server-side same-origin (stream com
+      // creds server). Registros antigos ("pdfs-gerados/") ficam no bucket publico
+      // "fotos" e mantem a URL publica armazenada.
+      const comUrls = rows.map((row) => {
+        if (!row.pdf_storage_path || row.pdf_storage_path.startsWith("pdfs-gerados/")) {
+          return row;
+        }
+        return {
+          ...row,
+          pdf_url: `/api/pdf/gerado?path=${encodeURIComponent(row.pdf_storage_path)}`,
+        };
+      });
       return comUrls;
     },
   });
@@ -116,15 +117,10 @@ export function usePdfsPorEmpresa(empresaId: string | null | undefined) {
       if (error) throw error;
       const rows = (data ?? []) as unknown as PdfGerado[];
       // URLs assinadas (1h) p/ PDFs no bucket privado; antigos ficam com a URL pública.
-      return Promise.all(
-        rows.map(async (row) => {
-          if (!row.pdf_storage_path || row.pdf_storage_path.startsWith("pdfs-gerados/")) return row;
-          const { data: signed } = await supabase.storage
-            .from("pdfs-gerados")
-            .createSignedUrl(row.pdf_storage_path, 3600);
-          return { ...row, pdf_url: signed?.signedUrl ?? row.pdf_url };
-        }),
-      );
+      return rows.map((row) => {
+        if (!row.pdf_storage_path || row.pdf_storage_path.startsWith("pdfs-gerados/")) return row;
+        return { ...row, pdf_url: `/api/pdf/gerado?path=${encodeURIComponent(row.pdf_storage_path)}` };
+      });
     },
   });
 }
@@ -205,10 +201,7 @@ export function usePdfCongelado(modulo?: string, idReferencia?: string) {
       if (error) throw error;
       const row = ((data ?? [])[0] ?? null) as PdfGerado | null;
       if (!row?.pdf_storage_path) return row;
-      const { data: signed } = await supabase.storage
-        .from("pdfs-gerados")
-        .createSignedUrl(row.pdf_storage_path, 3600);
-      return { ...row, pdf_url: signed?.signedUrl ?? row.pdf_url };
+      return { ...row, pdf_url: `/api/pdf/gerado?path=${encodeURIComponent(row.pdf_storage_path)}` };
     },
   });
 }
