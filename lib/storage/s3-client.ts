@@ -76,6 +76,10 @@ export interface StorageConfig {
   secretAccessKey: string;
   publicEndpoint?: string; // endpoint para getPublicUrl (default = endpoint)
   region?: string;
+  // Buckets cujo createSignedUrl/download deve passar pela rota server-side
+  // /api/storage/file (creds server) em vez de assinar localmente. Usado no
+  // CLIENTE p/ buckets privados -- as creds do browser tem escopo so `fotos`.
+  proxyPrivateBuckets?: string[];
 }
 
 function makeS3Client(config: StorageConfig): S3Client {
@@ -101,6 +105,9 @@ async function toUint8Array(
 export function createStorageNamespace(config: StorageConfig): StorageNamespace {
   const s3 = makeS3Client(config);
   const publicEndpoint = config.publicEndpoint ?? config.endpoint;
+  const proxyPrivate = new Set(config.proxyPrivateBuckets ?? []);
+  const proxyUrl = (bucket: string, path: string) =>
+    `/api/storage/file?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`;
 
   return {
     from(bucket: string): StorageBucketClient {
@@ -159,6 +166,9 @@ export function createStorageNamespace(config: StorageConfig): StorageNamespace 
         },
 
         async createSignedUrl(path, expiresIn) {
+          if (proxyPrivate.has(bucket)) {
+            return { data: { signedUrl: proxyUrl(bucket, path) }, error: null };
+          }
           try {
             const url = await getSignedUrl(
               s3,
@@ -172,6 +182,12 @@ export function createStorageNamespace(config: StorageConfig): StorageNamespace 
         },
 
         async createSignedUrls(paths, expiresIn) {
+          if (proxyPrivate.has(bucket)) {
+            return {
+              data: paths.map((p) => ({ path: p, signedUrl: proxyUrl(bucket, p), error: null })),
+              error: null,
+            };
+          }
           try {
             const data = await Promise.all(
               paths.map(async (p) => {
@@ -194,6 +210,15 @@ export function createStorageNamespace(config: StorageConfig): StorageNamespace 
         },
 
         async download(path) {
+          if (proxyPrivate.has(bucket)) {
+            try {
+              const res = await fetch(proxyUrl(bucket, path), { cache: "no-store" });
+              if (!res.ok) return { data: null, error: { message: `download falhou (${res.status})` } };
+              return { data: await res.blob(), error: null };
+            } catch (e) {
+              return { data: null, error: { message: e instanceof Error ? e.message : String(e) } };
+            }
+          }
           try {
             const result = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: path }));
             const body = result.Body;

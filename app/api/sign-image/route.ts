@@ -141,10 +141,17 @@ export async function POST(req: NextRequest) {
   // Se há rota de geração (Puppeteer), regenera server-side já com a imagem.
   if (body.apiPdfUrl) {
     try {
-      const origin = req.nextUrl.origin;
-      const url = body.apiPdfUrl.startsWith("http")
-        ? body.apiPdfUrl
-        : `${origin}${body.apiPdfUrl}`;
+      // CF Access bloqueia chamadas server-to-server na URL publica (retorna HTML
+      // de login) -> regenera o PDF pela porta INTERNA do app. Reescreve a base
+      // publica p/ a interna; URLs relativas ganham a base interna.
+      const internalBase = process.env.AUTH_INTERNAL_URL ?? "http://127.0.0.1:3000";
+      const publicBase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? req.nextUrl.origin;
+      let url = body.apiPdfUrl;
+      if (!url.startsWith("http")) {
+        url = `${internalBase}${url}`;
+      } else if (publicBase && url.startsWith(publicBase)) {
+        url = internalBase + url.slice(publicBase.length);
+      }
       const res = await fetch(url, {
         headers: { cookie: req.headers.get("cookie") ?? "" },
       });

@@ -68,6 +68,10 @@ const pubSecret = process.env.NEXT_PUBLIC_STORAGE_SECRET_ACCESS_KEY ?? "";
 const srvKeyId = process.env.STORAGE_ACCESS_KEY_ID ?? pubKeyId;
 const srvSecret = process.env.STORAGE_SECRET_ACCESS_KEY ?? pubSecret;
 
+// Buckets privados: no CLIENTE, createSignedUrl/download passam pela rota
+// /api/storage/file (creds server) -- as creds do browser tem escopo so `fotos`.
+const PRIVATE_BUCKETS = ["certificados", "pdfs-gerados", "pdfs-assinados"];
+
 // Token service_role (server-only). JWT com role=service_role aceito pelo
 // PostgREST (JWKS multi-key); BYPASSRLS no Postgres. Fallback p/ a service key
 // legada do Supabase se o token interno nao estiver setado.
@@ -177,6 +181,7 @@ export function createSupabaseBrowserClient(): ComposedSupabaseClient {
     bucket: storageBucket,
     accessKeyId: pubKeyId,
     secretAccessKey: pubSecret,
+    proxyPrivateBuckets: PRIVATE_BUCKETS,
   });
   return {
     auth: auth.auth,

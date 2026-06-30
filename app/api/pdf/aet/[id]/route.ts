@@ -53,7 +53,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 
     // OWAS config (aet_owas_categorias) — resolve imagem: custom (fotos) → assinada;
     // default (/owas/x.svg, relativo) → absoluta (Puppeteer não tem origem).
-    const origin = new URL(_req.url).origin;
+    // Origem INTERNA (nao a publica): o Chromium roda no container e o CF Access
+    // bloquearia server-to-server no hostname publico (SVG viraria HTML de login).
+    const origin = process.env.AUTH_INTERNAL_URL ?? "http://127.0.0.1:3000";
     const { data: rawOwas } = await supabase
       .from("aet_owas_categorias").select("*").order("ordem", { ascending: true });
     const owasConfig: AetOwasCfg[] = await Promise.all(
