@@ -30,4 +30,12 @@ foreach ($m in $migs) {
   docker exec $c psql -U chabra_admin -d $db -c "INSERT INTO public.schema_migrations(version) VALUES ('$v') ON CONFLICT DO NOTHING;" | Out-Null
   $n++
 }
-Write-Output ("migrations OK (" + $n + " nova(s) aplicada(s))")
+
+# Recarrega o schema cache do PostgREST. Apos DDL (add column etc.) o painel-sst-postgrest
+# continua servindo o schema ANTIGO -> 400 PGRST204 "column not found" no app, mesmo com a
+# coluna ja criada no banco. O deploy.ps1 sobe so o app (--no-deps), nunca reinicia o
+# postgrest. NOTIFY no canal padrao 'pgrst' forca o reload sem downtime. Incondicional
+# (barato): garante consistencia mesmo quando 0 migrations novas nesta execucao.
+docker exec $c psql -U chabra_admin -d $db -c "NOTIFY pgrst, 'reload schema';" | Out-Null
+
+Write-Output ("migrations OK (" + $n + " nova(s) aplicada(s); schema PostgREST recarregado)")
