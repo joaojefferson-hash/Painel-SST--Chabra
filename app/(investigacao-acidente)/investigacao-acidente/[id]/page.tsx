@@ -17,9 +17,13 @@ import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import MultiChipInput from "@/components/ui/MultiChipInput";
 import BodyMap from "@/components/investigacao/BodyMap";
+import FotoSlots, { uploadFotoSlots, type FotoSlot } from "@/components/ui/FotoSlots";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { gerarId } from "@/lib/utils";
 import { ISHIKAWA_CATS } from "@/lib/investigacao/ishikawa";
 import type {
   TestemunhaAcidente, PessoaEnvolvida, RelatoEnvolvido, OrganizacaoTrabalho, VinculoPessoa,
+  MidiaArquivo, VideoLink,
 } from "@/lib/supabase/types";
 
 interface FormState {
@@ -53,6 +57,7 @@ interface FormState {
   organizacao_trabalho: OrganizacaoTrabalho;
   atividade_momento: string;
   relatos_envolvidos: RelatoEnvolvido[];
+  videos: VideoLink[];
   tipo_acidente: string;
   houve_afastamento: boolean;
   dias_afastamento: string;
@@ -81,7 +86,7 @@ const VAZIO: FormState = {
   acidentado_escolaridade: "", acidentado_telefone: "", acidentado_endereco: "", acidentado_cbo: "",
   acidentado_tempo_funcao: "", acidentado_tempo_empresa: "", acidentado_jornada: "", acidentado_tempo_apos_inicio: "",
   qtd_acidentados: "", consequencias: [], fatores_morbi: [],
-  pessoas_envolvidas: [], organizacao_trabalho: {}, atividade_momento: "", relatos_envolvidos: [],
+  pessoas_envolvidas: [], organizacao_trabalho: {}, atividade_momento: "", relatos_envolvidos: [], videos: [],
   tipo_acidente: "", houve_afastamento: false, dias_afastamento: "", gravidade: "",
   descricao: "", agente_causador: "", partes_corpo: [], natureza_lesao: "", cid: "",
   testemunhas: [], causas_imediatas: "", causas_basicas: "", cinco_porques: [],
@@ -114,6 +119,13 @@ export default function EditorInvestigacaoPage() {
 
   const [form, setForm] = useState<FormState>(VAZIO);
   const [dirty, setDirty] = useState(false);
+  // Mídia (FotoSlots) — estado de slots por grupo (Item 7).
+  const [croquiSlots, setCroquiSlots] = useState<(FotoSlot | null)[]>([]);
+  const [mapaSlots, setMapaSlots] = useState<(FotoSlot | null)[]>([]);
+  const [fotoAntSlots, setFotoAntSlots] = useState<(FotoSlot | null)[]>([]);
+  const [fotoMomSlots, setFotoMomSlots] = useState<(FotoSlot | null)[]>([]);
+  const [fotoAtuSlots, setFotoAtuSlots] = useState<(FotoSlot | null)[]>([]);
+  const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
     if (!data) return;
@@ -148,6 +160,7 @@ export default function EditorInvestigacaoPage() {
       organizacao_trabalho: data.organizacao_trabalho ?? {},
       atividade_momento: data.atividade_momento ?? "",
       relatos_envolvidos: data.relatos_envolvidos ?? [],
+      videos: data.videos ?? [],
       tipo_acidente: data.tipo_acidente ?? "",
       houve_afastamento: data.houve_afastamento ?? false,
       dias_afastamento: data.dias_afastamento != null ? String(data.dias_afastamento) : "",
@@ -167,6 +180,13 @@ export default function EditorInvestigacaoPage() {
       status: data.status ?? "RASCUNHO",
       data_validade: data.data_validade ?? "",
     });
+    const toSlots = (arr: MidiaArquivo[] | undefined): (FotoSlot | null)[] =>
+      (arr ?? []).map((m) => ({ type: "existing" as const, url: m.url, path: m.path }));
+    setCroquiSlots(toSlots(data.croqui));
+    setMapaSlots(toSlots(data.mapa_riscos));
+    setFotoAntSlots(toSlots(data.fotos_anteriores));
+    setFotoMomSlots(toSlots(data.fotos_momento));
+    setFotoAtuSlots(toSlots(data.fotos_atuais));
     setDirty(false);
   }, [data]);
 
@@ -190,8 +210,31 @@ export default function EditorInvestigacaoPage() {
   function setOrg(k: keyof OrganizacaoTrabalho, v: string) {
     set("organizacao_trabalho", { ...form.organizacao_trabalho, [k]: v });
   }
+  function updVideo<K extends keyof VideoLink>(i: number, k: K, v: VideoLink[K]) {
+    const arr = [...form.videos];
+    arr[i] = { ...arr[i], [k]: v };
+    set("videos", arr);
+  }
+  const onSlots = (setter: (s: (FotoSlot | null)[]) => void) => (s: (FotoSlot | null)[]) => {
+    setter(s);
+    setDirty(true);
+  };
 
   async function handleSalvar() {
+    setSalvando(true);
+    try {
+    const supabase = createSupabaseBrowserClient();
+    const base = `investigacao/${id}`;
+    const oldPaths = (arr?: MidiaArquivo[]) => (arr ?? []).map((m) => m.path);
+    const up = async (slots: (FotoSlot | null)[], old: string[], sub: string): Promise<MidiaArquivo[]> => {
+      const { urls, paths } = await uploadFotoSlots(supabase, slots, old, "fotos", `${base}/${sub}`, gerarId);
+      return urls.map((url, i) => ({ url, path: paths[i] }));
+    };
+    const croqui = await up(croquiSlots, oldPaths(data?.croqui), "croqui");
+    const mapa_riscos = await up(mapaSlots, oldPaths(data?.mapa_riscos), "mapa");
+    const fotos_anteriores = await up(fotoAntSlots, oldPaths(data?.fotos_anteriores), "fotos-ant");
+    const fotos_momento = await up(fotoMomSlots, oldPaths(data?.fotos_momento), "fotos-mom");
+    const fotos_atuais = await up(fotoAtuSlots, oldPaths(data?.fotos_atuais), "fotos-atu");
     await salvar.mutateAsync({
       id_investigacao: id,
       data_acidente: form.data_acidente || null,
@@ -242,9 +285,16 @@ export default function EditorInvestigacaoPage() {
       conclusao: form.conclusao || null,
       status: form.status as never,
       data_validade: form.data_validade || null,
+      videos: form.videos.filter((v) => v.url.trim()),
+      croqui, mapa_riscos, fotos_anteriores, fotos_momento, fotos_atuais,
     });
     setDirty(false);
     toast.success("Investigação salva");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao salvar (verifique a mídia / storage).");
+    } finally {
+      setSalvando(false);
+    }
   }
 
   if (isLoading) return <EditorSkeleton />;
@@ -269,11 +319,11 @@ export default function EditorInvestigacaoPage() {
           <button
             type="button"
             onClick={handleSalvar}
-            disabled={salvar.isPending || !dirty}
+            disabled={salvando || salvar.isPending || !dirty}
             className="inline-flex items-center gap-2 rounded-xl bg-verde-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-verde-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {salvar.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-            {dirty ? "Salvar" : "Salvo"}
+            {salvando || salvar.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            {salvando ? "Enviando…" : dirty ? "Salvar" : "Salvo"}
           </button>
         )}
       </div>
@@ -399,6 +449,36 @@ export default function EditorInvestigacaoPage() {
               <Plus className="size-4" /> Adicionar testemunha
             </button>
           )}
+        </div>
+      </Secao>
+
+      {/* Local — mídia (Bloco 2b / Item 7) */}
+      <Secao titulo="Local — croqui, mapa de riscos e fotos">
+        <MidiaGrupo label="Planta baixa / croqui do setor" slots={croquiSlots} onChange={onSlots(setCroquiSlots)} max={4} ro={ro} />
+        <MidiaGrupo label="Mapa de riscos vigente à época" slots={mapaSlots} onChange={onSlots(setMapaSlots)} max={1} ro={ro} />
+        <MidiaGrupo label="Fotos — anteriores ao acidente" slots={fotoAntSlots} onChange={onSlots(setFotoAntSlots)} max={6} ro={ro} />
+        <MidiaGrupo label="Fotos — do momento do acidente" slots={fotoMomSlots} onChange={onSlots(setFotoMomSlots)} max={6} ro={ro} />
+        <MidiaGrupo label="Fotos — atuais" slots={fotoAtuSlots} onChange={onSlots(setFotoAtuSlots)} max={6} ro={ro} />
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-600">Vídeos (links)</label>
+          <div className="space-y-2">
+            {form.videos.map((v, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input disabled={ro} value={v.url} onChange={(e) => updVideo(i, "url", e.target.value)} placeholder="URL do vídeo (Drive, YouTube…)" className={inputCls} />
+                <input disabled={ro} value={v.descricao ?? ""} onChange={(e) => updVideo(i, "descricao", e.target.value)} placeholder="Descrição (opcional)" className={inputCls} />
+                {!ro && (
+                  <button type="button" onClick={() => set("videos", form.videos.filter((_, j) => j !== i))} className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600">
+                    <Trash2 className="size-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+            {!ro && (
+              <button type="button" onClick={() => set("videos", [...form.videos, { url: "", descricao: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                <Plus className="size-4" /> Adicionar vídeo
+              </button>
+            )}
+          </div>
         </div>
       </Secao>
 
@@ -649,6 +729,19 @@ function Area({
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30 disabled:bg-gray-50"
       />
+    </div>
+  );
+}
+
+function MidiaGrupo({
+  label, slots, onChange, max, ro,
+}: {
+  label: string; slots: (FotoSlot | null)[]; onChange: (s: (FotoSlot | null)[]) => void; max: number; ro?: boolean;
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium text-gray-600">{label}</label>
+      <FotoSlots slots={slots} onChange={onChange} max={max} disabled={ro} />
     </div>
   );
 }

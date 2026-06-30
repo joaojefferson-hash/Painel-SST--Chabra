@@ -4,8 +4,9 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { createSupabaseServerClient } from "@/lib/supabase/client";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
-import type { Empresa, InvestigacaoAcidente } from "@/lib/supabase/types";
+import type { Empresa, InvestigacaoAcidente, MidiaArquivo } from "@/lib/supabase/types";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
+import type { AnexoParaMerge } from "@/lib/pdf/anexar";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -67,6 +68,35 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     const silhuetaFrente = lerSilhueta("silhueta-frente.png");
     const silhuetaCostas = lerSilhueta("silhueta-costas.png");
 
+    // Mídia (croqui/mapa/fotos — Item 7): embutida como páginas de anexo no fim do
+    // laudo (URL assinada por path; degrada graciosamente se o storage falhar).
+    const gruposMidia: { nome: string; itens: MidiaArquivo[] }[] = [
+      { nome: "Croqui / planta do setor", itens: inv.croqui ?? [] },
+      { nome: "Mapa de riscos", itens: inv.mapa_riscos ?? [] },
+      { nome: "Foto anterior ao acidente", itens: inv.fotos_anteriores ?? [] },
+      { nome: "Foto do momento do acidente", itens: inv.fotos_momento ?? [] },
+      { nome: "Foto atual", itens: inv.fotos_atuais ?? [] },
+    ];
+    const anexosMidia: AnexoParaMerge[] = [];
+    for (const g of gruposMidia) {
+      for (let i = 0; i < g.itens.length; i++) {
+        const m = g.itens[i];
+        if (!m || (!m.path && !m.url)) continue;
+        let url = m.url;
+        if (m.path) {
+          const { data: signed } = await supabase.storage.from("fotos").createSignedUrl(m.path, 600);
+          if (signed?.signedUrl) url = signed.signedUrl;
+        }
+        const png = (m.path ?? url).toLowerCase().includes(".png");
+        anexosMidia.push({
+          nome: `${g.nome}${g.itens.length > 1 ? ` ${i + 1}` : ""}`,
+          url,
+          tipo: "imagem",
+          mime: png ? "image/png" : "image/jpeg",
+        });
+      }
+    }
+
     const [{ default: React }, { renderToStaticMarkup }, { default: Template }] =
       await Promise.all([
         import("react"),
@@ -104,7 +134,11 @@ ${bodyWithoutStyle}
       numeroPaginas: true,
     });
 
-    return new NextResponse(new Uint8Array(pdfBuffer), {
+    // Anexa croqui/mapa/fotos ao fim do laudo (vetorial). Sem mídia, devolve igual.
+    const { mesclarAnexos } = await import("@/lib/pdf/anexar");
+    const pdfFinal = await mesclarAnexos(pdfBuffer, anexosMidia);
+
+    return new NextResponse(new Uint8Array(pdfFinal), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="investigacao-acidente-${shortId}.pdf"`,

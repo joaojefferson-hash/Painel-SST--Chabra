@@ -92,6 +92,18 @@ export interface OrganizacaoTrabalho {
   hierarquia?: string;
 }
 
+/** Arquivo de mídia (foto/croqui/mapa): url pública + path de storage — Item 7. */
+export interface MidiaArquivo {
+  url: string;
+  path: string;
+}
+
+/** Vídeo do acidente (link externo) — Item 7. */
+export interface VideoLink {
+  url: string;
+  descricao?: string;
+}
+
 export interface InvestigacaoAcidente {
   id_investigacao: string;
   id_empresa: string;
@@ -139,6 +151,13 @@ export interface InvestigacaoAcidente {
   organizacao_trabalho: OrganizacaoTrabalho;
   atividade_momento: string | null;
   relatos_envolvidos: RelatoEnvolvido[];
+  // Mídia do local (Bloco 2b / Item 7)
+  croqui: MidiaArquivo[];
+  mapa_riscos: MidiaArquivo[];
+  fotos_anteriores: MidiaArquivo[];
+  fotos_momento: MidiaArquivo[];
+  fotos_atuais: MidiaArquivo[];
+  videos: VideoLink[];
   // Descrição
   descricao: string | null;
   agente_causador: string | null;
