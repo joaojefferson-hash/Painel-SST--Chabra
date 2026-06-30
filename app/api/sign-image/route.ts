@@ -152,20 +152,27 @@ export async function POST(req: NextRequest) {
       } else if (publicBase && url.startsWith(publicBase)) {
         url = internalBase + url.slice(publicBase.length);
       }
+      console.error("[sign-image] gerando PDF assinado via:", url);
       const res = await fetch(url, {
         headers: { cookie: req.headers.get("cookie") ?? "" },
       });
-      if (!res.ok) throw new Error("Falha ao gerar o PDF");
+      if (!res.ok) {
+        const snippet = (await res.text().catch(() => "")).slice(0, 400);
+        console.error("[sign-image] gerar PDF !ok", JSON.stringify({ url, status: res.status, ct: res.headers.get("content-type"), snippet }));
+        throw new Error(`gerar PDF status ${res.status}`);
+      }
       const bytes = new Uint8Array(await res.arrayBuffer());
       const erro = await salvarPdf(supabase, tabelaNome, docId, bytes);
       if (erro) {
+        console.error("[sign-image] salvarPdf erro:", erro);
         return NextResponse.json(
           { error: "Assinatura registrada, mas falha ao salvar o PDF." },
           { status: 500 },
         );
       }
       return NextResponse.json({ success: true });
-    } catch {
+    } catch (e) {
+      console.error("[sign-image] erro ao gerar/salvar PDF:", e instanceof Error ? (e.stack ?? e.message) : String(e));
       return NextResponse.json(
         { error: "Assinatura registrada, mas falha ao gerar o PDF. Tente novamente." },
         { status: 500 },
