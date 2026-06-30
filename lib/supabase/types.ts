@@ -110,6 +110,30 @@ export interface FatorAvaliacao {
   obs: string;
 }
 
+/** Laudo/documento externo (LPAT, perícia, BO, bombeiros…) — Item 13. */
+export interface LaudoExterno {
+  tipo: string;
+  numero: string;
+  data: string;
+  url: string;
+  obs: string;
+}
+
+/** Consultor / membro da equipe técnica da análise — Item 14. */
+export interface Consultor {
+  nome: string;
+  registro: string;
+}
+
+/** Item de cronograma de medida adotada — Item 17. */
+export interface Cronograma {
+  tipo: string;          // manutenção, aquisições, treinamentos, procedimentos…
+  descricao: string;
+  prazo: string;
+  responsavel: string;
+  status: string;        // pendente, em andamento, concluído
+}
+
 export interface InvestigacaoAcidente {
   id_investigacao: string;
   id_empresa: string;
@@ -166,6 +190,17 @@ export interface InvestigacaoAcidente {
   videos: VideoLink[];
   // Fatores contribuintes (Bloco 3 / Item 12) — chave do fator → avaliação
   fatores_contribuintes: Record<string, FatorAvaliacao>;
+  // Documentação técnica e medidas (Bloco 4 / Itens 13-14-17)
+  laudos_externos: LaudoExterno[];
+  analise_equipe: string | null;
+  consultores: Consultor[];
+  analise_links: VideoLink[];        // filmes/esquemas do dia (links)
+  medidas_adotadas: string | null;   // `medidas` (existente) = recomendadas
+  cronogramas: Cronograma[];
+  fotos_pos: MidiaArquivo[];          // relatório fotográfico pós-acidente
+  responsavel_legal_nome: string | null;
+  responsavel_legal_cargo: string | null;
+  responsavel_legal_data: string | null;
   // Descrição
   descricao: string | null;
   agente_causador: string | null;
