@@ -1235,6 +1235,28 @@ export interface ApreciacaoAcao {
   updated_at: string | null;
 }
 
+/** Ação 5W2H do plano de ação da Investigação de Acidente (tabela investigacao_acoes).
+ *  Espelha ApreciacaoAcao, escopada por investigação (sem item de origem). */
+export interface InvestigacaoAcao {
+  id_acao: string;
+  id_investigacao: string;
+  ordem: number;
+  what_acao: string;
+  why_justificativa: string | null;
+  where_local: string | null;
+  when_prazo: string | null; // ISO date
+  who_responsavel: string | null;
+  how_metodo: string | null;
+  how_much_custo: string | null;
+  status: StatusAcaoApreciacao;
+  prioridade: PrioridadeAcaoApreciacao;
+  data_conclusao: string | null;
+  observacoes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
 export interface ApreciacaoMaquinaItem {
   id_item: string;
   id_apreciacao: string;

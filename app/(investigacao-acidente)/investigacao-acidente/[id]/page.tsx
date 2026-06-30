@@ -5,12 +5,12 @@ import { EditorSkeleton } from "@/components/ui/PageSkeletons";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { ArrowLeft, Save, Plus, Trash2, Loader2, ClipboardList } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Loader2 } from "lucide-react";
 import {
   useInvestigacaoAcidente,
   useSalvarInvestigacao,
-  useEnviarMedidasParaPlano,
 } from "@/lib/hooks/useInvestigacaoAcidente";
+import PlanoAcaoTable from "@/components/investigacao-acidente/PlanoAcaoTable";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import { useCatalogoEmpresa } from "@/lib/hooks/useCatalogoEmpresa";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
@@ -143,7 +143,6 @@ export default function EditorInvestigacaoPage() {
   const router = useRouter();
   const { data, isLoading, isError } = useInvestigacaoAcidente(id);
   const salvar = useSalvarInvestigacao();
-  const enviarPlano = useEnviarMedidasParaPlano();
   const { data: catalogo } = useCatalogoEmpresa(data?.id_empresa);
   const canEdit = useCanEdit();
   const ro = !canEdit;
@@ -824,30 +823,10 @@ export default function EditorInvestigacaoPage() {
         </Grid>
       </Secao>
 
-      {/* Plano de Ação */}
-      {!ro && (
-        <Secao titulo="Plano de Ação">
-          {!form.medidas.trim() ? (
-            <p className="text-sm text-gray-400">
-              Preencha as “Medidas corretivas e preventivas” para enviar ao Plano de Ação.
-            </p>
-          ) : (
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                disabled={enviarPlano.isPending || dirty}
-                onClick={() => data && enviarPlano.mutate(data)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-verde-primary/40 bg-white px-3 py-1.5 text-sm font-semibold text-verde-primary transition hover:bg-verde-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {enviarPlano.isPending ? <Loader2 className="size-4 animate-spin" /> : <ClipboardList className="size-4" />}
-                Enviar medidas ao Plano de Ação
-              </button>
-              {dirty && <span className="text-xs text-amber-600">Salve antes de enviar.</span>}
-              <span className="text-xs text-gray-400">Cria uma ação 5W2H em /acoes (refine por lá).</span>
-            </div>
-          )}
-        </Secao>
-      )}
+      {/* Plano de Ação 5W2H (Fase A) — múltiplas ações vivem com a investigação/laudo */}
+      <Secao titulo="Plano de Ação (5W2H)">
+        <PlanoAcaoTable idInvestigacao={id} readOnly={ro} />
+      </Secao>
 
       {/* Laudo */}
       <Secao titulo="Laudo (PDF)">
