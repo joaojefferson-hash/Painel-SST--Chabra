@@ -5,6 +5,7 @@ import { BadgeCheck, Download, ShieldCheck } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { baixarPdfAssinado } from "@/lib/pdf/baixar-assinado";
 import { usePdfAssinado } from "@/lib/hooks/usePdfsGerados";
 import BotaoAssinarPdf from "@/components/ui/BotaoAssinarPdf";
 import StorageImg from "@/components/ui/StorageImg";
@@ -107,20 +108,12 @@ export default function AssinaturaRelatorio({
 
   async function handleBaixarPdf() {
     if (!pdfAssinado) return;
-    const { data, error } = await createSupabaseBrowserClient()
-      .storage
-      .from("pdfs-assinados")
-      .download(pdfAssinado.pdf_path);
-    if (error || !data) {
+    // Bucket privado: download via rota server-side same-origin (baixar-assinado).
+    try {
+      await baixarPdfAssinado(pdfAssinado.pdf_path, "relatorio-assinado.pdf");
+    } catch {
       toast.error("Não foi possível baixar o PDF. Tente novamente.");
-      return;
     }
-    const url = URL.createObjectURL(data);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "relatorio-assinado.pdf";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   const cargo = cargoResponsavel ?? sigData?.cargo ?? user?.cargo ?? "";

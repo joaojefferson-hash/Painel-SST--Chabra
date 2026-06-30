@@ -11,7 +11,7 @@ import PainelCongelamentoPdf from "@/components/ui/PainelCongelamentoPdf";
 import EmpresaInfoPanel from "@/components/empresas/EmpresaInfoPanel";
 import toast from "react-hot-toast";
 import { mensagemErro } from "@/lib/errors";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { baixarPdfAssinado } from "@/lib/pdf/baixar-assinado";
 import DrpsFiltro from "@/components/drps/DrpsFiltro";
 import DrpsSumarioPrint from "@/components/drps/DrpsSumarioPrint";
 import DrpsRelatorioExtrasPrint from "@/components/drps/DrpsRelatorioExtrasPrint";
@@ -128,22 +128,9 @@ export default function PsicossocialLaudoPage({
     if (!pdfAssinado) return;
     setBaixando(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      // URL assinada (token único a cada clique) + no-store: ignora o cache do
-      // CDN/navegador. O caminho é o mesmo a cada (re)assinatura, e o CDN servia
-      // a versão antiga do mesmo path — daí o PDF baixado vir defasado.
-      const { data: signed, error } = await supabase.storage
-        .from("pdfs-assinados")
-        .createSignedUrl(pdfAssinado.pdf_path, 120);
-      if (error || !signed?.signedUrl) { toast.error("Não foi possível baixar o PDF."); return; }
-      const res = await fetch(`${signed.signedUrl}&t=${Date.now()}`, { cache: "no-store" });
-      if (!res.ok) { toast.error("Não foi possível baixar o PDF."); return; }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "relatorio-drps-assinado.pdf"; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch { toast.error("Erro ao baixar o PDF."); }
+      // Bucket privado: download via rota server-side same-origin (baixar-assinado).
+      await baixarPdfAssinado(pdfAssinado.pdf_path, "relatorio-drps-assinado.pdf");
+    } catch { toast.error("Não foi possível baixar o PDF."); }
     finally { setBaixando(false); }
   }
 
