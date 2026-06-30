@@ -104,6 +104,12 @@ export interface VideoLink {
   descricao?: string;
 }
 
+/** Avaliação de um fator contribuinte (questionário causal) — Item 12. */
+export interface FatorAvaliacao {
+  resposta: "" | "sim" | "nao" | "parcial" | "na";
+  obs: string;
+}
+
 export interface InvestigacaoAcidente {
   id_investigacao: string;
   id_empresa: string;
@@ -158,6 +164,8 @@ export interface InvestigacaoAcidente {
   fotos_momento: MidiaArquivo[];
   fotos_atuais: MidiaArquivo[];
   videos: VideoLink[];
+  // Fatores contribuintes (Bloco 3 / Item 12) — chave do fator → avaliação
+  fatores_contribuintes: Record<string, FatorAvaliacao>;
   // Descrição
   descricao: string | null;
   agente_causador: string | null;
