@@ -23,7 +23,7 @@ import { gerarId } from "@/lib/utils";
 import { ISHIKAWA_CATS } from "@/lib/investigacao/ishikawa";
 import type {
   TestemunhaAcidente, PessoaEnvolvida, RelatoEnvolvido, OrganizacaoTrabalho, VinculoPessoa,
-  MidiaArquivo, VideoLink,
+  MidiaArquivo, VideoLink, FatorAvaliacao,
 } from "@/lib/supabase/types";
 
 interface FormState {
@@ -58,6 +58,7 @@ interface FormState {
   atividade_momento: string;
   relatos_envolvidos: RelatoEnvolvido[];
   videos: VideoLink[];
+  fatores_contribuintes: Record<string, FatorAvaliacao>;
   tipo_acidente: string;
   houve_afastamento: boolean;
   dias_afastamento: string;
@@ -87,6 +88,7 @@ const VAZIO: FormState = {
   acidentado_tempo_funcao: "", acidentado_tempo_empresa: "", acidentado_jornada: "", acidentado_tempo_apos_inicio: "",
   qtd_acidentados: "", consequencias: [], fatores_morbi: [],
   pessoas_envolvidas: [], organizacao_trabalho: {}, atividade_momento: "", relatos_envolvidos: [], videos: [],
+  fatores_contribuintes: {},
   tipo_acidente: "", houve_afastamento: false, dias_afastamento: "", gravidade: "",
   descricao: "", agente_causador: "", partes_corpo: [], natureza_lesao: "", cid: "",
   testemunhas: [], causas_imediatas: "", causas_basicas: "", cinco_porques: [],
@@ -105,6 +107,17 @@ const CONSEQUENCIAS = [
 const FATORES_MORBI = [
   "Agente químico", "Agente físico", "Agente biológico", "Queda", "Corrente elétrica",
   "Soterramento", "Impacto", "Colisão", "Transporte", "Incêndio", "Explosão", "Máquinas", "Outros",
+];
+const FATORES_CONTRIBUINTES: { key: string; label: string; hint?: string }[] = [
+  { key: "metas", label: "Metas / premiação", hint: "Pressão por produtividade, metas, premiação" },
+  { key: "layout", label: "Layout / arranjo físico do posto" },
+  { key: "materiais", label: "Natureza dos materiais", hint: "Materiais perigosos, forma de manuseio" },
+  { key: "instalacoes", label: "Uso das instalações / equipamentos" },
+  { key: "eps", label: "Suficiência dos equipamentos de segurança (EPI/EPC)" },
+  { key: "externas", label: "Condições externas", hint: "Clima, interferências, interrupções, flutuação de demanda, violência" },
+  { key: "organizacao", label: "Organização do trabalho", hint: "Jornada, remuneração, relações humanas, supervisão" },
+  { key: "manutencao", label: "Manutenção / limpeza / iluminação / piso" },
+  { key: "agentes", label: "Agentes de risco conhecidos e não controlados" },
 ];
 
 export default function EditorInvestigacaoPage() {
@@ -161,6 +174,7 @@ export default function EditorInvestigacaoPage() {
       atividade_momento: data.atividade_momento ?? "",
       relatos_envolvidos: data.relatos_envolvidos ?? [],
       videos: data.videos ?? [],
+      fatores_contribuintes: data.fatores_contribuintes ?? {},
       tipo_acidente: data.tipo_acidente ?? "",
       houve_afastamento: data.houve_afastamento ?? false,
       dias_afastamento: data.dias_afastamento != null ? String(data.dias_afastamento) : "",
@@ -219,6 +233,12 @@ export default function EditorInvestigacaoPage() {
     setter(s);
     setDirty(true);
   };
+  function getFator(key: string): FatorAvaliacao {
+    return form.fatores_contribuintes[key] ?? { resposta: "", obs: "" };
+  }
+  function setFator(key: string, patch: Partial<FatorAvaliacao>) {
+    set("fatores_contribuintes", { ...form.fatores_contribuintes, [key]: { ...getFator(key), ...patch } });
+  }
 
   async function handleSalvar() {
     setSalvando(true);
@@ -267,6 +287,7 @@ export default function EditorInvestigacaoPage() {
       organizacao_trabalho: form.organizacao_trabalho,
       atividade_momento: form.atividade_momento || null,
       relatos_envolvidos: form.relatos_envolvidos.filter((r) => r.pessoa.trim() || r.relato.trim()),
+      fatores_contribuintes: form.fatores_contribuintes,
       tipo_acidente: (form.tipo_acidente || null) as never,
       houve_afastamento: form.houve_afastamento,
       dias_afastamento: form.dias_afastamento ? parseInt(form.dias_afastamento, 10) : null,
@@ -609,6 +630,36 @@ export default function EditorInvestigacaoPage() {
               />
             </div>
           ))}
+        </div>
+      </Secao>
+
+      {/* Fatores contribuintes (Bloco 3 / Item 12) */}
+      <Secao titulo="Fatores contribuintes (questionário causal)">
+        <p className="-mt-1 mb-1 text-xs text-gray-500">Avalie se cada fator contribuiu para o acidente.</p>
+        <div className="divide-y divide-gray-100">
+          {FATORES_CONTRIBUINTES.map((f) => {
+            const fa = getFator(f.key);
+            return (
+              <div key={f.key} className="py-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800">{f.label}</p>
+                    {f.hint && <p className="text-[11px] text-gray-400">{f.hint}</p>}
+                  </div>
+                  <select disabled={ro} value={fa.resposta} onChange={(e) => setFator(f.key, { resposta: e.target.value as FatorAvaliacao["resposta"] })} className="shrink-0 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30 disabled:bg-gray-50">
+                    <option value="">—</option>
+                    <option value="sim">Sim</option>
+                    <option value="nao">Não</option>
+                    <option value="parcial">Parcial</option>
+                    <option value="na">N/A</option>
+                  </select>
+                </div>
+                {(fa.resposta === "sim" || fa.resposta === "parcial" || fa.obs) && (
+                  <input disabled={ro} value={fa.obs} onChange={(e) => setFator(f.key, { obs: e.target.value })} placeholder="Observação" className={`${inputCls} mt-1.5`} />
+                )}
+              </div>
+            );
+          })}
         </div>
       </Secao>
 

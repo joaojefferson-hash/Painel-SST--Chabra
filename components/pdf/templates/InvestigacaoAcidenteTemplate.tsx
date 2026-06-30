@@ -57,6 +57,18 @@ const VINCULO_LABEL: Record<string, string> = {
   comando: "Comando / organograma",
 };
 const TD_PESSOA = { borderBottom: "1px solid #f0f0f0", padding: "3px 6px", color: "#111827" } as const;
+const FATOR_LABEL: Record<string, string> = {
+  metas: "Metas / premiação",
+  layout: "Layout / arranjo físico do posto",
+  materiais: "Natureza dos materiais",
+  instalacoes: "Uso das instalações / equipamentos",
+  eps: "Suficiência dos equipamentos de segurança (EPI/EPC)",
+  externas: "Condições externas",
+  organizacao: "Organização do trabalho",
+  manutencao: "Manutenção / limpeza / iluminação / piso",
+  agentes: "Agentes de risco conhecidos e não controlados",
+};
+const FATOR_RESP: Record<string, string> = { sim: "Sim", nao: "Não", parcial: "Parcial", na: "N/A" };
 
 function fmt(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -315,6 +327,27 @@ export default function InvestigacaoAcidenteTemplate({
         )}
         <IshikawaPdf ishikawa={inv.ishikawa} />
       </section>
+
+      {inv.fatores_contribuintes && Object.values(inv.fatores_contribuintes).some((f) => f?.resposta) && (
+        <section>
+          <p className="ia-sec">Fatores contribuintes</p>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10pt", marginTop: 4 }}>
+            <tbody>
+              {Object.keys(FATOR_LABEL).map((k) => {
+                const f = inv.fatores_contribuintes[k];
+                if (!f?.resposta) return null;
+                return (
+                  <tr key={k}>
+                    <td style={{ ...TD_PESSOA, width: "55%" }}>{FATOR_LABEL[k]}</td>
+                    <td style={{ ...TD_PESSOA, fontWeight: 700, width: "12%" }}>{FATOR_RESP[f.resposta] ?? f.resposta}</td>
+                    <td style={TD_PESSOA}>{f.obs || ""}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {(inv.medidas?.trim() || inv.conclusao?.trim()) && (
         <section>
