@@ -37,10 +37,13 @@ Push na branch **`cutover/2026-06-26`** dispara o workflow `.forgejo/workflows/d
 
 > **Estado (2026-06-30):** o 1º run do pipeline **falhou no build** e o Forgejo não persistiu logs legíveis pelo backend. Suspeita principal: `ROOT_URL=https://git.chabra.com.br/` (público, atrás do CF Access) faz o runner tentar upload de log/checkout no hostname público → **CF Access bloqueia server-to-server**. Correção provável: forçar o runner a usar a URL interna (`127.0.0.1:3008`) p/ tudo, ou ajustar `[server] LOCAL_ROOT_URL`. **O app vivo está correto** (deploy manual; nada quebrado).
 >
-> ⚠️ **AUTO-DEPLOY DESLIGADO (interino):** com o webhook Bun **desabilitado** (hook id=1) e o Forgejo Actions em ajuste, **pushes na `cutover` NÃO refletem na `.107` sozinhos**. Para restaurar enquanto o Actions não é corrigido, escolha um:
-> - **Re-habilitar o webhook Bun** (`PATCH /api/v1/repos/chabra-admin/painel-sst/hooks/1` `{active:true}`) — ele já deploya a `cutover` canônica, que tem todos os fixes (seguro agora).
+> ⚠️ **AUTO-DEPLOY DESLIGADO (interino):** o webhook Bun (`:3010` — `107-redeploy-from-gitchabra.ps1`, build de `cutover` + rollback + HMAC, pipeline documentado/funcional, runbook 2026-06-30) foi **desabilitado** (hook id=1) durante a tentativa de Forgejo Actions, e o Actions ainda falha → **pushes na `cutover` NÃO deployam na `.107` sozinhos** (ex.: o v0.3.394 do João não chegou a deployar). O app vivo está na imagem **manual `cc0483e`** (com TODOS os fixes — correto).
+>
+> **Para restaurar o auto-deploy**, escolha um:
+> - **Re-habilitar o webhook Bun** (`PATCH /api/v1/repos/chabra-admin/painel-sst/hooks/1` `{active:true}`). ⚠️ ANTES, confirme que o `107-redeploy-from-gitchabra.ps1` usa o compose/.env **atual** (com `PDF_USE_SPARTICUZ=1`, `GROQ/RESEND`, `mem_limit 2g`) — senão o deploy dele **reverte** esses ajustes e quebra PDF/IA.
+> - **Corrigir o Forgejo Actions** (1º run falhou / CF Access no `ROOT_URL`) e usá-lo como pipeline (aí o Bun é aposentado).
 > - **Deploy manual** (abaixo).
-> O cutover definitivo é o Forgejo Actions; até lá, a canônica do Forgejo já está correta (nada se perde).
+> A canônica do Forgejo já tem tudo (`cutover` = fixes + v0.3.394) — nada se perde.
 
 ## Deploy manual (fallback enquanto o pipeline é ajustado)
 
