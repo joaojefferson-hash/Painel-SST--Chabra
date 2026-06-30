@@ -284,6 +284,19 @@ export default function InvestigacaoAcidenteTemplate({
         </section>
       )}
 
+      {(inv.videos ?? []).length > 0 && (
+        <section>
+          <p className="ia-sec">Vídeos do acidente</p>
+          <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: "10pt", color: "#111827" }}>
+            {inv.videos.map((v, i) => (
+              <li key={i}>
+                <a href={v.url} style={{ color: "#0d6b54" }}>{v.descricao?.trim() || v.url}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section>
         <p className="ia-sec">5. Análise de causas</p>
         <Bloco rot="Causas imediatas (atos e condições inseguras)" val={inv.causas_imediatas} />
