@@ -4,7 +4,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { createSupabaseServerClient } from "@/lib/supabase/client";
 import type { Signatario } from "@/components/pdf/FolhaAssinaturas";
-import type { Empresa, InvestigacaoAcidente, MidiaArquivo } from "@/lib/supabase/types";
+import type { Empresa, InvestigacaoAcidente, MidiaArquivo, InvestigacaoAcao } from "@/lib/supabase/types";
 import { montarSignatarioTecnico } from "@/lib/pdf/folha-assinatura-tecnico";
 import type { AnexoParaMerge } from "@/lib/pdf/anexar";
 
@@ -38,6 +38,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         .from("empresas").select("*").eq("id_empresa", inv.id_empresa).single();
       empresa = (rawEmp as unknown as Empresa) ?? null;
     }
+
+    // Plano de ação 5W2H (tabela investigacao_acoes) — entra no laudo.
+    const { data: rawAcoes } = await supabase
+      .from("investigacao_acoes")
+      .select("*")
+      .eq("id_investigacao", id)
+      .order("ordem", { ascending: true });
+    const acoes = (rawAcoes ?? []) as unknown as InvestigacaoAcao[];
 
     // assinado=1 (vindo do BotaoAssinarPdf) → renderiza o selo digital no PDF
     // que será assinado (o registro em pdfs_assinados só nasce após assinar).
@@ -113,6 +121,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         folhaEmpresa,
         dataHoraAssinatura,
         identificadorDocumento,
+        acoes,
         silhuetaFrente,
         silhuetaCostas,
       }),
