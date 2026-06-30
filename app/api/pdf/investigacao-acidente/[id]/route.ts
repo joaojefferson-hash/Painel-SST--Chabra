@@ -76,6 +76,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       { nome: "Foto anterior ao acidente", itens: inv.fotos_anteriores ?? [] },
       { nome: "Foto do momento do acidente", itens: inv.fotos_momento ?? [] },
       { nome: "Foto atual", itens: inv.fotos_atuais ?? [] },
+      { nome: "Relatório fotográfico pós-acidente", itens: inv.fotos_pos ?? [] },
     ];
     const anexosMidia: AnexoParaMerge[] = [];
     for (const g of gruposMidia) {

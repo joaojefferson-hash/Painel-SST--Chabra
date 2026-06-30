@@ -349,11 +349,93 @@ export default function InvestigacaoAcidenteTemplate({
         </section>
       )}
 
-      {(inv.medidas?.trim() || inv.conclusao?.trim()) && (
+      {(inv.laudos_externos ?? []).length > 0 && (
+        <section>
+          <p className="ia-sec">Laudos externos</p>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10pt", marginTop: 4 }}>
+            <thead>
+              <tr>
+                {["Tipo", "Número", "Data", "Observação"].map((h) => (
+                  <th key={h} style={{ textAlign: "left", borderBottom: "1px solid #d1d5db", padding: "3px 6px", color: "#6b7280", fontSize: 8, textTransform: "uppercase", letterSpacing: ".04em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {inv.laudos_externos.map((l, i) => (
+                <tr key={i}>
+                  <td style={TD_PESSOA}>{l.tipo || "—"}{l.url ? <> · <a href={l.url} style={{ color: "#0d6b54" }}>link</a></> : null}</td>
+                  <td style={TD_PESSOA}>{l.numero || "—"}</td>
+                  <td style={TD_PESSOA}>{fmt(l.data)}</td>
+                  <td style={TD_PESSOA}>{l.obs || ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {(inv.analise_equipe?.trim() || (inv.consultores ?? []).length > 0 || (inv.analise_links ?? []).length > 0) && (
+        <section>
+          <p className="ia-sec">Análise da equipe técnica</p>
+          <Bloco rot="Análise técnica do acidente" val={inv.analise_equipe} />
+          {(inv.consultores ?? []).length > 0 && (
+            <p style={{ fontSize: "10pt", color: "#111827", margin: "4px 0 0" }}>
+              <b>Consultores:</b> {inv.consultores.map((c) => `${c.nome}${c.registro ? ` (${c.registro})` : ""}`).join("; ")}
+            </p>
+          )}
+          {(inv.analise_links ?? []).length > 0 && (
+            <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: "10pt", color: "#111827" }}>
+              {inv.analise_links.map((v, i) => (
+                <li key={i}><a href={v.url} style={{ color: "#0d6b54" }}>{v.descricao?.trim() || v.url}</a></li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {(inv.medidas?.trim() || inv.medidas_adotadas?.trim() || inv.conclusao?.trim()) && (
         <section>
           <p className="ia-sec">6. Medidas e conclusão</p>
-          <Bloco rot="Medidas corretivas e preventivas" val={inv.medidas} />
+          <Bloco rot="Medidas recomendadas (corretivas e preventivas)" val={inv.medidas} />
+          <Bloco rot="Medidas adotadas após o acidente" val={inv.medidas_adotadas} />
           <Bloco rot="Conclusão / parecer técnico" val={inv.conclusao} />
+        </section>
+      )}
+
+      {(inv.cronogramas ?? []).length > 0 && (
+        <section>
+          <p className="ia-sec">Cronograma das medidas adotadas</p>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10pt", marginTop: 4 }}>
+            <thead>
+              <tr>
+                {["Tipo", "Descrição", "Prazo", "Responsável", "Status"].map((h) => (
+                  <th key={h} style={{ textAlign: "left", borderBottom: "1px solid #d1d5db", padding: "3px 6px", color: "#6b7280", fontSize: 8, textTransform: "uppercase", letterSpacing: ".04em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {inv.cronogramas.map((c, i) => (
+                <tr key={i}>
+                  <td style={TD_PESSOA}>{c.tipo || "—"}</td>
+                  <td style={TD_PESSOA}>{c.descricao || "—"}</td>
+                  <td style={TD_PESSOA}>{c.prazo || "—"}</td>
+                  <td style={TD_PESSOA}>{c.responsavel || "—"}</td>
+                  <td style={TD_PESSOA}>{c.status || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {inv.responsavel_legal_nome?.trim() && (
+        <section>
+          <p className="ia-sec">Responsável legal</p>
+          <p style={{ fontSize: "11pt", color: "#111827", margin: "2px 0 0" }}>
+            {inv.responsavel_legal_nome}
+            {inv.responsavel_legal_cargo ? ` — ${inv.responsavel_legal_cargo}` : ""}
+            {inv.responsavel_legal_data ? ` · ${fmt(inv.responsavel_legal_data)}` : ""}
+          </p>
         </section>
       )}
 

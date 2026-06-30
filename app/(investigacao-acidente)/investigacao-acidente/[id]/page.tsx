@@ -23,7 +23,7 @@ import { gerarId } from "@/lib/utils";
 import { ISHIKAWA_CATS } from "@/lib/investigacao/ishikawa";
 import type {
   TestemunhaAcidente, PessoaEnvolvida, RelatoEnvolvido, OrganizacaoTrabalho, VinculoPessoa,
-  MidiaArquivo, VideoLink, FatorAvaliacao,
+  MidiaArquivo, VideoLink, FatorAvaliacao, LaudoExterno, Consultor, Cronograma,
 } from "@/lib/supabase/types";
 
 interface FormState {
@@ -59,6 +59,15 @@ interface FormState {
   relatos_envolvidos: RelatoEnvolvido[];
   videos: VideoLink[];
   fatores_contribuintes: Record<string, FatorAvaliacao>;
+  laudos_externos: LaudoExterno[];
+  analise_equipe: string;
+  consultores: Consultor[];
+  analise_links: VideoLink[];
+  medidas_adotadas: string;
+  cronogramas: Cronograma[];
+  responsavel_legal_nome: string;
+  responsavel_legal_cargo: string;
+  responsavel_legal_data: string;
   tipo_acidente: string;
   houve_afastamento: boolean;
   dias_afastamento: string;
@@ -89,6 +98,9 @@ const VAZIO: FormState = {
   qtd_acidentados: "", consequencias: [], fatores_morbi: [],
   pessoas_envolvidas: [], organizacao_trabalho: {}, atividade_momento: "", relatos_envolvidos: [], videos: [],
   fatores_contribuintes: {},
+  laudos_externos: [], analise_equipe: "", consultores: [], analise_links: [],
+  medidas_adotadas: "", cronogramas: [],
+  responsavel_legal_nome: "", responsavel_legal_cargo: "", responsavel_legal_data: "",
   tipo_acidente: "", houve_afastamento: false, dias_afastamento: "", gravidade: "",
   descricao: "", agente_causador: "", partes_corpo: [], natureza_lesao: "", cid: "",
   testemunhas: [], causas_imediatas: "", causas_basicas: "", cinco_porques: [],
@@ -119,6 +131,12 @@ const FATORES_CONTRIBUINTES: { key: string; label: string; hint?: string }[] = [
   { key: "manutencao", label: "Manutenção / limpeza / iluminação / piso" },
   { key: "agentes", label: "Agentes de risco conhecidos e não controlados" },
 ];
+const LAUDO_TIPOS = [
+  "LPAT / PRF", "Perícia (Polícia Científica)", "B.O. (Polícia Civil)",
+  "Certidão (Corpo de Bombeiros)", "Outro",
+];
+const CRONOGRAMA_TIPOS = ["Manutenção", "Aquisições", "Treinamentos", "Procedimentos", "Outro"];
+const CRONOGRAMA_STATUS = ["Pendente", "Em andamento", "Concluído"];
 
 export default function EditorInvestigacaoPage() {
   const { id } = useParams<{ id: string }>();
@@ -138,6 +156,7 @@ export default function EditorInvestigacaoPage() {
   const [fotoAntSlots, setFotoAntSlots] = useState<(FotoSlot | null)[]>([]);
   const [fotoMomSlots, setFotoMomSlots] = useState<(FotoSlot | null)[]>([]);
   const [fotoAtuSlots, setFotoAtuSlots] = useState<(FotoSlot | null)[]>([]);
+  const [fotoPosSlots, setFotoPosSlots] = useState<(FotoSlot | null)[]>([]);
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
@@ -175,6 +194,15 @@ export default function EditorInvestigacaoPage() {
       relatos_envolvidos: data.relatos_envolvidos ?? [],
       videos: data.videos ?? [],
       fatores_contribuintes: data.fatores_contribuintes ?? {},
+      laudos_externos: data.laudos_externos ?? [],
+      analise_equipe: data.analise_equipe ?? "",
+      consultores: data.consultores ?? [],
+      analise_links: data.analise_links ?? [],
+      medidas_adotadas: data.medidas_adotadas ?? "",
+      cronogramas: data.cronogramas ?? [],
+      responsavel_legal_nome: data.responsavel_legal_nome ?? "",
+      responsavel_legal_cargo: data.responsavel_legal_cargo ?? "",
+      responsavel_legal_data: data.responsavel_legal_data ?? "",
       tipo_acidente: data.tipo_acidente ?? "",
       houve_afastamento: data.houve_afastamento ?? false,
       dias_afastamento: data.dias_afastamento != null ? String(data.dias_afastamento) : "",
@@ -201,6 +229,7 @@ export default function EditorInvestigacaoPage() {
     setFotoAntSlots(toSlots(data.fotos_anteriores));
     setFotoMomSlots(toSlots(data.fotos_momento));
     setFotoAtuSlots(toSlots(data.fotos_atuais));
+    setFotoPosSlots(toSlots(data.fotos_pos));
     setDirty(false);
   }, [data]);
 
@@ -239,6 +268,18 @@ export default function EditorInvestigacaoPage() {
   function setFator(key: string, patch: Partial<FatorAvaliacao>) {
     set("fatores_contribuintes", { ...form.fatores_contribuintes, [key]: { ...getFator(key), ...patch } });
   }
+  function updLaudo<K extends keyof LaudoExterno>(i: number, k: K, v: LaudoExterno[K]) {
+    const arr = [...form.laudos_externos]; arr[i] = { ...arr[i], [k]: v }; set("laudos_externos", arr);
+  }
+  function updConsultor<K extends keyof Consultor>(i: number, k: K, v: Consultor[K]) {
+    const arr = [...form.consultores]; arr[i] = { ...arr[i], [k]: v }; set("consultores", arr);
+  }
+  function updCronograma<K extends keyof Cronograma>(i: number, k: K, v: Cronograma[K]) {
+    const arr = [...form.cronogramas]; arr[i] = { ...arr[i], [k]: v }; set("cronogramas", arr);
+  }
+  function updAnaliseLink<K extends keyof VideoLink>(i: number, k: K, v: VideoLink[K]) {
+    const arr = [...form.analise_links]; arr[i] = { ...arr[i], [k]: v }; set("analise_links", arr);
+  }
 
   async function handleSalvar() {
     setSalvando(true);
@@ -255,6 +296,7 @@ export default function EditorInvestigacaoPage() {
     const fotos_anteriores = await up(fotoAntSlots, oldPaths(data?.fotos_anteriores), "fotos-ant");
     const fotos_momento = await up(fotoMomSlots, oldPaths(data?.fotos_momento), "fotos-mom");
     const fotos_atuais = await up(fotoAtuSlots, oldPaths(data?.fotos_atuais), "fotos-atu");
+    const fotos_pos = await up(fotoPosSlots, oldPaths(data?.fotos_pos), "fotos-pos");
     await salvar.mutateAsync({
       id_investigacao: id,
       data_acidente: form.data_acidente || null,
@@ -288,6 +330,16 @@ export default function EditorInvestigacaoPage() {
       atividade_momento: form.atividade_momento || null,
       relatos_envolvidos: form.relatos_envolvidos.filter((r) => r.pessoa.trim() || r.relato.trim()),
       fatores_contribuintes: form.fatores_contribuintes,
+      laudos_externos: form.laudos_externos.filter((l) => l.tipo.trim() || l.numero.trim() || l.url.trim()),
+      analise_equipe: form.analise_equipe || null,
+      consultores: form.consultores.filter((c) => c.nome.trim()),
+      analise_links: form.analise_links.filter((v) => v.url.trim()),
+      medidas_adotadas: form.medidas_adotadas || null,
+      cronogramas: form.cronogramas.filter((c) => c.descricao.trim() || c.tipo.trim()),
+      fotos_pos,
+      responsavel_legal_nome: form.responsavel_legal_nome || null,
+      responsavel_legal_cargo: form.responsavel_legal_cargo || null,
+      responsavel_legal_data: form.responsavel_legal_data || null,
       tipo_acidente: (form.tipo_acidente || null) as never,
       houve_afastamento: form.houve_afastamento,
       dias_afastamento: form.dias_afastamento ? parseInt(form.dias_afastamento, 10) : null,
@@ -665,8 +717,102 @@ export default function EditorInvestigacaoPage() {
 
       {/* 6. Medidas + 7. Conclusão */}
       <Secao titulo="Medidas e conclusão">
-        <Area label="Medidas corretivas e preventivas" value={form.medidas} onChange={(v) => set("medidas", v)} ro={ro} rows={3} />
+        <Area label="Medidas recomendadas (corretivas e preventivas)" value={form.medidas} onChange={(v) => set("medidas", v)} ro={ro} rows={3} />
         <Area label="Conclusão / parecer técnico" value={form.conclusao} onChange={(v) => set("conclusao", v)} ro={ro} rows={3} />
+      </Secao>
+
+      {/* Laudos externos (Bloco 4 / Item 13) */}
+      <Secao titulo="Laudos externos">
+        <div className="space-y-3">
+          {form.laudos_externos.map((l, i) => (
+            <div key={i} className="space-y-2 rounded-lg border border-gray-200 p-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <select disabled={ro} value={l.tipo} onChange={(e) => updLaudo(i, "tipo", e.target.value)} className={inputCls}>
+                  <option value="">— tipo —</option>
+                  {LAUDO_TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <input disabled={ro} value={l.numero} onChange={(e) => updLaudo(i, "numero", e.target.value)} placeholder="Número / protocolo" className={inputCls} />
+                <input disabled={ro} type="date" value={l.data} onChange={(e) => updLaudo(i, "data", e.target.value)} className={inputCls} />
+                <input disabled={ro} value={l.url} onChange={(e) => updLaudo(i, "url", e.target.value)} placeholder="Link do documento (opcional)" className={inputCls} />
+              </div>
+              <input disabled={ro} value={l.obs} onChange={(e) => updLaudo(i, "obs", e.target.value)} placeholder="Observação" className={inputCls} />
+              {!ro && (
+                <div className="flex justify-end">
+                  <button type="button" onClick={() => set("laudos_externos", form.laudos_externos.filter((_, j) => j !== i))} className="flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="size-4" /></button>
+                </div>
+              )}
+            </div>
+          ))}
+          {!ro && (
+            <button type="button" onClick={() => set("laudos_externos", [...form.laudos_externos, { tipo: "", numero: "", data: "", url: "", obs: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <Plus className="size-4" /> Adicionar laudo externo
+            </button>
+          )}
+        </div>
+      </Secao>
+
+      {/* Análise da equipe técnica (Item 14) */}
+      <Secao titulo="Análise da equipe técnica / consultores">
+        <Area label="Análise técnica do acidente" value={form.analise_equipe} onChange={(v) => set("analise_equipe", v)} ro={ro} rows={4} />
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-600">Consultores / equipe</label>
+          <div className="space-y-2">
+            {form.consultores.map((c, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input disabled={ro} value={c.nome} onChange={(e) => updConsultor(i, "nome", e.target.value)} placeholder="Nome" className={inputCls} />
+                <input disabled={ro} value={c.registro} onChange={(e) => updConsultor(i, "registro", e.target.value)} placeholder="Registro (CREA/MTE…)" className={inputCls} />
+                {!ro && <button type="button" onClick={() => set("consultores", form.consultores.filter((_, j) => j !== i))} className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="size-4" /></button>}
+              </div>
+            ))}
+            {!ro && <button type="button" onClick={() => set("consultores", [...form.consultores, { nome: "", registro: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"><Plus className="size-4" /> Adicionar consultor</button>}
+          </div>
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-600">Filmes / esquemas do dia (links)</label>
+          <div className="space-y-2">
+            {form.analise_links.map((v, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input disabled={ro} value={v.url} onChange={(e) => updAnaliseLink(i, "url", e.target.value)} placeholder="URL" className={inputCls} />
+                <input disabled={ro} value={v.descricao ?? ""} onChange={(e) => updAnaliseLink(i, "descricao", e.target.value)} placeholder="Descrição" className={inputCls} />
+                {!ro && <button type="button" onClick={() => set("analise_links", form.analise_links.filter((_, j) => j !== i))} className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="size-4" /></button>}
+              </div>
+            ))}
+            {!ro && <button type="button" onClick={() => set("analise_links", [...form.analise_links, { url: "", descricao: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"><Plus className="size-4" /> Adicionar link</button>}
+          </div>
+        </div>
+      </Secao>
+
+      {/* Medidas adotadas, cronogramas, relatório fotográfico e responsável legal (Item 17) */}
+      <Secao titulo="Medidas adotadas após o acidente">
+        <Area label="Medidas adotadas" value={form.medidas_adotadas} onChange={(v) => set("medidas_adotadas", v)} ro={ro} rows={3} />
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-600">Cronogramas</label>
+          <div className="space-y-2">
+            {form.cronogramas.map((c, i) => (
+              <div key={i} className="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 p-2 sm:grid-cols-2">
+                <select disabled={ro} value={c.tipo} onChange={(e) => updCronograma(i, "tipo", e.target.value)} className={inputCls}>
+                  <option value="">— tipo —</option>
+                  {CRONOGRAMA_TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <input disabled={ro} value={c.descricao} onChange={(e) => updCronograma(i, "descricao", e.target.value)} placeholder="Descrição" className={inputCls} />
+                <input disabled={ro} value={c.prazo} onChange={(e) => updCronograma(i, "prazo", e.target.value)} placeholder="Prazo" className={inputCls} />
+                <input disabled={ro} value={c.responsavel} onChange={(e) => updCronograma(i, "responsavel", e.target.value)} placeholder="Responsável" className={inputCls} />
+                <select disabled={ro} value={c.status} onChange={(e) => updCronograma(i, "status", e.target.value)} className={inputCls}>
+                  <option value="">— status —</option>
+                  {CRONOGRAMA_STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+                {!ro && <div className="flex items-center sm:col-span-2 sm:justify-end"><button type="button" onClick={() => set("cronogramas", form.cronogramas.filter((_, j) => j !== i))} className="flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="size-4" /></button></div>}
+              </div>
+            ))}
+            {!ro && <button type="button" onClick={() => set("cronogramas", [...form.cronogramas, { tipo: "", descricao: "", prazo: "", responsavel: "", status: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"><Plus className="size-4" /> Adicionar cronograma</button>}
+          </div>
+        </div>
+        <MidiaGrupo label="Relatório fotográfico (pós-acidente)" slots={fotoPosSlots} onChange={onSlots(setFotoPosSlots)} max={6} ro={ro} />
+        <Grid>
+          <Campo label="Responsável legal — nome" value={form.responsavel_legal_nome} onChange={(v) => set("responsavel_legal_nome", v)} ro={ro} />
+          <Campo label="Responsável legal — cargo" value={form.responsavel_legal_cargo} onChange={(v) => set("responsavel_legal_cargo", v)} ro={ro} />
+          <Campo label="Data" type="date" value={form.responsavel_legal_data} onChange={(v) => set("responsavel_legal_data", v)} ro={ro} />
+        </Grid>
       </Secao>
 
       {/* Controle */}
