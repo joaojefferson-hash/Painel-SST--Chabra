@@ -20,6 +20,13 @@ import {
   type StatusMaquina,
 } from "@/lib/supabase/types";
 import StorageImg from "@/components/ui/StorageImg";
+import { cn } from "@/lib/utils";
+import {
+  ABAS_INVENTARIO,
+  ABA_INVENTARIO_PADRAO,
+  categoriaInventario,
+  type AbaInventario,
+} from "@/lib/inventario/categorias";
 
 const STATUS_CORES: Record<StatusMaquina, string> = {
   OPERANTE: "bg-emerald-100 text-emerald-700",
@@ -37,12 +44,32 @@ export default function InventarioMaquinasPage() {
   const [filtroStatus, setFiltroStatus] = useState<StatusMaquina | "TODAS">(
     "TODAS"
   );
+  const [aba, setAba] = useState<AbaInventario>(ABA_INVENTARIO_PADRAO);
 
   const empresaMap = useMemo(() => {
     const m = new Map<string, string>();
     empresas.forEach((e) => m.set(e.id_empresa, e.nome_empresa));
     return m;
   }, [empresas]);
+
+  // Contagem por aba (categoria derivada) — sobre TODOS os itens, para o badge.
+  const contagemAbas = useMemo(() => {
+    const c: Record<AbaInventario, number> = {
+      equipamentos: 0,
+      maquinas: 0,
+      medicoes: 0,
+    };
+    maquinas.forEach((m) => {
+      c[categoriaInventario(m)] += 1;
+    });
+    return c;
+  }, [maquinas]);
+
+  // Itens da aba ativa — base para os cards de resumo, filtros e lista.
+  const itensDaAba = useMemo(
+    () => maquinas.filter((m) => categoriaInventario(m) === aba),
+    [maquinas, aba]
+  );
 
   const totais = useMemo(() => {
     const acc: Record<StatusMaquina, number> = {
@@ -52,15 +79,15 @@ export default function InventarioMaquinasPage() {
       BAIXADA: 0,
       RESERVA: 0,
     };
-    maquinas.forEach((m) => {
+    itensDaAba.forEach((m) => {
       acc[m.status] += 1;
     });
     return acc;
-  }, [maquinas]);
+  }, [itensDaAba]);
 
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    return maquinas.filter((m) => {
+    return itensDaAba.filter((m) => {
       if (filtroStatus !== "TODAS" && m.status !== filtroStatus) return false;
       if (!q) return true;
       return [
@@ -74,7 +101,7 @@ export default function InventarioMaquinasPage() {
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(q));
     });
-  }, [maquinas, busca, filtroStatus]);
+  }, [itensDaAba, busca, filtroStatus]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -107,11 +134,42 @@ export default function InventarioMaquinasPage() {
         </p>
       </div>
 
+      {/* Abas de categoria (derivadas dos dados existentes) */}
+      <div className="border-b border-gray-200">
+        <div className="flex gap-0">
+          {ABAS_INVENTARIO.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setAba(t.id)}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-2 text-sm font-semibold transition-colors",
+                aba === t.id
+                  ? "border-b-2 border-blue-500 text-blue-600"
+                  : "border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+              )}
+            >
+              {t.label}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                  aba === t.id
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 text-gray-500"
+                )}
+              >
+                {isLoading ? "…" : contagemAbas[t.id]}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Cards de resumo */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <ResumoCard
           label="Total"
-          valor={isLoading ? "…" : maquinas.length}
+          valor={isLoading ? "…" : itensDaAba.length}
           icon={<Boxes className="size-4" />}
           cor="bg-blue-50 text-blue-700 border-blue-200"
         />
@@ -170,9 +228,11 @@ export default function InventarioMaquinasPage() {
           </div>
         ) : filtradas.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-500">
-            {maquinas.length === 0 ? (
+            {itensDaAba.length === 0 ? (
               <>
-                Nenhuma máquina cadastrada ainda.{" "}
+                Nenhum item em{" "}
+                <strong>{ABAS_INVENTARIO.find((t) => t.id === aba)?.label}</strong>{" "}
+                por enquanto.{" "}
                 {canCreate && (
                   <>
                     Clique em <strong>Nova máquina</strong> para começar.
