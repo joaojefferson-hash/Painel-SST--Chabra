@@ -82,6 +82,7 @@ export default function PortalClienteLayout({ children }: { children: React.Reac
               alt="Logo"
               className="h-9 w-auto max-w-[38px] rounded-md bg-white object-contain p-0.5 shadow"
               referrerPolicy="no-referrer"
+              onError={(e) => { const el = e.currentTarget as HTMLImageElement; if (!el.src.endsWith("/logo-chabra.png")) el.src = "/logo-chabra.png"; }}
             />
           ) : (
             <div className="flex size-9 items-center justify-center rounded-md bg-white/15">

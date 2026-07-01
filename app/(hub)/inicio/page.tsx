@@ -345,6 +345,12 @@ function InicioContent() {
               alt="Logo"
               className="h-10 w-auto max-w-[44px] rounded-md bg-white object-contain p-0.5 shadow"
               referrerPolicy="no-referrer"
+              onError={(e) => {
+                // Se a URL do storage quebrar (MinIO self-host / URL antiga), cai
+                // no logo estático embutido — mesmo fallback da tela de login.
+                const el = e.currentTarget as HTMLImageElement;
+                if (!el.src.endsWith("/logo-chabra.png")) el.src = "/logo-chabra.png";
+              }}
             />
           ) : (
             <div className="flex size-10 items-center justify-center rounded-md bg-white/15 text-white shadow">
