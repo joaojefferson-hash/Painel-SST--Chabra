@@ -345,6 +345,10 @@ function InicioContent() {
               alt="Logo"
               className="h-10 w-auto max-w-[44px] rounded-md bg-white object-contain p-0.5 shadow"
               referrerPolicy="no-referrer"
+              onError={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                if (!img.src.endsWith("/logo-chabra.png")) img.src = "/logo-chabra.png";
+              }}
             />
           ) : (
             <div className="flex size-10 items-center justify-center rounded-md bg-white/15 text-white shadow">

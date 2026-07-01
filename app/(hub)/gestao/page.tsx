@@ -325,7 +325,7 @@ export default function GestaoChabraPage() {
         <Link href="/inicio" className="flex items-center gap-2.5 border-b border-white/[0.09] px-4 py-3.5 transition-colors hover:bg-white/[0.05]">
           {configs?.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={configs.logo_url} alt="Logo Chabra" className="h-8 w-auto max-w-[36px] shrink-0 rounded-md bg-white object-contain p-0.5 shadow" referrerPolicy="no-referrer" />
+            <img src={configs.logo_url} alt="Logo Chabra" className="h-8 w-auto max-w-[36px] shrink-0 rounded-md bg-white object-contain p-0.5 shadow" referrerPolicy="no-referrer" onError={(e) => { const img = e.currentTarget as HTMLImageElement; if (!img.src.endsWith("/logo-chabra.png")) img.src = "/logo-chabra.png"; }} />
           ) : (
             <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-verde-primary text-white shadow"><KanbanSquare className="size-4" /></span>
           )}
