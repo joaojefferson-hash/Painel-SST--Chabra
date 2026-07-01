@@ -54,30 +54,39 @@ export default function InspecaoRow({
         </span>
       </td>
       <td className="px-4 py-3">
-        {associados.length === 0 ? (
-          <span className="text-xs text-gray-300">—</span>
-        ) : (
-          <div className="flex items-center -space-x-1.5">
-            {associados.slice(0, 4).map((a) => (
-              <span
-                key={a.id}
-                title={a.nome}
-                className="flex size-6 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white"
-                style={{ backgroundColor: corAvatar(a.nome) }}
-              >
-                {iniciais(a.nome)}
-              </span>
-            ))}
-            {associados.length > 4 && (
-              <span
-                title={associados.slice(4).map((a) => a.nome).join(", ")}
-                className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-[9px] font-bold text-gray-600"
-              >
-                +{associados.length - 4}
-              </span>
-            )}
-          </div>
-        )}
+        {(() => {
+          // Une os associados (tabela nova) com quem assumiu a elaboração pelo fluxo
+          // de status (elaboracao_responsavel) — assim inspeções antigas também mostram.
+          const pessoas: { key: string; nome: string }[] = associados.map((a) => ({ key: a.id, nome: a.nome }));
+          const nomes = new Set(pessoas.map((p) => p.nome.trim().toLowerCase()));
+          const resp = insp.elaboracao_responsavel?.trim();
+          if (resp && !nomes.has(resp.toLowerCase())) {
+            pessoas.push({ key: `resp-${insp.id_inspecao}`, nome: resp });
+          }
+          if (pessoas.length === 0) return <span className="text-xs text-gray-300">—</span>;
+          return (
+            <div className="flex items-center -space-x-1.5">
+              {pessoas.slice(0, 4).map((p) => (
+                <span
+                  key={p.key}
+                  title={p.nome}
+                  className="flex size-6 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white"
+                  style={{ backgroundColor: corAvatar(p.nome) }}
+                >
+                  {iniciais(p.nome)}
+                </span>
+              ))}
+              {pessoas.length > 4 && (
+                <span
+                  title={pessoas.slice(4).map((p) => p.nome).join(", ")}
+                  className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-[9px] font-bold text-gray-600"
+                >
+                  +{pessoas.length - 4}
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </td>
       <td className="px-4 py-3">
         <StatusBadge status={insp.status} />
