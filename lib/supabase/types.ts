@@ -1257,6 +1257,16 @@ export interface InvestigacaoAcao {
   updated_at: string | null;
 }
 
+/** Usuário associado à elaboração de uma inspeção (Documento SGG) — tabela inspecao_associados. */
+export interface InspecaoAssociado {
+  id: string;
+  id_inspecao: string;
+  id_usuario: string;
+  nome: string;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface ApreciacaoMaquinaItem {
   id_item: string;
   id_apreciacao: string;
