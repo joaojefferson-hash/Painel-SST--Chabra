@@ -17,10 +17,13 @@ export default function AssociadosElaboracao({
   idInspecao,
   user,
   isAdmin,
+  responsavelNome,
 }: {
   idInspecao: string;
   user: Usuario | null;
   isAdmin: boolean;
+  /** Quem assumiu a elaboração pelo fluxo de status (elaboracao_responsavel). */
+  responsavelNome?: string | null;
 }) {
   const { data: associados = [] } = useInspecaoAssociados(idInspecao);
   const { data: usuarios = [] } = useUsuariosParaAssociar();
@@ -32,13 +35,35 @@ export default function AssociadosElaboracao({
   const disponiveis = usuarios.filter((u) => !jaAssociados.has(u.id_usuario));
   const podeRemover = (idUsuario: string) => isAdmin || idUsuario === user?.id_usuario;
 
+  // Quem assumiu pelo fluxo de status, se ainda não estiver na tabela de associados.
+  const respTrim = responsavelNome?.trim() || "";
+  const respImplicito =
+    respTrim && !associados.some((a) => a.nome.trim().toLowerCase() === respTrim.toLowerCase())
+      ? respTrim
+      : "";
+
   return (
     <div className="mt-3 border-t border-gray-100 pt-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Associados</span>
 
-        {associados.length === 0 && (
+        {associados.length === 0 && !respImplicito && (
           <span className="text-xs text-gray-400">Ninguém associado à elaboração.</span>
+        )}
+
+        {respImplicito && (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 py-0.5 pl-0.5 pr-2 text-xs"
+            title="Assumiu a elaboração (fluxo de status)"
+          >
+            <span
+              className="flex size-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+              style={{ backgroundColor: corAvatar(respImplicito) }}
+            >
+              {iniciais(respImplicito)}
+            </span>
+            <span className="text-gray-700">{respImplicito}</span>
+          </span>
         )}
 
         {associados.map((a) => (

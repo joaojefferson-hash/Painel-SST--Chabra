@@ -429,7 +429,7 @@ export default function RelatorioChabraPage({ params }: Props) {
           )}
         </div>
         {podeElaborar && (
-          <AssociadosElaboracao idInspecao={id} user={user} isAdmin={user?.perfil === "Admin"} />
+          <AssociadosElaboracao idInspecao={id} user={user} isAdmin={user?.perfil === "Admin"} responsavelNome={inspecao.elaboracao_responsavel} />
         )}
       </div>
 
