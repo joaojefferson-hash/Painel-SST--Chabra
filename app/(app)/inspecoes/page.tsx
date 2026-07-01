@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import EmpresaSelect from "@/components/empresas/EmpresaSelect";
 import InspecaoRow from "@/components/inspecoes/InspecaoRow";
+import { useAssociadosPorInspecao } from "@/lib/hooks/useInspecaoAssociados";
 import { TabelaSkeleton } from "@/components/ui/PageSkeletons";
 import Pagination from "@/components/ui/Pagination";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -134,6 +135,7 @@ function InspecoesInner() {
 
   const items = lista.data?.items ?? [];
   const total = lista.data?.total ?? 0;
+  const { data: associadosMap } = useAssociadosPorInspecao(items.map((i) => i.id_inspecao));
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const isLoading = lista.isLoading;
   const isFetching = lista.isFetching;
@@ -288,6 +290,7 @@ function InspecoesInner() {
                   <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-gray-400">Rev.</th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400">Data</th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400">Responsável</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400">Associados</th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400">Status</th>
                   <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Ações</th>
                 </tr>
@@ -297,6 +300,7 @@ function InspecoesInner() {
                   <InspecaoRow
                     key={i.id_inspecao}
                     insp={i}
+                    associados={associadosMap?.get(i.id_inspecao) ?? []}
                     onDelete={canDelete ? setConfirmDel : undefined}
                     onEditResponsavel={isAdmin ? setEditResp : undefined}
                     showEmpresa={!empresaId}

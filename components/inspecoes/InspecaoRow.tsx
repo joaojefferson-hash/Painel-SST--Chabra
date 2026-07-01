@@ -4,15 +4,19 @@ import Link from "next/link";
 import { Pencil, ChartBar, Trash2 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { fmtData } from "@/lib/utils";
-import type { Inspecao } from "@/lib/supabase/types";
+import { iniciais, corAvatar } from "@/lib/hooks/useGestao";
+import type { Inspecao, InspecaoAssociado } from "@/lib/supabase/types";
 
 export default function InspecaoRow({
   insp,
+  associados = [],
   onDelete,
   onEditResponsavel,
   showEmpresa,
 }: {
   insp: Inspecao;
+  /** Associados à elaboração do Documento SGG desta inspeção. */
+  associados?: InspecaoAssociado[];
   onDelete?: (insp: Inspecao) => void;
   /** Quando fornecido (apenas Admin), mostra o lápis para editar o responsável. */
   onEditResponsavel?: (insp: Inspecao) => void;
@@ -48,6 +52,32 @@ export default function InspecaoRow({
             </button>
           )}
         </span>
+      </td>
+      <td className="px-4 py-3">
+        {associados.length === 0 ? (
+          <span className="text-xs text-gray-300">—</span>
+        ) : (
+          <div className="flex items-center -space-x-1.5">
+            {associados.slice(0, 4).map((a) => (
+              <span
+                key={a.id}
+                title={a.nome}
+                className="flex size-6 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white"
+                style={{ backgroundColor: corAvatar(a.nome) }}
+              >
+                {iniciais(a.nome)}
+              </span>
+            ))}
+            {associados.length > 4 && (
+              <span
+                title={associados.slice(4).map((a) => a.nome).join(", ")}
+                className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-[9px] font-bold text-gray-600"
+              >
+                +{associados.length - 4}
+              </span>
+            )}
+          </div>
+        )}
       </td>
       <td className="px-4 py-3">
         <StatusBadge status={insp.status} />
