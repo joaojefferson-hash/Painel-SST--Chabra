@@ -186,6 +186,7 @@ export type OrdemInspecao = "recentes" | "antigas" | "revisao";
 interface InspecoesPaginadasParams {
   idEmpresa: string | null;
   tecnico: string;
+  associado: string;
   idUnidade?: string | null;
   dataIni?: string;
   dataFim?: string;
@@ -193,6 +194,25 @@ interface InspecoesPaginadasParams {
   ordem: OrdemInspecao;
   page: number;
   pageSize: number;
+}
+
+// Filtro por associado à elaboração (cross-table): casa quem está em inspecao_associados
+// OU quem assumiu a elaboração (elaboracao_responsavel). Pré-busca os ids que batem.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function aplicarFiltroAssociado(supabase: any, q: any, associado: string) {
+  const term = associado.trim();
+  if (term.length < 2) return q;
+  const { data } = await supabase
+    .from("inspecao_associados")
+    .select("id_inspecao")
+    .ilike("nome", `%${term}%`);
+  const ids = [...new Set(((data ?? []) as { id_inspecao: string }[]).map((r) => r.id_inspecao))];
+  // Sanitiza o termo p/ não quebrar a sintaxe do .or() do PostgREST.
+  const t = term.replace(/[(),*]/g, " ");
+  if (ids.length > 0) {
+    return q.or(`id_inspecao.in.(${ids.join(",")}),elaboracao_responsavel.ilike.*${t}*`);
+  }
+  return q.ilike("elaboracao_responsavel", `%${term}%`);
 }
 
 interface FiltrosBase {
@@ -219,6 +239,7 @@ function aplicarFiltros(q: any, { idEmpresa, tecnico, idUnidade, dataIni, dataFi
 export function useInspecoesPaginadas({
   idEmpresa,
   tecnico,
+  associado,
   idUnidade,
   dataIni,
   dataFim,
@@ -233,11 +254,12 @@ export function useInspecoesPaginadas({
   const selLista = idUnidade ? "*, empresas!inner(nome_empresa, id_unidade)" : "*, empresas(nome_empresa)";
 
   const lista = useQuery({
-    queryKey: ["inspecoes-lista", idEmpresa, tecnico, idUnidade, dataIni, dataFim, filtro, ordem, page, pageSize],
+    queryKey: ["inspecoes-lista", idEmpresa, tecnico, associado, idUnidade, dataIni, dataFim, filtro, ordem, page, pageSize],
     placeholderData: (prev) => prev,
     queryFn: async () => {
       const supabase = createSupabaseBrowserClient();
       let q = aplicarFiltros(supabase.from("inspecoes").select(selLista, { count: "exact" }), base);
+      q = await aplicarFiltroAssociado(supabase, q, associado);
       if (filtro !== "Todos") q = q.eq("status", filtro);
       if (ordem === "recentes") q = q.order("created_at", { ascending: false });
       else if (ordem === "antigas") q = q.order("created_at", { ascending: true });
@@ -253,11 +275,12 @@ export function useInspecoesPaginadas({
   // Contagens por status — busca só a coluna status (leve) para os filtros.
   const selCounts = idUnidade ? "status, empresas!inner(id_unidade)" : "status";
   const counts = useQuery({
-    queryKey: ["inspecoes-counts", idEmpresa, tecnico, idUnidade, dataIni, dataFim],
+    queryKey: ["inspecoes-counts", idEmpresa, tecnico, associado, idUnidade, dataIni, dataFim],
     staleTime: 30_000,
     queryFn: async () => {
       const supabase = createSupabaseBrowserClient();
-      const q = aplicarFiltros(supabase.from("inspecoes").select(selCounts), base);
+      let q = aplicarFiltros(supabase.from("inspecoes").select(selCounts), base);
+      q = await aplicarFiltroAssociado(supabase, q, associado);
       const { data, error } = await q;
       if (error) throw error;
       const acc: Record<FiltroInspecao, number> = {
