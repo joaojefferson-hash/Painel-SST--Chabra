@@ -561,6 +561,9 @@ export default function DashboardPage() {
           titulo="Inspeções Associadas por Mês"
           data={assocPorMes}
           loading={loadingAssocMes}
+          link="/dashboard/por-associados"
+          linkLabel="Ver por associados"
+          linkTitle="Detalhe das inspeções associadas por mês e por associado"
           singular="associação"
           plural="associações"
         />
