@@ -30,6 +30,7 @@ import StatusBadge from "@/components/inspecoes/StatusBadge";
 import { TabelaSkeleton } from "@/components/ui/PageSkeletons";
 import { cn, fmtData } from "@/lib/utils";
 import { useUserStore } from "@/lib/store";
+import { corAvatar } from "@/lib/hooks/useGestao";
 import type { Inspecao, Empresa } from "@/lib/supabase/types";
 import { useState, useEffect, useMemo } from "react";
 
@@ -158,6 +159,44 @@ async function fetchDocumentosPorSituacao(): Promise<{ name: string; value: numb
   ];
 }
 
+// Documentos por associado à elaboração: nº de inspeções distintas por pessoa.
+// Une a tabela inspecao_associados com quem assumiu (elaboracao_responsavel), como na
+// coluna da lista. Top 6 pessoas + "Outros". Degrada se a tabela ainda não existir.
+async function fetchDocumentosPorAssociado(): Promise<{ name: string; value: number }[]> {
+  const supabase = createSupabaseBrowserClient();
+  const [assocRes, respRes] = await Promise.all([
+    supabase.from("inspecao_associados").select("nome, id_inspecao"),
+    supabase
+      .from("inspecoes")
+      .select("elaboracao_responsavel, id_inspecao")
+      .neq("status", "DELETADA")
+      .not("elaboracao_responsavel", "is", null),
+  ]);
+
+  const porPessoa = new Map<string, { nome: string; docs: Set<string> }>();
+  const add = (nome: string | null, idInsp: string) => {
+    const n = (nome ?? "").trim();
+    if (!n || !idInsp) return;
+    const key = n.toLowerCase();
+    const e = porPessoa.get(key) ?? { nome: n, docs: new Set<string>() };
+    e.docs.add(idInsp);
+    porPessoa.set(key, e);
+  };
+  for (const r of (assocRes.data ?? []) as { nome: string; id_inspecao: string }[]) add(r.nome, r.id_inspecao);
+  for (const r of (respRes.data ?? []) as { elaboracao_responsavel: string | null; id_inspecao: string }[]) {
+    add(r.elaboracao_responsavel, r.id_inspecao);
+  }
+
+  const ordenado = [...porPessoa.values()]
+    .map((e) => ({ name: e.nome, value: e.docs.size }))
+    .sort((a, b) => b.value - a.value);
+  const TOP = 6;
+  if (ordenado.length <= TOP) return ordenado;
+  const outros = ordenado.slice(TOP).reduce((s, x) => s + x.value, 0);
+  const top = ordenado.slice(0, TOP);
+  return outros > 0 ? [...top, { name: "Outros", value: outros }] : top;
+}
+
 async function fetchInspecoesRecentes(): Promise<InspecaoComEmpresa[]> {
   const supabase = createSupabaseBrowserClient();
   const { data: insp, error } = await supabase
@@ -260,17 +299,18 @@ function GraficoMes({
 // ─── Donut reutilizável (Por Status / Documentos por Situação) ─────────────────
 
 function GraficoDonut({
-  titulo, sub, data, colors, loading,
+  titulo, sub, data, colors, loading, className,
 }: {
   titulo: string;
   sub: string;
   data: { name: string; value: number }[];
   colors: string[];
   loading: boolean;
+  className?: string;
 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   return (
-    <div className="glass reveal-up delay-1 rounded-2xl p-5">
+    <div className={cn("glass reveal-up delay-1 rounded-2xl p-5", className)}>
       <div className="mb-4 flex items-start justify-between">
         <div>
           <h2 className="text-sm font-semibold text-gray-800">{titulo}</h2>
@@ -364,6 +404,15 @@ export default function DashboardPage() {
     queryKey: ["dashboard-doc-situacao"],
     queryFn: fetchDocumentosPorSituacao,
   });
+
+  const { data: docAssociado = [], isLoading: loadingDocAssoc } = useQuery({
+    queryKey: ["dashboard-doc-associado"],
+    queryFn: fetchDocumentosPorAssociado,
+  });
+  const assocColors = useMemo(
+    () => docAssociado.map((d) => (d.name === "Outros" ? "#9ca3af" : corAvatar(d.name))),
+    [docAssociado],
+  );
 
   const { data: recentes, isLoading: loadingRecentes } = useQuery({
     queryKey: ["dashboard-recentes"],
@@ -462,6 +511,16 @@ export default function DashboardPage() {
           data={docSituacao}
           colors={DOC_COLORS}
           loading={loadingDocSit}
+        />
+
+        {/* Linha 3: Documentos por Associado (abaixo de Documentos por Situação) */}
+        <GraficoDonut
+          className="lg:col-start-3"
+          titulo="Documentos por Associado"
+          sub="Associados à elaboração"
+          data={docAssociado}
+          colors={assocColors}
+          loading={loadingDocAssoc}
         />
       </section>
 
