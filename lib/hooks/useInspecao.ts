@@ -196,23 +196,31 @@ interface InspecoesPaginadasParams {
   pageSize: number;
 }
 
-// Filtro por associado à elaboração (cross-table): casa quem está em inspecao_associados
-// OU quem assumiu a elaboração (elaboracao_responsavel). Pré-busca os ids que batem.
+// Filtro por associado à elaboração (cross-table). Separado em dois passos:
+// idsPorAssociado (ASYNC, pré-busca) NÃO pode devolver o query-builder — uma função
+// async que retorna um thenable (o builder) o executa cedo. Por isso retorna só os ids
+// (ou null = sem filtro), e aplicarFiltroAssociado (SÍNCRONO) devolve o builder.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function aplicarFiltroAssociado(supabase: any, q: any, associado: string) {
+async function idsPorAssociado(supabase: any, associado: string): Promise<string[] | null> {
   const term = associado.trim();
-  if (term.length < 2) return q;
+  if (term.length < 2) return null;
   const { data } = await supabase
     .from("inspecao_associados")
     .select("id_inspecao")
     .ilike("nome", `%${term}%`);
-  const ids = [...new Set(((data ?? []) as { id_inspecao: string }[]).map((r) => r.id_inspecao))];
-  // Sanitiza o termo p/ não quebrar a sintaxe do .or() do PostgREST.
-  const t = term.replace(/[(),*]/g, " ");
+  return [...new Set(((data ?? []) as { id_inspecao: string }[]).map((r) => r.id_inspecao))];
+}
+
+// Aplica o filtro: casa quem está em inspecao_associados OU quem assumiu a elaboração
+// (elaboracao_responsavel). `ids === null` → sem filtro. Síncrono → devolve o builder.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function aplicarFiltroAssociado(q: any, associado: string, ids: string[] | null) {
+  if (ids === null) return q;
+  const t = associado.trim().replace(/[(),*]/g, " ");
   if (ids.length > 0) {
     return q.or(`id_inspecao.in.(${ids.join(",")}),elaboracao_responsavel.ilike.*${t}*`);
   }
-  return q.ilike("elaboracao_responsavel", `%${term}%`);
+  return q.ilike("elaboracao_responsavel", `%${t}%`);
 }
 
 interface FiltrosBase {
@@ -258,8 +266,9 @@ export function useInspecoesPaginadas({
     placeholderData: (prev) => prev,
     queryFn: async () => {
       const supabase = createSupabaseBrowserClient();
+      const idsAssoc = await idsPorAssociado(supabase, associado);
       let q = aplicarFiltros(supabase.from("inspecoes").select(selLista, { count: "exact" }), base);
-      q = await aplicarFiltroAssociado(supabase, q, associado);
+      q = aplicarFiltroAssociado(q, associado, idsAssoc);
       if (filtro !== "Todos") q = q.eq("status", filtro);
       if (ordem === "recentes") q = q.order("created_at", { ascending: false });
       else if (ordem === "antigas") q = q.order("created_at", { ascending: true });
@@ -279,8 +288,9 @@ export function useInspecoesPaginadas({
     staleTime: 30_000,
     queryFn: async () => {
       const supabase = createSupabaseBrowserClient();
+      const idsAssoc = await idsPorAssociado(supabase, associado);
       let q = aplicarFiltros(supabase.from("inspecoes").select(selCounts), base);
-      q = await aplicarFiltroAssociado(supabase, q, associado);
+      q = aplicarFiltroAssociado(q, associado, idsAssoc);
       const { data, error } = await q;
       if (error) throw error;
       const acc: Record<FiltroInspecao, number> = {
