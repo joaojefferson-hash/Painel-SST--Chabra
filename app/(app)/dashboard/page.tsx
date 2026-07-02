@@ -137,6 +137,42 @@ async function fetchDocumentosPorMes(): Promise<MesData[]> {
   return months;
 }
 
+// Inspeções associadas por mês: nº de inspeções DISTINTAS que receberam uma associação
+// naquele mês (por created_at da tabela inspecao_associados). Degrada p/ zeros se a
+// tabela ainda não existir.
+async function fetchInspecoesAssociadasPorMes(): Promise<MesData[]> {
+  const supabase = createSupabaseBrowserClient();
+  const now = new Date();
+  const sixAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+  const { data } = await supabase
+    .from("inspecao_associados")
+    .select("created_at, id_inspecao")
+    .gte("created_at", sixAgo.toISOString());
+
+  const months: MesData[] = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    return {
+      mes: d.toLocaleDateString("pt-BR", { month: "short" })
+        .replace(".", "")
+        .replace(/^\w/, (c) => c.toUpperCase()),
+      total: 0,
+    };
+  });
+  const setsPorMes = Array.from({ length: 6 }, () => new Set<string>());
+
+  for (const r of (data ?? []) as { created_at: string; id_inspecao: string }[]) {
+    if (!r.created_at) continue;
+    const d = new Date(r.created_at);
+    const diff = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+    const idx = 5 - diff;
+    if (idx >= 0 && idx < 6) setsPorMes[idx].add(r.id_inspecao);
+  }
+  for (let i = 0; i < 6; i++) months[i].total = setsPorMes[i].size;
+
+  return months;
+}
+
 async function fetchDocumentosPorSituacao(): Promise<{ name: string; value: number }[]> {
   const supabase = createSupabaseBrowserClient();
   const { data } = await supabase
@@ -245,9 +281,9 @@ function GraficoMes({
   titulo: string;
   data: MesData[] | undefined;
   loading: boolean;
-  link: string;
-  linkLabel: string;
-  linkTitle: string;
+  link?: string;
+  linkLabel?: string;
+  linkTitle?: string;
   singular: string;
   plural: string;
   className?: string;
@@ -259,15 +295,17 @@ function GraficoMes({
           <h2 className="text-sm font-semibold text-gray-800">{titulo}</h2>
           <p className="mt-0.5 text-xs text-gray-400">Últimos 6 meses</p>
         </div>
-        <Link
-          href={link}
-          className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-verde-light px-2.5 py-1.5 text-xs font-semibold text-verde-primary transition-colors hover:bg-verde-primary hover:text-white"
-          title={linkTitle}
-        >
-          <TrendingUp className="size-3.5" />
-          {linkLabel}
-          <ArrowRight className="size-3" />
-        </Link>
+        {link && (
+          <Link
+            href={link}
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-verde-light px-2.5 py-1.5 text-xs font-semibold text-verde-primary transition-colors hover:bg-verde-primary hover:text-white"
+            title={linkTitle}
+          >
+            <TrendingUp className="size-3.5" />
+            {linkLabel}
+            <ArrowRight className="size-3" />
+          </Link>
+        )}
       </div>
       {loading ? (
         <div className="min-h-40 flex-1 animate-pulse rounded-xl bg-gray-100" />
@@ -409,6 +447,10 @@ export default function DashboardPage() {
     queryKey: ["dashboard-doc-associado"],
     queryFn: fetchDocumentosPorAssociado,
   });
+  const { data: assocPorMes, isLoading: loadingAssocMes } = useQuery({
+    queryKey: ["dashboard-assoc-por-mes"],
+    queryFn: fetchInspecoesAssociadasPorMes,
+  });
   const assocColors = useMemo(
     () => docAssociado.map((d) => (d.name === "Outros" ? "#9ca3af" : corAvatar(d.name))),
     [docAssociado],
@@ -513,7 +555,15 @@ export default function DashboardPage() {
           loading={loadingDocSit}
         />
 
-        {/* Linha 3: Documentos por Associado (abaixo de Documentos por Situação) */}
+        {/* Linha 3: Inspeções Associadas por Mês (barra) + Documentos por Associado (donut) */}
+        <GraficoMes
+          className="lg:col-span-2"
+          titulo="Inspeções Associadas por Mês"
+          data={assocPorMes}
+          loading={loadingAssocMes}
+          singular="associação"
+          plural="associações"
+        />
         <GraficoDonut
           className="lg:col-start-3"
           titulo="Documentos por Associado"
