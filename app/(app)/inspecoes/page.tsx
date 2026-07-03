@@ -100,12 +100,13 @@ function InspecoesInner() {
   const [filtro, setFiltro] = useState<FiltroInspecao>("Todos");
   const [ordem, setOrdem] = useState<OrdemInspecao>("recentes");
   const [buscaTecnico, setBuscaTecnico] = useState("");
+  const [buscaAssociado, setBuscaAssociado] = useState("");
   const [page, setPage] = useState(1);
 
   const { data: unidades = [] } = useUnidades();
 
   // Reseta para página 1 quando qualquer filtro muda
-  useEffect(() => { setPage(1); }, [empresaId, idUnidade, dataIni, dataFim, filtro, ordem, buscaTecnico]);
+  useEffect(() => { setPage(1); }, [empresaId, idUnidade, dataIni, dataFim, filtro, ordem, buscaTecnico, buscaAssociado]);
 
   // Mantém o filtro de unidade alinhado à Unidade ativa (inclusive ao limpá-la).
   useEffect(() => { setIdUnidade(unidadeAtivaId ?? ""); }, [unidadeAtivaId]);
@@ -124,6 +125,7 @@ function InspecoesInner() {
   const { lista, counts } = useInspecoesPaginadas({
     idEmpresa: empresaId,
     tecnico: buscaTecnico,
+    associado: buscaAssociado,
     idUnidade: idUnidade || null,
     dataIni,
     dataFim,
@@ -185,6 +187,17 @@ function InspecoesInner() {
             className="w-full rounded-md border border-gray-300 bg-white py-1.5 pl-8 pr-3 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
           />
         </div>
+        <div className="relative max-w-xs flex-1 min-w-[180px]">
+          <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-gray-500">Associado</label>
+          <Search className="pointer-events-none absolute left-2.5 top-[31px] size-3.5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por associado..."
+            value={buscaAssociado}
+            onChange={(e) => setBuscaAssociado(e.target.value)}
+            className="w-full rounded-md border border-gray-300 bg-white py-1.5 pl-8 pr-3 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
+          />
+        </div>
         <div>
           <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-gray-500">Unidade</label>
           <select
@@ -216,10 +229,10 @@ function InspecoesInner() {
             className="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-verde-primary focus:outline-none focus:ring-2 focus:ring-verde-primary/30"
           />
         </div>
-        {(idUnidade || dataIni || dataFim || buscaTecnico) && (
+        {(idUnidade || dataIni || dataFim || buscaTecnico || buscaAssociado) && (
           <button
             type="button"
-            onClick={() => { setIdUnidade(""); setDataIni(""); setDataFim(""); setBuscaTecnico(""); }}
+            onClick={() => { setIdUnidade(""); setDataIni(""); setDataFim(""); setBuscaTecnico(""); setBuscaAssociado(""); }}
             className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
             Limpar filtros
