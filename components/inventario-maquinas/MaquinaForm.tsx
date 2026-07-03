@@ -13,9 +13,11 @@ import {
 import {
   STATUS_MAQUINA_LABELS,
   GRAU_RISCO_MAQUINA_LABELS,
+  CATEGORIA_INVENTARIO_LABELS,
   type Maquina,
   type StatusMaquina,
   type GrauRiscoMaquina,
+  type CategoriaInventario,
 } from "@/lib/supabase/types";
 import RevisaoIAModal, { type CampoRevisaoIA } from "@/components/ui/RevisaoIAModal";
 import { cn } from "@/lib/utils";
@@ -32,12 +34,16 @@ function parseBool(v: string): boolean | null {
   return null;
 }
 
-function initialForm(m?: Maquina): MaquinaInput {
+function initialForm(
+  m?: Maquina,
+  categoriaInicial?: CategoriaInventario,
+): MaquinaInput {
   return {
     id_empresa: m?.id_empresa ?? null,
     nome: m?.nome ?? "",
     tipo: m?.tipo ?? null,
     categoria: m?.categoria ?? null,
+    categoria_inventario: m?.categoria_inventario ?? categoriaInicial ?? "maquinas",
     codigo_interno: m?.codigo_interno ?? null,
     tag: m?.tag ?? null,
     marca: m?.marca ?? null,
@@ -88,6 +94,8 @@ interface MaquinaFormProps {
   inicial?: Maquina;
   idMaquina: string;
   disabled?: boolean;
+  /** Categoria pré-selecionada ao cadastrar a partir de uma aba do inventário. */
+  categoriaInicial?: CategoriaInventario;
   onSubmit: (input: MaquinaInput) => Promise<void>;
   submitLabel?: string;
 }
@@ -98,13 +106,16 @@ export default function MaquinaForm({
   inicial,
   idMaquina,
   disabled = false,
+  categoriaInicial,
   onSubmit,
   submitLabel = "Salvar",
 }: MaquinaFormProps) {
   const { data: empresas = [] } = useEmpresas();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState<MaquinaInput>(() => initialForm(inicial));
+  const [form, setForm] = useState<MaquinaInput>(() =>
+    initialForm(inicial, categoriaInicial),
+  );
   const [abaAtiva, setAbaAtiva] = useState<0 | 1 | 2 | 3>(0);
   const [uploading, setUploading] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -337,6 +348,19 @@ export default function MaquinaForm({
       {abaAtiva === 0 && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Campo label="Categoria do inventário">
+              <select
+                value={form.categoria_inventario ?? "maquinas"}
+                onChange={(e) => setF("categoria_inventario", e.target.value as CategoriaInventario)}
+                disabled={disabled}
+                className={inputClass}
+              >
+                {(Object.keys(CATEGORIA_INVENTARIO_LABELS) as CategoriaInventario[]).map((c) => (
+                  <option key={c} value={c}>{CATEGORIA_INVENTARIO_LABELS[c]}</option>
+                ))}
+              </select>
+            </Campo>
+            <div className="hidden sm:block" aria-hidden />
             <Campo label="Nome da máquina / equipamento *">
               <input type="text" value={form.nome} onChange={(e) => setF("nome", e.target.value)} disabled={disabled} required placeholder="Ex: Furadeira de bancada" className={inputClass} />
             </Campo>

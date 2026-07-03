@@ -1,7 +1,14 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { Boxes, HelpCircle } from "lucide-react";
+import {
+  Boxes,
+  Package,
+  Factory,
+  Ruler,
+  ArrowLeftRight,
+  HelpCircle,
+} from "lucide-react";
 import SidebarShell, { type NavSection } from "@/components/layout/SidebarShell";
 import ModuleTopbar from "@/components/layout/ModuleTopbar";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -12,6 +19,10 @@ const sections: NavSection[] = [
     label: "Inventário",
     items: [
       { href: "/inventario-maquinas", label: "Visão geral", icon: Boxes },
+      { href: "/inventario-maquinas/equipamentos", label: "Equipamentos", icon: Package },
+      { href: "/inventario-maquinas/maquinas", label: "Máquinas", icon: Factory },
+      { href: "/inventario-maquinas/medicoes", label: "Medição", icon: Ruler },
+      { href: "/inventario-maquinas/transferencia", label: "Transferência", icon: ArrowLeftRight },
       { href: "/inventario-maquinas/ajuda", label: "Ajuda", icon: HelpCircle },
     ],
   },

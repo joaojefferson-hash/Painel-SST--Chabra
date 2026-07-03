@@ -10,6 +10,7 @@ import type {
   Maquina,
   StatusMaquina,
   GrauRiscoMaquina,
+  CategoriaInventario,
   InspecaoMaquina,
 } from "@/lib/supabase/types";
 
@@ -77,6 +78,7 @@ export interface MaquinaInput {
   nome: string;
   tipo: string | null;
   categoria: string | null;
+  categoria_inventario: CategoriaInventario | null;
   codigo_interno: string | null;
   tag: string | null;
   marca: string | null;
@@ -482,6 +484,8 @@ export function useImportarMaquinasInspecao() {
           nome: m.nome,
           tipo: m.tipo,
           categoria: null,
+          // Máquinas importadas de inspeções são de clientes.
+          categoria_inventario: "maquinas",
           codigo_interno: null,
           tag: m.tag,
           marca: m.marca,

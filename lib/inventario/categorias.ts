@@ -1,42 +1,47 @@
-// Classificação das 3 abas do Inventário (Equipamentos · Máquinas · Medições).
+// Classificação das 3 abas/categorias do Inventário (Equipamentos · Máquinas ·
+// Medição).
 //
-// DECISÃO: a categoria é DERIVADA dos dados que já existem — não há coluna
-// dedicada no banco e nada no fluxo de cadastro muda. Um item é classificado a
-// partir do texto livre já gravado em `categoria`, `tipo` ou `nome`.
-//
-// ⚠️ ÚNICO PONTO A AJUSTAR: se a regra real for outra (ex.: um valor específico
-// em `categoria`, ou distinguir por `id_empresa`), altere SOMENTE as expressões
-// abaixo ou o corpo de `categoriaInventario`. Nenhuma outra parte do app depende
-// disto — a lista importa esta função e pronto.
+// A partir da v115 a categoria é um CAMPO EXPLÍCITO na tabela
+// (`categoria_inventario`), escolhido no cadastro. Esta função lê esse campo; o
+// fallback por palavra-chave/dono só existe para itens LEGADOS que ainda não
+// tenham a coluna preenchida (a migration v115 já faz o backfill no banco).
 
-import type { Maquina } from "@/lib/supabase/types";
+import type { Maquina, CategoriaInventario } from "@/lib/supabase/types";
+import { CATEGORIA_INVENTARIO_LABELS } from "@/lib/supabase/types";
 
-export type AbaInventario = "equipamentos" | "maquinas" | "medicoes";
+export type AbaInventario = CategoriaInventario;
 
-/** Ordem e rótulos das abas (mesma ordem pedida: Equipamentos, Máquinas, Medições). */
+/** Ordem e rótulos das abas (mesma ordem pedida: Equipamentos, Máquinas, Medição). */
 export const ABAS_INVENTARIO: { id: AbaInventario; label: string }[] = [
-  { id: "equipamentos", label: "Equipamentos" },
-  { id: "maquinas", label: "Máquinas" },
-  { id: "medicoes", label: "Medições" },
+  { id: "equipamentos", label: CATEGORIA_INVENTARIO_LABELS.equipamentos },
+  { id: "maquinas", label: CATEGORIA_INVENTARIO_LABELS.maquinas },
+  { id: "medicoes", label: CATEGORIA_INVENTARIO_LABELS.medicoes },
 ];
 
 /** Aba mostrada ao abrir o inventário (a que concentra os itens por padrão). */
 export const ABA_INVENTARIO_PADRAO: AbaInventario = "maquinas";
 
-// Palavras-chave provisórias (case-insensitive, sem acento sensível). Medições
-// é checada primeiro por ser a mais específica; Equipamentos em seguida; o
-// restante cai em Máquinas (o módulo é centrado em máquinas NR-12).
+// Fallback para itens legados sem `categoria_inventario`. Medição é a mais
+// específica (checada primeiro); depois cai no critério de dono
+// (interno => equipamentos; cliente => maquinas).
 const RX_MEDICAO =
-  /medi[çc][aã]o|medi[çc][oõ]es|medidor|calibra|lux[íi]metro|decibel|dos[íi]metro|term[oô]metro|anem[oô]metro|balan[çc]a/i;
+  /medi[çc][aã]o|medi[çc][oõ]es|medidor|calibra|lux[íi]metro|decibel|dos[íi]metro|term[oôó]metro|anem[oô]metro|balan[çc]a/i;
 const RX_EQUIPAMENTO =
   /equipamento|ferramenta|mobili|comput|notebook|impressora|ve[íi]culo|el[eé]trico portat/i;
 
 /** Categoria derivada de um item do inventário. Sempre retorna exatamente uma aba. */
 export function categoriaInventario(
-  m: Pick<Maquina, "categoria" | "tipo" | "nome">,
+  m: Pick<
+    Maquina,
+    "categoria_inventario" | "id_empresa" | "categoria" | "tipo" | "nome"
+  >,
 ): AbaInventario {
+  // Campo explícito manda (v115+).
+  if (m.categoria_inventario) return m.categoria_inventario;
+
+  // Fallback (dados legados): palavra-chave, depois dono.
   const txt = [m.categoria, m.tipo, m.nome].filter(Boolean).join(" ");
   if (RX_MEDICAO.test(txt)) return "medicoes";
   if (RX_EQUIPAMENTO.test(txt)) return "equipamentos";
-  return "maquinas";
+  return m.id_empresa == null ? "equipamentos" : "maquinas";
 }

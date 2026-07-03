@@ -76,6 +76,7 @@ function initialForm(m?: Maquina): MaquinaInput {
     nome: m?.nome ?? "",
     tipo: m?.tipo ?? null,
     categoria: m?.categoria ?? null,
+    categoria_inventario: m?.categoria_inventario ?? "maquinas",
     codigo_interno: m?.codigo_interno ?? null,
     tag: m?.tag ?? null,
     marca: m?.marca ?? null,

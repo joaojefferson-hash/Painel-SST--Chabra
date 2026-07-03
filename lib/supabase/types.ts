@@ -964,6 +964,20 @@ export const GRAU_RISCO_MAQUINA_LABELS: Record<GrauRiscoMaquina, string> = {
   CRITICO: "Crítico",
 };
 
+/**
+ * Classificação do item no inventário (abas/categorias do sidebar):
+ *  - equipamentos: material interno da Chabra
+ *  - maquinas:     material de clientes
+ *  - medicoes:     instrumentos de medição
+ */
+export type CategoriaInventario = "equipamentos" | "maquinas" | "medicoes";
+
+export const CATEGORIA_INVENTARIO_LABELS: Record<CategoriaInventario, string> = {
+  equipamentos: "Equipamentos",
+  maquinas: "Máquinas",
+  medicoes: "Medição",
+};
+
 export interface Maquina {
   id_maquina: string;
   /** NULL = patrimônio interno da Chabra; preenchido = máquina de cliente. */
@@ -977,6 +991,8 @@ export interface Maquina {
   nome: string;
   tipo: string | null;
   categoria: string | null;
+  /** Aba/categoria do inventário: Equipamentos (interno) · Máquinas (cliente) · Medição. */
+  categoria_inventario: CategoriaInventario | null;
   codigo_interno: string | null;
   tag: string | null;
   marca: string | null; // fabricante
