@@ -124,6 +124,9 @@ export function useAlterarAcesso() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["gestao-meu-nivel"] });
+      // O RPC (v118) espelha id_quadro/papel → atualiza o modal e o podeEditar do cliente.
+      qc.invalidateQueries({ queryKey: ["gestao-acessos"] });
+      qc.invalidateQueries({ queryKey: ["gestao-meus-acessos"] });
       toast.success("Acesso atualizado");
     },
     onError: (e) => toast.error(mensagemErro(e, "Não foi possível alterar o acesso.")),
