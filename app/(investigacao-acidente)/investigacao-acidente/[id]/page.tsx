@@ -80,7 +80,7 @@ interface FormState {
   testemunhas: TestemunhaAcidente[];
   causas_imediatas: string;
   causas_basicas: string;
-  cinco_porques: string[];
+  cinco_porques: { pergunta: string; resposta: string }[];
   ishikawa: Record<string, string[]>;
   medidas: string;
   conclusao: string;
@@ -214,7 +214,10 @@ export default function EditorInvestigacaoPage() {
       testemunhas: data.testemunhas ?? [],
       causas_imediatas: data.causas_imediatas ?? "",
       causas_basicas: data.causas_basicas ?? "",
-      cinco_porques: data.cinco_porques ?? [],
+      // aceita formato legado (string[]) e o novo ({ pergunta, resposta }[])
+      cinco_porques: ((data.cinco_porques ?? []) as unknown as (string | { pergunta?: string; resposta?: string })[]).map((p) =>
+        typeof p === "string" ? { pergunta: "", resposta: p } : { pergunta: p?.pergunta ?? "", resposta: p?.resposta ?? "" },
+      ),
       ishikawa: data.ishikawa ?? {},
       medidas: data.medidas ?? "",
       conclusao: data.conclusao ?? "",
@@ -351,7 +354,7 @@ export default function EditorInvestigacaoPage() {
       testemunhas: form.testemunhas.filter((t) => t.nome.trim() || t.depoimento.trim()),
       causas_imediatas: form.causas_imediatas || null,
       causas_basicas: form.causas_basicas || null,
-      cinco_porques: form.cinco_porques.filter((p) => p.trim()),
+      cinco_porques: form.cinco_porques.filter((p) => p.pergunta.trim() || p.resposta.trim()),
       ishikawa: form.ishikawa,
       medidas: form.medidas || null,
       conclusao: form.conclusao || null,
@@ -636,27 +639,41 @@ export default function EditorInvestigacaoPage() {
           <p className="mb-1 text-sm font-medium text-gray-700">5 Porquês</p>
           <div className="space-y-2">
             {form.cinco_porques.map((p, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="w-20 shrink-0 text-xs font-semibold text-gray-400">{i + 1}º Por quê?</span>
+              <div key={i} className="rounded-lg border border-gray-200 p-2">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-400">{i + 1}º Por quê?</span>
+                  {!ro && (
+                    <button type="button" onClick={() => set("cinco_porques", form.cinco_porques.filter((_, j) => j !== i))} className="flex size-7 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600">
+                      <Trash2 className="size-4" />
+                    </button>
+                  )}
+                </div>
                 <input
                   disabled={ro}
-                  value={p}
+                  value={p.pergunta}
+                  placeholder="Pergunta — por que isso aconteceu?"
                   onChange={(e) => {
                     const arr = [...form.cinco_porques];
-                    arr[i] = e.target.value;
+                    arr[i] = { ...arr[i], pergunta: e.target.value };
                     set("cinco_porques", arr);
                   }}
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30"
+                  className="mb-1.5 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30"
                 />
-                {!ro && (
-                  <button type="button" onClick={() => set("cinco_porques", form.cinco_porques.filter((_, j) => j !== i))} className="flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600">
-                    <Trash2 className="size-4" />
-                  </button>
-                )}
+                <input
+                  disabled={ro}
+                  value={p.resposta}
+                  placeholder="Resposta"
+                  onChange={(e) => {
+                    const arr = [...form.cinco_porques];
+                    arr[i] = { ...arr[i], resposta: e.target.value };
+                    set("cinco_porques", arr);
+                  }}
+                  className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30"
+                />
               </div>
             ))}
             {!ro && form.cinco_porques.length < 5 && (
-              <button type="button" onClick={() => set("cinco_porques", [...form.cinco_porques, ""])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <button type="button" onClick={() => set("cinco_porques", [...form.cinco_porques, { pergunta: "", resposta: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
                 <Plus className="size-4" /> Adicionar “Por quê?”
               </button>
             )}

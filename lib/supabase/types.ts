@@ -214,8 +214,8 @@ export interface InvestigacaoAcidente {
   // Análise de causas
   causas_imediatas: string | null;
   causas_basicas: string | null;
-  /** 5 Porquês — respostas em ordem (até 5). */
-  cinco_porques: string[];
+  /** 5 Porquês — pergunta + resposta em ordem (até 5). */
+  cinco_porques: { pergunta: string; resposta: string }[];
   /** Diagrama de Ishikawa: categoria (6M) → causas. */
   ishikawa: Record<string, string[]>;
   // Medidas + conclusão
