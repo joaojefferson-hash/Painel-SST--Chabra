@@ -1423,27 +1423,9 @@ async function upsertAcesso(idQuadro: string, email: string, papel: "viewer" | "
   else { const { error } = await sb.from("gestao_acessos").insert({ id: crypto.randomUUID(), id_quadro: idQuadro, usuario_email: lower, ...campos } as never); if (error) throw error; }
 }
 
-export function useSalvarAcesso() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (p: { id_quadro: string; email: string; papel: "viewer" | "editor" }) => upsertAcesso(p.id_quadro, p.email, p.papel),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-acessos"] }); qc.invalidateQueries({ queryKey: ["gestao-meus-acessos"] }); },
-    onError: (e) => toast.error(mensagemErro(e, "Não foi possível salvar o acesso.")),
-  });
-}
-
-export function useExcluirAcesso() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const sb = createSupabaseBrowserClient();
-      const { error } = await sb.from("gestao_acessos").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["gestao-acessos"] }); qc.invalidateQueries({ queryKey: ["gestao-meus-acessos"] }); },
-    onError: (e) => toast.error(mensagemErro(e, "Não foi possível remover o acesso.")),
-  });
-}
+// useSalvarAcesso/useExcluirAcesso removidos na Fase 4b: o compartilhamento por lista agora passa
+// por gestao_alterar_acesso (useAlterarAcesso) — com motivo + log LGPD. upsertAcesso segue abaixo,
+// usado só pelo auto-grant de useToggleRestrito (não se trancar fora ao restringir).
 
 /** Liga/desliga "lista restrita". Ao ligar, garante o usuário atual como editor ANTES (não se trancar fora). */
 export function useToggleRestrito() {
