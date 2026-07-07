@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock, CircleUser, CheckSquare, BarChart3, FileText, Inbox, Lock } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Plus, Search, X, LayoutList, CalendarDays, GanttChartSquare, SlidersHorizontal, Tags, Tag, Zap, Settings, ChevronDown, Clock, CircleUser, CheckSquare, BarChart3, FileText, Inbox, Lock, Users } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 import { useCanEdit, useIsAdmin } from "@/lib/hooks/useUsuario";
 import { useConfiguracoes } from "@/lib/hooks/useConfiguracoes";
@@ -28,6 +28,8 @@ import EtiquetasManagerModal from "@/components/gestao/EtiquetasManagerModal";
 import FormulariosManagerModal from "@/components/gestao/FormulariosManagerModal";
 import CalendarioModal from "@/components/gestao/CalendarioModal";
 import CompartilharModal from "@/components/gestao/CompartilharModal";
+import MembrosModal from "@/components/gestao/MembrosModal";
+import { useMeuPapelGestao } from "@/lib/hooks/useGestaoAcesso";
 import TarefaCard from "@/components/gestao/TarefaCard";
 import FiltrosPanel from "@/components/gestao/FiltrosPanel";
 import MinhasTarefas from "@/components/gestao/MinhasTarefas";
@@ -58,6 +60,8 @@ export default function GestaoChabraPage() {
   const canEditGlobal = useCanEdit();
   const isAdmin = useIsAdmin();
   const { data: meusAcessos } = useMeusAcessos();
+  const { data: meuPapelGestao, isFetched: papelGestaoFetched } = useMeuPapelGestao();
+  const souGestor = meuPapelGestao === "owner" || meuPapelGestao === "admin";
   const podeEditarGlobal = isAdmin || canEditGlobal;
   const { data: configs } = useConfiguracoes();
   const { data: quadros = [], isLoading: loadingQuadros } = useQuadros();
@@ -112,6 +116,7 @@ export default function GestaoChabraPage() {
   const [formulariosOpen, setFormulariosOpen] = useState(false);
   const [calendarioOpen, setCalendarioOpen] = useState(false);
   const [compartilharOpen, setCompartilharOpen] = useState(false);
+  const [membrosOpen, setMembrosOpen] = useState(false);
   const [quadroAgrupar, setQuadroAgrupar] = useState<"status" | "responsavel" | "prioridade" | "etiqueta">("status");
   const [online, setOnline] = useState(true);
   const [boardScrolled, setBoardScrolled] = useState(false);
@@ -128,8 +133,11 @@ export default function GestaoChabraPage() {
   const inboxCount = useMemo(() => notificacoes.filter((n) => !n.lida).length, [notificacoes]);
 
   useEffect(() => {
-    if (user?.perfil === "Cliente") router.replace("/portal-cliente/inicio");
-  }, [user?.perfil, router]);
+    if (user?.perfil === "Cliente") { router.replace("/portal-cliente/inicio"); return; }
+    // Portão de membership: quem não é membro da Gestão não entra. Só dispara quando a
+    // query resolveu com NULL explícito (não-membro) — erro/loading mantém a guarda dormindo.
+    if (papelGestaoFetched && meuPapelGestao === null && user) router.replace("/inicio");
+  }, [user, user?.perfil, papelGestaoFetched, meuPapelGestao, router]);
 
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | undefined;
@@ -436,6 +444,11 @@ export default function GestaoChabraPage() {
               <X className="size-4" /> Limpar
             </button>
           )}
+          {souGestor && (
+            <button type="button" onClick={() => setMembrosOpen(true)} title="Membros da Gestão" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <Users className="size-4" /> Membros
+            </button>
+          )}
           {podeEditar && (
             <div className="relative">
               <button type="button" onClick={() => setConfigOpen((v) => !v)} title="Configurar quadro" className="relative z-40 inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
@@ -701,6 +714,8 @@ export default function GestaoChabraPage() {
           podeEditar={podeEditar}
         />
       )}
+
+      <MembrosModal open={membrosOpen} onClose={() => setMembrosOpen(false)} />
 
       {selecaoModo && selecionados.size > 0 && (
         <BarraAcoesMassa

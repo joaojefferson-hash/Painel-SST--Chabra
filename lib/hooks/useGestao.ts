@@ -1414,9 +1414,13 @@ export function useMeusAcessos() {
 async function upsertAcesso(idQuadro: string, email: string, papel: "viewer" | "editor") {
   const sb = createSupabaseBrowserClient();
   const lower = email.toLowerCase();
+  // Grava também o modelo novo (nivel/recurso) — o resolver da v117 lê `nivel`, não `papel`.
+  // viewer→view, editor→edit; recurso é sempre a lista (list) deste quadro.
+  const nivel = papel === "editor" ? "edit" : "view";
+  const campos = { papel, nivel, recurso_tipo: "list", recurso_id: idQuadro };
   const { data: ex } = await sb.from("gestao_acessos").select("id").eq("id_quadro", idQuadro).eq("usuario_email", lower).maybeSingle();
-  if (ex) { const { error } = await sb.from("gestao_acessos").update({ papel } as never).eq("id", (ex as { id: string }).id); if (error) throw error; }
-  else { const { error } = await sb.from("gestao_acessos").insert({ id: crypto.randomUUID(), id_quadro: idQuadro, usuario_email: lower, papel } as never); if (error) throw error; }
+  if (ex) { const { error } = await sb.from("gestao_acessos").update(campos as never).eq("id", (ex as { id: string }).id); if (error) throw error; }
+  else { const { error } = await sb.from("gestao_acessos").insert({ id: crypto.randomUUID(), id_quadro: idQuadro, usuario_email: lower, ...campos } as never); if (error) throw error; }
 }
 
 export function useSalvarAcesso() {
