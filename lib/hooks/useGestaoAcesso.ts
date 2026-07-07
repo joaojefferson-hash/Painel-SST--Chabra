@@ -73,6 +73,24 @@ export function useGestaoMembros() {
   });
 }
 
+/** Usuários internos (não-Cliente) para o seletor de adicionar membro. */
+export function useUsuariosParaMembro() {
+  return useQuery({
+    queryKey: ["gestao-usuarios-membro"],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb
+        .from("usuarios")
+        .select("email, nome, perfil")
+        .neq("perfil", "Cliente")
+        .order("nome", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as { email: string; nome: string; perfil: string }[];
+    },
+  });
+}
+
 /** Gere o roster (adicionar/remover/mudar papel) — passa por gestao_definir_membro (log + motivo). */
 export function useDefinirMembro() {
   const qc = useQueryClient();
