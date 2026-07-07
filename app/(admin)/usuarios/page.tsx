@@ -592,17 +592,15 @@ function UsuarioFormModal({ open, onClose, usuario }: UsuarioFormProps) {
     }
     setUploadingPfx(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const path = `pfx_${Date.now()}_${Math.random().toString(36).slice(2)}.pfx`;
-      // Remove certificado anterior, se houver
-      if (form.certificado_pfx_path) {
-        await supabase.storage.from("certificados").remove([form.certificado_pfx_path]);
-      }
-      const { error } = await supabase.storage
-        .from("certificados")
-        .upload(path, file, { upsert: false });
-      if (error) throw error;
-      setForm((f) => ({ ...f, certificado_pfx_path: path }));
+      // Upload pelo servidor (bucket privado `certificados` via service_role). O upload
+      // direto do navegador dava 403 no self-host (cred do browser só escreve em `fotos`).
+      const fd = new FormData();
+      fd.append("file", file);
+      if (form.certificado_pfx_path) fd.append("oldPath", form.certificado_pfx_path);
+      const res = await fetch("/api/cert/upload", { method: "POST", body: fd });
+      const data = (await res.json().catch(() => ({}))) as { path?: string; error?: string };
+      if (!res.ok || !data.path) throw new Error(data.error || "Erro ao enviar certificado");
+      setForm((f) => ({ ...f, certificado_pfx_path: data.path! }));
       toast.success("Certificado A1 enviado");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao enviar certificado");
