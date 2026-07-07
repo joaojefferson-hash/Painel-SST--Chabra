@@ -911,7 +911,7 @@ export function useExcluirTempo() {
   });
 }
 
-export type GatilhoAutomacao = "status_muda" | "tarefa_criada" | "prazo_proximo";
+export type GatilhoAutomacao = "status_muda" | "tarefa_criada" | "prazo_proximo" | "prazo_vencido";
 
 export interface GestaoAutomacao {
   id: string;
@@ -919,7 +919,7 @@ export interface GestaoAutomacao {
   nome: string;
   ativo: boolean;
   gatilho: GatilhoAutomacao;
-  condicao: { de?: string; para?: string };
+  condicao: { de?: string; para?: string; dias_antes?: string };
   acao: { tipo?: string; valor?: string; campo_id?: string };
   ordem: number;
 }
@@ -979,33 +979,15 @@ export function useExcluirAutomacao() {
   });
 }
 
-/** Executor client-side das automações (gatilhos de ação imediata). */
-export function useAutomacaoRunner(idQuadro: string | null | undefined) {
-  const { data: automacoes = [] } = useAutomacoes(idQuadro);
-  const salvar = useSalvarTarefa();
-  const criarNotif = useCriarNotificacao();
-  const { data: usuariosFull = [] } = useUsuarios();
+/** Automações agora rodam NO SERVIDOR (v120: trigger em gestao_tarefas + pg_cron para prazos).
+ *  O executor client-side foi aposentado para não aplicar a ação duas vezes. Mantido como no-op
+ *  (mesma assinatura) para não quebrar os call sites em gestao/page.tsx. */
+export function useAutomacaoRunner(_idQuadro: string | null | undefined) {
   return useCallback(
-    (ctx: { gatilho: "status_muda" | "tarefa_criada"; tarefa: GestaoTarefa; de?: string; para?: string }) => {
-      for (const a of automacoes) {
-        if (!a.ativo || a.gatilho !== ctx.gatilho) continue;
-        if (ctx.gatilho === "status_muda") {
-          if (a.condicao?.de && a.condicao.de !== ctx.de) continue;
-          if (a.condicao?.para && a.condicao.para !== ctx.para) continue;
-        }
-        const acao = a.acao || {};
-        const base = { id_tarefa: ctx.tarefa.id_tarefa, id_quadro: ctx.tarefa.id_quadro };
-        if (acao.tipo === "mover_status" && acao.valor) salvar.mutate({ ...base, status: acao.valor });
-        else if (acao.tipo === "definir_responsavel") salvar.mutate({ ...base, responsavel: acao.valor || null });
-        else if (acao.tipo === "definir_prioridade" && acao.valor) salvar.mutate({ ...base, prioridade: acao.valor as PrioridadeTarefa });
-        else if (acao.tipo === "definir_campo" && acao.campo_id) salvar.mutate({ ...base, campos: { ...(ctx.tarefa.campos ?? {}), [acao.campo_id]: acao.valor ?? null } });
-        else if (acao.tipo === "notificar") {
-          const email = ctx.tarefa.responsavel ? usuariosFull.find((u) => u.nome === ctx.tarefa.responsavel)?.email ?? null : null;
-          if (email) criarNotif.mutate({ destinatario: email, tipo: "status", titulo: acao.valor || `Automação em "${ctx.tarefa.titulo}"`, id_tarefa: ctx.tarefa.id_tarefa, id_quadro: ctx.tarefa.id_quadro });
-        }
-      }
+    (_ctx: { gatilho: "status_muda" | "tarefa_criada"; tarefa: GestaoTarefa; de?: string; para?: string }) => {
+      /* no-op: ver public.gestao_automacao_trg / gestao_automacao_prazos (v120) */
     },
-    [automacoes, salvar, criarNotif, usuariosFull],
+    [],
   );
 }
 
