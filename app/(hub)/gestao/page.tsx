@@ -12,7 +12,7 @@ import {
   useMinhasTarefas, useTodosStatus, useNotificacoes, useMarcarLida, useMeusAcessos,
   usePreferenciaVisao, useSalvarPreferenciaVisao,
   useStatusQuadro, statusPadrao, useCamposQuadro, useEtiquetasQuadro,
-  useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner, useTempoQuadro, useAnexosCountQuadro,
+  useEspacos, usePastas, useTodasDependencias, useAutomacaoRunner, useAutomacaoTick, useTempoQuadro, useAnexosCountQuadro,
   corAvatar, formatarDuracao,
   PRIORIDADES, FILTRO_VAZIO, contarFiltros,
   type GestaoTarefa, type StatusTarefa, type VistaGestao, type AgruparPor, type GestaoStatus, type GestaoNotificacao, type PrioridadeTarefa, type FiltrosGestao,
@@ -85,6 +85,7 @@ export default function GestaoChabraPage() {
   const { data: campos = [] } = useCamposQuadro(quadro?.id_quadro);
   const { data: etiquetasCat = [] } = useEtiquetasQuadro(quadro?.id_quadro);
   const runAuto = useAutomacaoRunner(quadro?.id_quadro);
+  useAutomacaoTick();  // fallback de agendamento sem pg_cron (.107): scan de prazos 1x/dia
   const salvar = useSalvarTarefa();
   const acaoMassa = useAcaoMassa();
   const { data: tempoEntries = [] } = useTempoQuadro(quadro?.id_quadro, tarefas.map((t) => t.id_tarefa));

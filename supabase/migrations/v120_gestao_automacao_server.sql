@@ -163,5 +163,28 @@ begin
   perform set_config('gestao.in_automacao', 'off', true);
 end $fn$;
 
--- ── 6) Agendamento diário (06:15, após a recorrência das 06:05) ──────────────
-select cron.schedule('gestao-automacao-prazos', '15 6 * * *', $$select public.gestao_automacao_prazos()$$);
+-- ── 6) Agendamento diário — SÓ se o pg_cron existir ──────────────────────────
+-- Supabase tem pg_cron; o self-host .107 (banco painel_sst) NÃO tem o schema `cron`.
+-- Guardado para a migration aplicar nos dois ambientes. Sem pg_cron, os prazos rodam
+-- pelo fallback abaixo (gestao_automacao_tick), disparado pelo app ao abrir a Gestão.
+do $$
+begin
+  if exists (select 1 from pg_namespace where nspname = 'cron') then
+    perform cron.schedule('gestao-automacao-prazos', '15 6 * * *', $c$select public.gestao_automacao_prazos()$c$);
+  else
+    raise notice 'pg_cron indisponível: agendamento não criado. Prazos rodam via gestao_automacao_tick().';
+  end if;
+end $$;
+
+-- ── 7) Fallback sem pg_cron: tick idempotente (1x/dia), chamado pelo app ─────
+-- Roda o scan de prazos no máximo uma vez por dia (marca 'tick' no log). Seguro sob
+-- concorrência: o dedup interno de gestao_automacao_prazos evita ação/aviso em dobro.
+create or replace function public.gestao_automacao_tick() returns void
+  language plpgsql security definer set search_path=public as $fn$
+begin
+  if exists (select 1 from public.gestao_automacao_log where gatilho = 'tick' and created_at::date = current_date) then
+    return;  -- já rodou hoje
+  end if;
+  insert into public.gestao_automacao_log (gatilho, resultado, detalhe) values ('tick', 'ok', 'scan diário de prazos');
+  perform public.gestao_automacao_prazos();
+end $fn$;
