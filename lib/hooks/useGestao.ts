@@ -983,8 +983,16 @@ export function useExcluirAutomacao() {
  *  gestao_automacao_tick roda no máximo 1x/dia. Chamado ao abrir a Gestão. */
 export function useAutomacaoTick() {
   useEffect(() => {
-    const sb = createSupabaseBrowserClient() as unknown as { rpc: (fn: string) => Promise<unknown> };
-    sb.rpc("gestao_automacao_tick").catch(() => {});
+    // O rpc() do Supabase é um thenable (sem .catch) — consumir via await + try/catch.
+    // Um fallback de agendamento NUNCA deve derrubar a página.
+    void (async () => {
+      try {
+        const sb = createSupabaseBrowserClient() as unknown as { rpc: (fn: string) => PromiseLike<unknown> };
+        await sb.rpc("gestao_automacao_tick");
+      } catch {
+        /* silencioso */
+      }
+    })();
   }, []);
 }
 
