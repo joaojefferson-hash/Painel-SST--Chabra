@@ -201,7 +201,9 @@ export default function InvestigacaoAcidenteTemplate({
   const afast = inv.houve_afastamento
     ? `Sim${inv.dias_afastamento != null ? ` — ${inv.dias_afastamento} dia(s)` : ""}`
     : "Não";
-  const porques = (inv.cinco_porques ?? []).filter((p) => p && p.trim());
+  const porques = ((inv.cinco_porques ?? []) as unknown as (string | { pergunta?: string; resposta?: string })[])
+    .map((p) => (typeof p === "string" ? { pergunta: "", resposta: p } : { pergunta: p?.pergunta ?? "", resposta: p?.resposta ?? "" }))
+    .filter((p) => p.pergunta.trim() || p.resposta.trim());
   const testemunhas = (inv.testemunhas ?? []).filter((t) => (t.nome ?? "").trim() || (t.depoimento ?? "").trim());
 
   return (
@@ -381,7 +383,10 @@ export default function InvestigacaoAcidenteTemplate({
             </p>
             <ul className="ia-pq">
               {porques.map((p, i) => (
-                <li key={i}><b>{i + 1}º Por quê?</b> {p}</li>
+                <li key={i}>
+                  <b>{i + 1}º Por quê?{p.pergunta.trim() ? ` ${p.pergunta}` : ""}</b>
+                  {p.resposta.trim() ? ` — ${p.resposta}` : ""}
+                </li>
               ))}
             </ul>
           </div>
