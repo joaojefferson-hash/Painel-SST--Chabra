@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -977,6 +977,15 @@ export function useExcluirAutomacao() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["gestao-automacoes"] }),
     onError: (e) => toast.error(mensagemErro(e, "Não foi possível excluir a automação.")),
   });
+}
+
+/** Dispara o scan diário de prazos no servidor (fallback sem pg_cron, ex.: .107). Idempotente:
+ *  gestao_automacao_tick roda no máximo 1x/dia. Chamado ao abrir a Gestão. */
+export function useAutomacaoTick() {
+  useEffect(() => {
+    const sb = createSupabaseBrowserClient() as unknown as { rpc: (fn: string) => Promise<unknown> };
+    sb.rpc("gestao_automacao_tick").catch(() => {});
+  }, []);
 }
 
 /** Automações agora rodam NO SERVIDOR (v120: trigger em gestao_tarefas + pg_cron para prazos).
