@@ -431,8 +431,9 @@ function InicioContent() {
           /* ── Nível 1: seleção de categoria ── */
           (() => {
             const visibleCats = CATEGORIES.filter((c) => cardsDisponiveis.some((d) => d.categoria === c.id));
-            // +1 do card Empresa (todos os usuários internos) e +2 admin (Gestão Gerencial + PDFs).
-            const totalCards = visibleCats.length + 1 + (isAdmin ? 2 : 0);
+            // +1 Empresa (todos internos) + Gestão Gerencial (quem tem o módulo) + PDFs (admin).
+            const totalCards =
+              visibleCats.length + 1 + (modulosPermitidos.has("gestao_gerencial") ? 1 : 0) + (isAdmin ? 1 : 0);
             return (
               <div
                 className={cn(
@@ -468,12 +469,8 @@ function InicioContent() {
                   );
                 })}
                 <EmpresaDirectCard />
-                {isAdmin && (
-                  <>
-                    <GestaoGerencialDirectCard />
-                    <PdfDirectCard />
-                  </>
-                )}
+                {modulosPermitidos.has("gestao_gerencial") && <GestaoGerencialDirectCard />}
+                {isAdmin && <PdfDirectCard />}
               </div>
             );
           })()
