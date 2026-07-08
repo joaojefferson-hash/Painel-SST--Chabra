@@ -21,7 +21,8 @@ export type ModuloPermitido =
   | "aep"
   | "questionarios_psicossociais"
   | "produtividade"
-  | "investigacao_acidente";
+  | "investigacao_acidente"
+  | "gestao_gerencial";
 
 export const TODOS_MODULOS: ModuloPermitido[] = [
   "painel",
@@ -36,10 +37,12 @@ export const TODOS_MODULOS: ModuloPermitido[] = [
   "questionarios_psicossociais",
   "produtividade",
   "investigacao_acidente",
+  "gestao_gerencial",
 ];
 
 export const ROTULO_MODULO: Record<ModuloPermitido, string> = {
   investigacao_acidente: "Investigação de Acidente de Trabalho",
+  gestao_gerencial: "Gestão Gerencial",
   painel: "Painel SST",
   psicossocial: "DRPS – Diagnóstico de Riscos Psicossociais",
   conformidade: "Relatório de Conformidade",
