@@ -37,8 +37,11 @@ body { font-family: Arial, Helvetica, sans-serif; color: #111827; }
 .ia-test .nome { font-weight: 700; font-size: 11pt; color: #111827; }
 .ia-test .dep { font-size: 10pt; color: #374151; white-space: pre-wrap; margin-top: 2px; }
 .ia-pq { margin: 4px 0; padding-left: 0; list-style: none; }
-.ia-pq li { font-size: 11pt; color: #111827; padding: 3px 0; border-bottom: 1px dotted #d1d5db; }
-.ia-pq b { color: ${VERDE}; }
+.ia-pq li { padding: 5px 0; border-bottom: 1px dotted #d1d5db; }
+.ia-pq .num { display: block; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: ${VERDE}; margin-bottom: 1px; }
+.ia-pq .perg { display: block; font-size: 11pt; font-weight: 600; color: #111827; }
+.ia-pq .resp { display: block; font-size: 11pt; color: #374151; margin-top: 1px; }
+.ia-pq .lbl { font-weight: 700; color: #6b7280; }
 section { page-break-inside: avoid; }
 `;
 
@@ -420,8 +423,9 @@ export default function InvestigacaoAcidenteTemplate({
             <ul className="ia-pq">
               {porques.map((p, i) => (
                 <li key={i}>
-                  <b>{i + 1}º Por quê?{p.pergunta.trim() ? ` ${p.pergunta}` : ""}</b>
-                  {p.resposta.trim() ? ` — ${p.resposta}` : ""}
+                  <span className="num">{i + 1}º Por quê?</span>
+                  {p.pergunta.trim() && <span className="perg">{p.pergunta}</span>}
+                  {p.resposta.trim() && <span className="resp"><span className="lbl">Resposta: </span>{p.resposta}</span>}
                 </li>
               ))}
             </ul>
