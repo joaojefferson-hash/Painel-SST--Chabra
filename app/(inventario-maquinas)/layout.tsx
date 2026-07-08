@@ -4,8 +4,6 @@ import { type ReactNode } from "react";
 import {
   Boxes,
   Package,
-  Factory,
-  Ruler,
   ArrowLeftRight,
   HelpCircle,
 } from "lucide-react";
@@ -20,8 +18,6 @@ const sections: NavSection[] = [
     items: [
       { href: "/inventario-maquinas", label: "Visão geral", icon: Boxes },
       { href: "/inventario-maquinas/equipamentos", label: "Equipamentos", icon: Package },
-      { href: "/inventario-maquinas/maquinas", label: "Máquinas", icon: Factory },
-      { href: "/inventario-maquinas/medicoes", label: "Medição", icon: Ruler },
       { href: "/inventario-maquinas/transferencia", label: "Transferência", icon: ArrowLeftRight },
       { href: "/inventario-maquinas/ajuda", label: "Ajuda", icon: HelpCircle },
     ],
