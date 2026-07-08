@@ -17,6 +17,11 @@ export interface GGVinculo {
 }
 export interface GGEscala { id: string; id_profissional: string; id_unidade: string; dia_semana: number; id_turno: string }
 
+// A RPC nova (gg_sugerir_substitutos) ainda não está nos tipos gerados → cast tipado.
+type GGRpc = {
+  rpc<T = unknown>(fn: string, args?: Record<string, unknown>): Promise<{ data: T; error: { message: string } | null }>;
+};
+
 export const DIAS_SEMANA = [
   { n: 1, label: "Seg" }, { n: 2, label: "Ter" }, { n: 3, label: "Qua" },
   { n: 4, label: "Qui" }, { n: 5, label: "Sex" }, { n: 6, label: "Sáb" }, { n: 7, label: "Dom" },
@@ -213,5 +218,99 @@ export function useToggleEscala() {
     },
     onSuccess: (_d, p) => qc.invalidateQueries({ queryKey: ["gg-escala", p.id_unidade] }),
     onError: (e: Error) => toast.error(mensagemErro(e)),
+  });
+}
+
+// ── Ausências (por profissional; exibidas no escopo da unidade) ──────────────
+export const TIPOS_AUSENCIA = [
+  { v: "folga", label: "Folga" },
+  { v: "ferias", label: "Férias" },
+  { v: "atestado", label: "Atestado" },
+  { v: "falta", label: "Falta" },
+  { v: "in_loco", label: "Atend. in loco" },
+] as const;
+export type TipoAusencia = (typeof TIPOS_AUSENCIA)[number]["v"];
+export const rotuloTipoAusencia = (v: string) => TIPOS_AUSENCIA.find((t) => t.v === v)?.label ?? v;
+
+export interface GGAusencia {
+  id: string; id_profissional: string; tipo: string;
+  data_inicio: string; data_fim: string; obs: string | null;
+  profissional: { nome: string } | null;
+}
+
+/** Ausências dos profissionais vinculados a ESTA unidade (mais recentes primeiro). */
+export function useGGAusencias(idUnidade: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gg-ausencias", idUnidade],
+    enabled: !!idUnidade,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data: vincs, error: e1 } = await sb
+        .from("gg_profissional_unidades").select("id_profissional").eq("id_unidade", idUnidade!);
+      if (e1) throw e1;
+      const ids = Array.from(new Set((vincs ?? []).map((v: { id_profissional: string }) => v.id_profissional)));
+      if (ids.length === 0) return [] as GGAusencia[];
+      const { data, error } = await sb
+        .from("gg_ausencias")
+        .select("id, id_profissional, tipo, data_inicio, data_fim, obs, profissional:gg_profissionais(nome)")
+        .in("id_profissional", ids)
+        .order("data_inicio", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as GGAusencia[];
+    },
+  });
+}
+
+export function useGGAusenciaMut() {
+  const qc = useQueryClient();
+  const inval = (idUnidade: string) => {
+    qc.invalidateQueries({ queryKey: ["gg-ausencias", idUnidade] });
+    qc.invalidateQueries({ queryKey: ["gg-substituicoes", idUnidade] });
+  };
+  const criar = useMutation({
+    mutationFn: async (p: { id_unidade: string; id_profissional: string; tipo: string; data_inicio: string; data_fim: string; obs?: string }) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gg_ausencias").insert({
+        id: gerarId("AUS"), id_profissional: p.id_profissional, tipo: p.tipo,
+        data_inicio: p.data_inicio, data_fim: p.data_fim, obs: p.obs?.trim() || null,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: (_d, p) => inval(p.id_unidade),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
+  });
+  const excluir = useMutation({
+    mutationFn: async (p: { id: string; id_unidade: string }) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gg_ausencias").delete().eq("id", p.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, p) => inval(p.id_unidade),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
+  });
+  return { criar, excluir };
+}
+
+// ── Verificação de substituição (RPC v124) ───────────────────────────────────
+export interface GGSubstituicaoRow {
+  id_turno: string; turno_nome: string;
+  id_categoria: string | null; categoria_nome: string | null;
+  id_ausente: string; ausente_nome: string; tipo_ausencia: string;
+  id_substituto: string | null; substituto_nome: string | null;
+}
+
+/** Para uma unidade e uma data, retorna slots descobertos + substitutos sugeridos. */
+export function useGGSubstituicoes(idUnidade: string | null | undefined, data: string | null | undefined) {
+  return useQuery({
+    queryKey: ["gg-substituicoes", idUnidade, data],
+    enabled: !!idUnidade && !!data,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient() as unknown as GGRpc;
+      const { data: rows, error } = await sb.rpc<GGSubstituicaoRow[]>("gg_sugerir_substitutos", {
+        p_id_unidade: idUnidade!, p_data: data!,
+      });
+      if (error) throw new Error(error.message);
+      return rows ?? [];
+    },
   });
 }

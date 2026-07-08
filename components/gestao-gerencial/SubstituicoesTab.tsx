@@ -1,0 +1,116 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Loader2, CalendarSearch, UserCheck, UserX, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useGGSubstituicoes, rotuloTipoAusencia, type GGSubstituicaoRow } from "@/lib/hooks/useGestaoGerencial";
+
+const hoje = () => {
+  const d = new Date();
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
+};
+
+const fmtLongo = (iso: string) => {
+  if (!iso) return "";
+  const [y, m, dia] = iso.split("-").map(Number);
+  const d = new Date(y, m - 1, dia);
+  return d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+};
+
+interface Grupo {
+  chave: string;
+  turno_nome: string;
+  categoria_nome: string | null;
+  ausente_nome: string;
+  tipo_ausencia: string;
+  substitutos: { id: string; nome: string }[];
+}
+
+function agrupar(rows: GGSubstituicaoRow[]): Grupo[] {
+  const map = new Map<string, Grupo>();
+  for (const r of rows) {
+    const chave = `${r.id_ausente}|${r.id_turno}`;
+    let g = map.get(chave);
+    if (!g) {
+      g = { chave, turno_nome: r.turno_nome, categoria_nome: r.categoria_nome, ausente_nome: r.ausente_nome, tipo_ausencia: r.tipo_ausencia, substitutos: [] };
+      map.set(chave, g);
+    }
+    if (r.id_substituto && r.substituto_nome) g.substitutos.push({ id: r.id_substituto, nome: r.substituto_nome });
+  }
+  return Array.from(map.values());
+}
+
+/**
+ * Verificação de substituição: escolhida uma DATA, mostra quem está ausente naquele
+ * dia (por turno) e sugere substitutos da mesma unidade/categoria, ativos e sem conflito.
+ */
+export default function SubstituicoesTab({ idUnidade }: { idUnidade: string }) {
+  const [data, setData] = useState<string>(hoje());
+  const q = useGGSubstituicoes(idUnidade, data);
+  const grupos = useMemo(() => agrupar(q.data ?? []), [q.data]);
+
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="text-sm font-medium text-gray-700">Data:</label>
+        <input
+          type="date"
+          value={data}
+          onChange={(e) => setData(e.target.value)}
+          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30"
+        />
+        {data && <span className="text-sm capitalize text-gray-500">{fmtLongo(data)}</span>}
+        {q.isFetching && <Loader2 className="size-4 animate-spin text-verde-primary" />}
+      </div>
+
+      {q.isLoading ? (
+        <p className="text-sm text-gray-500">Verificando…</p>
+      ) : grupos.length === 0 ? (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+          <CheckCircle2 className="size-5 shrink-0" />
+          Ninguém precisa de substituição nesta data — a escala está coberta.
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {grupos.map((g) => (
+            <li key={g.chave} className="rounded-xl border border-gray-200 bg-white p-4">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-alert">
+                  <UserX className="size-3.5" /> {g.ausente_nome}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {g.turno_nome}{g.categoria_nome ? ` · ${g.categoria_nome}` : ""}
+                </span>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${g.tipo_ausencia === "in_loco" ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-600"}`}>
+                  {rotuloTipoAusencia(g.tipo_ausencia)}
+                </span>
+              </div>
+
+              {g.substitutos.length === 0 ? (
+                <div className="flex items-center gap-1.5 text-sm text-amber-700">
+                  <AlertTriangle className="size-4 shrink-0" />
+                  Nenhum substituto disponível (mesma categoria, ativo e sem conflito de escala).
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-gray-500">Substitutos sugeridos:</span>
+                  {g.substitutos.map((s) => (
+                    <span key={s.id} className="inline-flex items-center gap-1 rounded-md border border-verde-primary/30 bg-verde-primary/5 px-2 py-0.5 text-xs font-medium text-verde-primary">
+                      <UserCheck className="size-3.5" /> {s.nome}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="flex items-start gap-1.5 text-xs text-gray-500">
+        <CalendarSearch className="mt-0.5 size-3.5 shrink-0" />
+        A sugestão considera a escala padrão daquele dia da semana e as ausências registradas. Um substituto só aparece se
+        for da mesma unidade e categoria, estiver ativo e não estiver escalado no mesmo turno (em qualquer unidade).
+      </p>
+    </section>
+  );
+}

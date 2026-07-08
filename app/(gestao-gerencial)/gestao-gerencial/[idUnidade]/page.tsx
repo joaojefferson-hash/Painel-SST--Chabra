@@ -3,17 +3,21 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, Users, CalendarRange, Settings2 } from "lucide-react";
+import { ArrowLeft, Users, CalendarRange, Settings2, CalendarOff, UserCheck } from "lucide-react";
 import { useUnidades } from "@/lib/hooks/useUnidades";
 import ProfissionaisTab from "@/components/gestao-gerencial/ProfissionaisTab";
 import EscalaTab from "@/components/gestao-gerencial/EscalaTab";
 import ConfigTab from "@/components/gestao-gerencial/ConfigTab";
+import AusenciasTab from "@/components/gestao-gerencial/AusenciasTab";
+import SubstituicoesTab from "@/components/gestao-gerencial/SubstituicoesTab";
 
-type Aba = "profissionais" | "escala" | "config";
+type Aba = "profissionais" | "escala" | "ausencias" | "substituicoes" | "config";
 
 const ABAS: { id: Aba; label: string; icon: typeof Users }[] = [
   { id: "profissionais", label: "Profissionais", icon: Users },
   { id: "escala", label: "Escala padrão", icon: CalendarRange },
+  { id: "ausencias", label: "Ausências", icon: CalendarOff },
+  { id: "substituicoes", label: "Substituições", icon: UserCheck },
   { id: "config", label: "Configuração", icon: Settings2 },
 ];
 
@@ -58,6 +62,8 @@ export default function UnidadeEscalasPage() {
 
       {aba === "profissionais" && <ProfissionaisTab idUnidade={idUnidade} />}
       {aba === "escala" && <EscalaTab idUnidade={idUnidade} />}
+      {aba === "ausencias" && <AusenciasTab idUnidade={idUnidade} />}
+      {aba === "substituicoes" && <SubstituicoesTab idUnidade={idUnidade} />}
       {aba === "config" && <ConfigTab idUnidade={idUnidade} />}
     </div>
   );
