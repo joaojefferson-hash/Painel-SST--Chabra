@@ -24,6 +24,7 @@ import {
   FileClock,
   TrendingUp,
   Siren,
+  CalendarClock,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useUserStore } from "@/lib/store";
@@ -430,8 +431,8 @@ function InicioContent() {
           /* ── Nível 1: seleção de categoria ── */
           (() => {
             const visibleCats = CATEGORIES.filter((c) => cardsDisponiveis.some((d) => d.categoria === c.id));
-            // +1 do card Empresa (todos os usuários internos) e +1 do PDFs (admin).
-            const totalCards = visibleCats.length + 1 + (isAdmin ? 1 : 0);
+            // +1 do card Empresa (todos os usuários internos) e +2 admin (Gestão Gerencial + PDFs).
+            const totalCards = visibleCats.length + 1 + (isAdmin ? 2 : 0);
             return (
               <div
                 className={cn(
@@ -468,7 +469,10 @@ function InicioContent() {
                 })}
                 <EmpresaDirectCard />
                 {isAdmin && (
-                  <PdfDirectCard />
+                  <>
+                    <GestaoGerencialDirectCard />
+                    <PdfDirectCard />
+                  </>
                 )}
               </div>
             );
@@ -617,6 +621,44 @@ function EmpresaDirectCard() {
           Cadastro
         </span>
         <span className="text-gray-500">Todos os módulos</span>
+        <ArrowRight
+          className="ml-auto size-4 transition-transform group-hover:translate-x-1"
+          style={{ color: accent }}
+        />
+      </div>
+    </Link>
+  );
+}
+
+function GestaoGerencialDirectCard() {
+  const accent = "#00432F";
+  return (
+    <Link
+      href="/gestao-gerencial"
+      className="group flex w-full flex-col gap-4 glass tilt-3d sheen reveal-up rounded-2xl p-6 text-left"
+    >
+      <div className="flex items-start gap-4">
+        <div
+          className="flex size-16 shrink-0 items-center justify-center rounded-2xl text-white shadow-md transition-transform group-hover:scale-105"
+          style={{ backgroundColor: accent }}
+        >
+          <CalendarClock className="size-12" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-bold text-gray-900">Gestão Gerencial</h2>
+          <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">
+            Escalas e substituições dos profissionais por unidade
+          </p>
+        </div>
+      </div>
+      <div className="flex min-h-[40px] items-center gap-2 border-t border-gray-100 pt-3 text-xs">
+        <span
+          className="rounded-full px-2 py-0.5 font-semibold text-white"
+          style={{ backgroundColor: accent }}
+        >
+          Gerencial
+        </span>
+        <span className="text-gray-500">Uso interno</span>
         <ArrowRight
           className="ml-auto size-4 transition-transform group-hover:translate-x-1"
           style={{ color: accent }}
