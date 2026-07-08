@@ -21,6 +21,20 @@ export interface InvestigacaoTemplateProps {
 
 const VERDE = "#006B54";
 
+/** Rótulo de tipo (ex.: "Causas imediatas", "5 Porquês") como SUBTÍTULO destacado:
+ *  verde, maiúsculo, com barra de destaque à esquerda — entre o título de seção e o texto. */
+const rotStyle: React.CSSProperties = {
+  fontSize: "10pt",
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: ".04em",
+  color: VERDE,
+  margin: "2px 0 4px",
+  paddingLeft: 7,
+  borderLeft: `3px solid ${VERDE}`,
+  lineHeight: 1.25,
+};
+
 const STYLE_BLOCK = `
 * { box-sizing: border-box; }
 body { font-family: Arial, Helvetica, sans-serif; color: #111827; }
@@ -188,7 +202,7 @@ function Bloco({ rot, val }: { rot: string; val: string | null | undefined }) {
   if (!texto) return null;
   return (
     <div className="ia-bloco">
-      <p className="rot" style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em", color: "#6b7280", margin: "0 0 2px" }}>
+      <p className="rot" style={rotStyle}>
         {rot}
       </p>
       <p className="val" style={{ fontSize: "11pt", color: "#111827", whiteSpace: "pre-wrap", margin: 0 }}>{texto}</p>
@@ -417,7 +431,7 @@ export default function InvestigacaoAcidenteTemplate({
         <Bloco rot="Causas básicas (fatores pessoais e do trabalho)" val={inv.causas_basicas} />
         {porques.length > 0 && (
           <div className="ia-bloco">
-            <p className="rot" style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em", color: "#6b7280", margin: "0 0 2px" }}>
+            <p className="rot" style={rotStyle}>
               5 Porquês
             </p>
             <ul className="ia-pq">
