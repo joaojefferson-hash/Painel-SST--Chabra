@@ -314,3 +314,21 @@ export function useGGSubstituicoes(idUnidade: string | null | undefined, data: s
     },
   });
 }
+
+export interface GGProjecaoRow extends GGSubstituicaoRow { data: string }
+
+/** Projeção mensal: para cada dia do mês, slots descobertos + substitutos sugeridos. */
+export function useGGProjecaoMensal(idUnidade: string | null | undefined, ano: number, mes: number) {
+  return useQuery({
+    queryKey: ["gg-projecao", idUnidade, ano, mes],
+    enabled: !!idUnidade && ano > 0 && mes >= 1 && mes <= 12,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient() as unknown as GGRpc;
+      const { data: rows, error } = await sb.rpc<GGProjecaoRow[]>("gg_projecao_mensal", {
+        p_id_unidade: idUnidade!, p_ano: ano, p_mes: mes,
+      });
+      if (error) throw new Error(error.message);
+      return rows ?? [];
+    },
+  });
+}

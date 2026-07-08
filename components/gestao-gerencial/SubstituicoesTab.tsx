@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, CalendarSearch, UserCheck, UserX, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Loader2, CalendarSearch, UserCheck, UserX, CheckCircle2, AlertTriangle, CalendarDays, CalendarClock } from "lucide-react";
 import { useGGSubstituicoes, rotuloTipoAusencia, type GGSubstituicaoRow } from "@/lib/hooks/useGestaoGerencial";
+import ProjecaoMensal from "@/components/gestao-gerencial/ProjecaoMensal";
 
 const hoje = () => {
   const d = new Date();
@@ -40,11 +41,37 @@ function agrupar(rows: GGSubstituicaoRow[]): Grupo[] {
   return Array.from(map.values());
 }
 
+/** Aba de substituições: alterna entre verificação por dia e projeção do mês inteiro. */
+export default function SubstituicoesTab({ idUnidade }: { idUnidade: string }) {
+  const [modo, setModo] = useState<"dia" | "mes">("dia");
+  return (
+    <section className="space-y-4">
+      <div className="inline-flex rounded-md border border-gray-200 bg-white p-0.5 text-xs">
+        <button
+          type="button"
+          onClick={() => setModo("dia")}
+          className={`inline-flex items-center gap-1 rounded px-2.5 py-1 font-medium ${modo === "dia" ? "bg-verde-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}
+        >
+          <CalendarDays className="size-3.5" /> Por dia
+        </button>
+        <button
+          type="button"
+          onClick={() => setModo("mes")}
+          className={`inline-flex items-center gap-1 rounded px-2.5 py-1 font-medium ${modo === "mes" ? "bg-verde-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}
+        >
+          <CalendarClock className="size-3.5" /> Projeção mensal
+        </button>
+      </div>
+      {modo === "dia" ? <VisaoDiaria idUnidade={idUnidade} /> : <ProjecaoMensal idUnidade={idUnidade} />}
+    </section>
+  );
+}
+
 /**
  * Verificação de substituição: escolhida uma DATA, mostra quem está ausente naquele
  * dia (por turno) e sugere substitutos da mesma unidade/categoria, ativos e sem conflito.
  */
-export default function SubstituicoesTab({ idUnidade }: { idUnidade: string }) {
+function VisaoDiaria({ idUnidade }: { idUnidade: string }) {
   const [data, setData] = useState<string>(hoje());
   const q = useGGSubstituicoes(idUnidade, data);
   const grupos = useMemo(() => agrupar(q.data ?? []), [q.data]);
