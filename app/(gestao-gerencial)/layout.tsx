@@ -6,10 +6,10 @@ import { Building2 } from "lucide-react";
 import SidebarShell, { type NavSection } from "@/components/layout/SidebarShell";
 import ModuleTopbar from "@/components/layout/ModuleTopbar";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { useRequireAdmin } from "@/lib/hooks/useRequireAdmin";
+import { useRequireModule } from "@/lib/hooks/useRequireModule";
 
-// Módulo administrativo interno (não é gated por ModuloPermitido — só isAdmin),
-// no padrão do route group (admin). Fase 1: só a navegação de unidades.
+// Módulo interno gated por ModuloPermitido "gestao_gerencial" (Fase 2). Fase 1: só a
+// navegação de unidades; as escalas entram nas próximas fases.
 const sections: NavSection[] = [
   {
     label: "Gestão Gerencial",
@@ -21,7 +21,7 @@ const sections: NavSection[] = [
 
 export default function GestaoGerencialLayout({ children }: { children: ReactNode }) {
   useAuth();
-  useRequireAdmin();
+  useRequireModule("gestao_gerencial");
   const pathname = usePathname();
   const titulo = pathname.startsWith("/gestao-gerencial/") ? "Escalas e Substituições" : "Gestão Gerencial";
 
