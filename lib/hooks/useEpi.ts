@@ -9,6 +9,7 @@ import { useUserStore } from "@/lib/store";
 import type {
   EpiColaborador, EpiCatalogoItem, EpiMovimentacao, EpiSaldo, EpiMovTipo,
   EpiImportacaoNfe, EpiNfeItemMap, EpiEntrega, EpiEntregaItem, EpiEntregaItemInput,
+  EpiTransferencia, EpiTransferItemInput,
 } from "@/lib/epi/types";
 
 /** Email do usuário logado (autor das escritas). */
@@ -273,6 +274,48 @@ export function useRegistrarEntrega() {
       qc.invalidateQueries({ queryKey: ["epi-movimentacoes", p.empresa_id] });
       qc.invalidateQueries({ queryKey: ["epi-saldo", p.empresa_id] });
       toast.success("Entrega registrada");
+    },
+    onError: (e: Error) => toast.error(mensagemErro(e)),
+  });
+}
+
+// ── Transferências entre empresas (só interno) ───────────────────────────────
+export function useEpiTransferencias(empresaId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["epi-transferencias", empresaId],
+    enabled: !!empresaId,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb
+        .from("epi_transferencias")
+        .select("*, origem:empresas!epi_transferencias_empresa_origem_fkey(nome_empresa), destino:empresas!epi_transferencias_empresa_destino_fkey(nome_empresa)")
+        .or(`empresa_origem.eq.${empresaId},empresa_destino.eq.${empresaId}`)
+        .order("criado_em", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as EpiTransferencia[];
+    },
+  });
+}
+
+export function useTransferir() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { empresa_origem: string; empresa_destino: string; observacao?: string; itens: EpiTransferItemInput[] }) => {
+      const sb = createSupabaseBrowserClient() as unknown as EpiRpc;
+      const { data, error } = await sb.rpc<string>("epi_transferir", {
+        p_empresa_origem: p.empresa_origem, p_empresa_destino: p.empresa_destino,
+        p_observacao: p.observacao || null, p_itens: p.itens,
+      });
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: (_d, p) => {
+      qc.invalidateQueries({ queryKey: ["epi-transferencias", p.empresa_origem] });
+      qc.invalidateQueries({ queryKey: ["epi-transferencias", p.empresa_destino] });
+      qc.invalidateQueries({ queryKey: ["epi-movimentacoes", p.empresa_origem] });
+      qc.invalidateQueries({ queryKey: ["epi-saldo", p.empresa_origem] });
+      qc.invalidateQueries({ queryKey: ["epi-catalogo", p.empresa_destino] });
+      toast.success("Transferência realizada");
     },
     onError: (e: Error) => toast.error(mensagemErro(e)),
   });

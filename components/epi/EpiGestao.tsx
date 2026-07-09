@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, Boxes, Users, FileInput, PackageCheck } from "lucide-react";
+import { BookOpen, Boxes, Users, FileInput, PackageCheck, ArrowRightLeft } from "lucide-react";
 import EpiCatalogoTab from "@/components/epi/EpiCatalogoTab";
 import EpiEstoqueTab from "@/components/epi/EpiEstoqueTab";
 import EpiColaboradoresTab from "@/components/epi/EpiColaboradoresTab";
 import EpiNfeTab from "@/components/epi/EpiNfeTab";
 import EpiEntregasTab from "@/components/epi/EpiEntregasTab";
+import EpiTransferenciasTab from "@/components/epi/EpiTransferenciasTab";
 
-type AbaId = "catalogo" | "estoque" | "nfe" | "entregas" | "colaboradores";
+type AbaId = "catalogo" | "estoque" | "nfe" | "entregas" | "transferencias" | "colaboradores";
 
 interface AbaCfg {
   id: AbaId;
@@ -25,6 +26,7 @@ const ABAS: AbaCfg[] = [
   { id: "estoque", label: "Estoque", icon: Boxes, render: (e, c) => <EpiEstoqueTab empresaId={e} canEdit={c} /> },
   { id: "nfe", label: "NF-e", icon: FileInput, render: (e, c) => <EpiNfeTab empresaId={e} canEdit={c} />, soEdicao: true },
   { id: "entregas", label: "Entregas", icon: PackageCheck, render: (e, c) => <EpiEntregasTab empresaId={e} canEdit={c} /> },
+  { id: "transferencias", label: "Transferências", icon: ArrowRightLeft, render: (e, c) => <EpiTransferenciasTab empresaId={e} canEdit={c} />, soInterno: true },
   { id: "colaboradores", label: "Colaboradores", icon: Users, render: (e, c) => <EpiColaboradoresTab empresaId={e} canEdit={c} /> },
 ];
 

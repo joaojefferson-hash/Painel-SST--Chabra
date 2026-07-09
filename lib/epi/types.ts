@@ -120,3 +120,22 @@ export interface EpiEntregaItemInput {
   ca_numero?: string;
   quantidade: number;
 }
+
+export interface EpiTransferencia {
+  id: string;
+  empresa_origem: string;
+  empresa_destino: string;
+  observacao: string | null;
+  total_itens: number;
+  criado_por: string | null;
+  criado_em: string;
+  origem?: { nome_empresa: string } | null;
+  destino?: { nome_empresa: string } | null;
+}
+
+/** Linha de item ao transferir (enviada à RPC epi_transferir). */
+export interface EpiTransferItemInput {
+  id_catalogo_origem: string;
+  quantidade: number;
+  id_catalogo_destino?: string | null;
+}
