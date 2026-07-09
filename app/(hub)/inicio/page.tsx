@@ -24,6 +24,7 @@ import {
   FileClock,
   TrendingUp,
   Siren,
+  HardHat,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useUserStore } from "@/lib/store";
@@ -122,6 +123,17 @@ const CARDS: HubCardCfg[] = [
     categoria: "seguranca",
     skipStats: true,
     staticLabel: "Investigação de acidentes do trabalho",
+  },
+  {
+    modulo: "epi",
+    href: "/epi",
+    title: "Gestão de EPI",
+    description: "Catálogo com C.A., estoque, entrega com ficha assinada e transferência entre empresas",
+    icon: <HardHat className="size-12" />,
+    accent: "#0369A1",
+    categoria: "seguranca",
+    skipStats: true,
+    staticLabel: "Controle de EPI por empresa",
   },
   // ── NR — Fatores Psicossocial ──────────────────────────────────────
   {
