@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, CalendarSearch, UserCheck, UserX, CheckCircle2, AlertTriangle, CalendarDays, CalendarClock } from "lucide-react";
-import { useGGSubstituicoes, rotuloTipoAusencia, type GGSubstituicaoRow } from "@/lib/hooks/useGestaoGerencial";
+import { Loader2, CalendarSearch, UserX, CheckCircle2, CalendarDays, CalendarClock } from "lucide-react";
+import { useGGSubstituicoes, useGGSubsSalvas, chaveSlot, rotuloTipoAusencia, type GGSubstituicaoRow } from "@/lib/hooks/useGestaoGerencial";
+import { useCanEdit } from "@/lib/hooks/useUsuario";
 import ProjecaoMensal from "@/components/gestao-gerencial/ProjecaoMensal";
+import SlotSubstitutos from "@/components/gestao-gerencial/SlotSubstitutos";
 
 const hoje = () => {
   const d = new Date();
@@ -20,6 +22,8 @@ const fmtLongo = (iso: string) => {
 
 interface Grupo {
   chave: string;
+  id_ausente: string;
+  id_turno: string;
   turno_nome: string;
   categoria_nome: string | null;
   ausente_nome: string;
@@ -33,7 +37,7 @@ function agrupar(rows: GGSubstituicaoRow[]): Grupo[] {
     const chave = `${r.id_ausente}|${r.id_turno}`;
     let g = map.get(chave);
     if (!g) {
-      g = { chave, turno_nome: r.turno_nome, categoria_nome: r.categoria_nome, ausente_nome: r.ausente_nome, tipo_ausencia: r.tipo_ausencia, substitutos: [] };
+      g = { chave, id_ausente: r.id_ausente, id_turno: r.id_turno, turno_nome: r.turno_nome, categoria_nome: r.categoria_nome, ausente_nome: r.ausente_nome, tipo_ausencia: r.tipo_ausencia, substitutos: [] };
       map.set(chave, g);
     }
     if (r.id_substituto && r.substituto_nome) g.substitutos.push({ id: r.id_substituto, nome: r.substituto_nome });
@@ -72,9 +76,16 @@ export default function SubstituicoesTab({ idUnidade }: { idUnidade: string }) {
  * dia (por turno) e sugere substitutos da mesma unidade/categoria, ativos e sem conflito.
  */
 function VisaoDiaria({ idUnidade }: { idUnidade: string }) {
+  const podeEditar = useCanEdit();
   const [data, setData] = useState<string>(hoje());
   const q = useGGSubstituicoes(idUnidade, data);
   const grupos = useMemo(() => agrupar(q.data ?? []), [q.data]);
+  const salvas = useGGSubsSalvas(idUnidade, data, data);
+  const escolhidos = useMemo(() => {
+    const m = new Map<string, { id: string; nome: string | null }>();
+    for (const s of salvas.data ?? []) m.set(chaveSlot(s.data, s.id_turno, s.id_ausente), { id: s.id_substituto, nome: s.substituto?.nome ?? null });
+    return m;
+  }, [salvas.data]);
 
   return (
     <section className="space-y-4">
@@ -113,21 +124,15 @@ function VisaoDiaria({ idUnidade }: { idUnidade: string }) {
                 </span>
               </div>
 
-              {g.substitutos.length === 0 ? (
-                <div className="flex items-center gap-1.5 text-sm text-amber-700">
-                  <AlertTriangle className="size-4 shrink-0" />
-                  Nenhum substituto disponível (mesma categoria, ativo e sem conflito de escala).
-                </div>
-              ) : (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs text-gray-500">Substitutos sugeridos:</span>
-                  {g.substitutos.map((s) => (
-                    <span key={s.id} className="inline-flex items-center gap-1 rounded-md border border-verde-primary/30 bg-verde-primary/5 px-2 py-0.5 text-xs font-medium text-verde-primary">
-                      <UserCheck className="size-3.5" /> {s.nome}
-                    </span>
-                  ))}
-                </div>
-              )}
+              <SlotSubstitutos
+                idUnidade={idUnidade}
+                data={data}
+                idTurno={g.id_turno}
+                idAusente={g.id_ausente}
+                sugeridos={g.substitutos}
+                chosen={escolhidos.get(chaveSlot(data, g.id_turno, g.id_ausente)) ?? null}
+                podeEditar={podeEditar}
+              />
             </li>
           ))}
         </ul>

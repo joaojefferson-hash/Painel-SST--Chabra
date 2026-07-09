@@ -15,7 +15,8 @@ export interface GGVinculo {
   profissional: { nome: string; ativo: boolean } | null;
   categoria: { nome: string } | null;
 }
-export interface GGEscala { id: string; id_profissional: string; id_unidade: string; dia_semana: number; id_turno: string }
+export type EscalaTipo = "trabalha" | "disponivel";
+export interface GGEscala { id: string; id_profissional: string; id_unidade: string; dia_semana: number; id_turno: string; tipo: EscalaTipo }
 
 // A RPC nova (gg_sugerir_substitutos) ainda não está nos tipos gerados → cast tipado.
 type GGRpc = {
@@ -203,13 +204,21 @@ export function useGGEscala(idUnidade: string | null | undefined) {
   });
 }
 
-export function useToggleEscala() {
+/**
+ * Ciclo tri-estado de uma célula da escala ao clicar:
+ *   vazio → 'trabalha' (Atua) → 'disponivel' (Disponível p/ substituir) → vazio.
+ * `atual`/`id_existente` descrevem o estado atual da célula.
+ */
+export function useCicloEscala() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (p: { id_profissional: string; id_unidade: string; dia_semana: number; id_turno: string; marcar: boolean; id_existente?: string }) => {
+    mutationFn: async (p: { id_profissional: string; id_unidade: string; dia_semana: number; id_turno: string; atual: EscalaTipo | null; id_existente?: string }) => {
       const sb = createSupabaseBrowserClient();
-      if (p.marcar) {
-        const { error } = await sb.from("gg_escala_padrao").insert({ id: gerarId("ESC"), id_profissional: p.id_profissional, id_unidade: p.id_unidade, dia_semana: p.dia_semana, id_turno: p.id_turno } as never);
+      if (p.atual === null) {
+        const { error } = await sb.from("gg_escala_padrao").insert({ id: gerarId("ESC"), id_profissional: p.id_profissional, id_unidade: p.id_unidade, dia_semana: p.dia_semana, id_turno: p.id_turno, tipo: "trabalha" } as never);
+        if (error) throw error;
+      } else if (p.atual === "trabalha" && p.id_existente) {
+        const { error } = await sb.from("gg_escala_padrao").update({ tipo: "disponivel" } as never).eq("id", p.id_existente);
         if (error) throw error;
       } else if (p.id_existente) {
         const { error } = await sb.from("gg_escala_padrao").delete().eq("id", p.id_existente);
@@ -331,4 +340,64 @@ export function useGGProjecaoMensal(idUnidade: string | null | undefined, ano: n
       return rows ?? [];
     },
   });
+}
+
+// ── Substituições ESCOLHIDAS (decisão persistida) ────────────────────────────
+export interface GGSubSalva {
+  id: string; id_unidade: string; data: string;
+  id_turno: string; id_ausente: string; id_substituto: string;
+  substituto: { nome: string } | null;
+}
+/** Chave de um slot (data+turno+ausente) para casar sugestão × escolha salva. */
+export const chaveSlot = (data: string, idTurno: string, idAusente: string) => `${data}|${idTurno}|${idAusente}`;
+
+/** Substituições já escolhidas na unidade dentro de um intervalo de datas. */
+export function useGGSubsSalvas(idUnidade: string | null | undefined, dataIni: string, dataFim: string) {
+  return useQuery({
+    queryKey: ["gg-subs-salvas", idUnidade, dataIni, dataFim],
+    enabled: !!idUnidade && !!dataIni && !!dataFim,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb
+        .from("gg_substituicoes")
+        .select("id, id_unidade, data, id_turno, id_ausente, id_substituto, substituto:gg_profissionais!gg_substituicoes_id_substituto_fkey(nome)")
+        .eq("id_unidade", idUnidade!)
+        .gte("data", dataIni)
+        .lte("data", dataFim);
+      if (error) throw error;
+      return (data ?? []) as unknown as GGSubSalva[];
+    },
+  });
+}
+
+export function useGGSubstituicaoMut() {
+  const qc = useQueryClient();
+  const inval = (idUnidade: string) => qc.invalidateQueries({ queryKey: ["gg-subs-salvas", idUnidade] });
+  // define/troca o substituto de um slot (um por slot: apaga o anterior e grava o novo)
+  const setSub = useMutation({
+    mutationFn: async (p: { id_unidade: string; data: string; id_turno: string; id_ausente: string; id_substituto: string }) => {
+      const sb = createSupabaseBrowserClient();
+      const { error: e1 } = await sb.from("gg_substituicoes").delete()
+        .eq("id_unidade", p.id_unidade).eq("data", p.data).eq("id_turno", p.id_turno).eq("id_ausente", p.id_ausente);
+      if (e1) throw e1;
+      const { error: e2 } = await sb.from("gg_substituicoes").insert({
+        id: gerarId("SUB"), id_unidade: p.id_unidade, data: p.data,
+        id_turno: p.id_turno, id_ausente: p.id_ausente, id_substituto: p.id_substituto,
+      } as never);
+      if (e2) throw e2;
+    },
+    onSuccess: (_d, p) => inval(p.id_unidade),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
+  });
+  const removerSub = useMutation({
+    mutationFn: async (p: { id_unidade: string; data: string; id_turno: string; id_ausente: string }) => {
+      const sb = createSupabaseBrowserClient();
+      const { error } = await sb.from("gg_substituicoes").delete()
+        .eq("id_unidade", p.id_unidade).eq("data", p.data).eq("id_turno", p.id_turno).eq("id_ausente", p.id_ausente);
+      if (error) throw error;
+    },
+    onSuccess: (_d, p) => inval(p.id_unidade),
+    onError: (e: Error) => toast.error(mensagemErro(e)),
+  });
+  return { setSub, removerSub };
 }

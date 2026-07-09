@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, CheckCircle2, AlertTriangle, UserCheck, UserX } from "lucide-react";
-import { useGGProjecaoMensal, rotuloTipoAusencia, type GGProjecaoRow } from "@/lib/hooks/useGestaoGerencial";
+import { Loader2, CheckCircle2, UserX } from "lucide-react";
+import { useGGProjecaoMensal, useGGSubsSalvas, chaveSlot, rotuloTipoAusencia, type GGProjecaoRow } from "@/lib/hooks/useGestaoGerencial";
+import { useCanEdit } from "@/lib/hooks/useUsuario";
+import SlotSubstitutos from "@/components/gestao-gerencial/SlotSubstitutos";
 
 const mesAtual = () => {
   const d = new Date();
@@ -18,7 +20,8 @@ const fmtDiaLista = (iso: string) => {
 };
 
 interface Slot {
-  chave: string; turno_nome: string; categoria_nome: string | null;
+  chave: string; id_ausente: string; id_turno: string;
+  turno_nome: string; categoria_nome: string | null;
   ausente_nome: string; tipo_ausencia: string; substitutos: { id: string; nome: string }[];
 }
 
@@ -29,7 +32,7 @@ function agruparPorDia(rows: GGProjecaoRow[]): Map<string, Slot[]> {
     if (!sm) { sm = new Map(); dias.set(r.data, sm); }
     const chave = `${r.id_ausente}|${r.id_turno}`;
     let s = sm.get(chave);
-    if (!s) { s = { chave, turno_nome: r.turno_nome, categoria_nome: r.categoria_nome, ausente_nome: r.ausente_nome, tipo_ausencia: r.tipo_ausencia, substitutos: [] }; sm.set(chave, s); }
+    if (!s) { s = { chave, id_ausente: r.id_ausente, id_turno: r.id_turno, turno_nome: r.turno_nome, categoria_nome: r.categoria_nome, ausente_nome: r.ausente_nome, tipo_ausencia: r.tipo_ausencia, substitutos: [] }; sm.set(chave, s); }
     if (r.id_substituto && r.substituto_nome) s.substitutos.push({ id: r.id_substituto, nome: r.substituto_nome });
   }
   const out = new Map<string, Slot[]>();
@@ -44,6 +47,18 @@ export default function ProjecaoMensal({ idUnidade }: { idUnidade: string }) {
   const [selDia, setSelDia] = useState<string | null>(null);
   const q = useGGProjecaoMensal(idUnidade, ano, mesNum);
   const porDia = useMemo(() => agruparPorDia(q.data ?? []), [q.data]);
+  const podeEditar = useCanEdit();
+
+  // substituições já escolhidas no mês
+  const nDiasMes = ano && mesNum ? new Date(ano, mesNum, 0).getDate() : 0;
+  const iniMes = ano ? `${ano}-${String(mesNum).padStart(2, "0")}-01` : "";
+  const fimMes = ano ? `${ano}-${String(mesNum).padStart(2, "0")}-${String(nDiasMes).padStart(2, "0")}` : "";
+  const salvas = useGGSubsSalvas(idUnidade, iniMes, fimMes);
+  const escolhidos = useMemo(() => {
+    const m = new Map<string, { id: string; nome: string | null }>();
+    for (const s of salvas.data ?? []) m.set(chaveSlot(s.data, s.id_turno, s.id_ausente), { id: s.id_substituto, nome: s.substituto?.nome ?? null });
+    return m;
+  }, [salvas.data]);
 
   // resumo
   const resumo = useMemo(() => {
@@ -188,20 +203,15 @@ export default function ProjecaoMensal({ idUnidade }: { idUnidade: string }) {
                           {rotuloTipoAusencia(s.tipo_ausencia)}
                         </span>
                       </div>
-                      {s.substitutos.length === 0 ? (
-                        <div className="flex items-center gap-1.5 text-sm text-amber-700">
-                          <AlertTriangle className="size-4 shrink-0" /> Nenhum substituto disponível.
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-xs text-gray-500">Substitutos:</span>
-                          {s.substitutos.map((sub) => (
-                            <span key={sub.id} className="inline-flex items-center gap-1 rounded-md border border-verde-primary/30 bg-verde-primary/5 px-2 py-0.5 text-xs font-medium text-verde-primary">
-                              <UserCheck className="size-3.5" /> {sub.nome}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <SlotSubstitutos
+                        idUnidade={idUnidade}
+                        data={iso}
+                        idTurno={s.id_turno}
+                        idAusente={s.id_ausente}
+                        sugeridos={s.substitutos}
+                        chosen={escolhidos.get(chaveSlot(iso, s.id_turno, s.id_ausente)) ?? null}
+                        podeEditar={podeEditar}
+                      />
                     </li>
                   ))}
                 </ul>

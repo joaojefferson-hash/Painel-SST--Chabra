@@ -4,29 +4,30 @@ import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useCanEdit } from "@/lib/hooks/useUsuario";
 import {
-  useGGEquipe, useGGTurnos, useGGEscala, useToggleEscala, DIAS_SEMANA,
+  useGGEquipe, useGGTurnos, useGGEscala, useCicloEscala, DIAS_SEMANA, type EscalaTipo,
 } from "@/lib/hooks/useGestaoGerencial";
 
 /**
  * Escala padrão semanal da unidade: para o turno selecionado, uma grade
- * profissionais × dias. Clicar numa célula marca/desmarca quem atua naquele
- * dia+turno (gg_escala_padrao).
+ * profissionais × dias, TRI-ESTADO por célula:
+ *   vazio → Atua (verde) → Disponível p/ substituir (azul) → vazio.
+ * Só quem estiver "Disponível" entra como possível substituto na aba Substituições.
  */
 export default function EscalaTab({ idUnidade }: { idUnidade: string }) {
   const podeEditar = useCanEdit();
   const equipe = useGGEquipe(idUnidade);
   const turnos = useGGTurnos(idUnidade);
   const escala = useGGEscala(idUnidade);
-  const toggle = useToggleEscala();
+  const ciclo = useCicloEscala();
 
   const turnosAtivos = useMemo(() => (turnos.data ?? []).filter((t) => t.ativo), [turnos.data]);
   const [idTurno, setIdTurno] = useState<string>("");
   const turnoSel = idTurno || turnosAtivos[0]?.id || "";
 
-  // índice das células marcadas: chave "prof|dia|turno" → id do registro
+  // índice das células: chave "prof|dia|turno" → { id, tipo }
   const marcados = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const e of escala.data ?? []) m.set(`${e.id_profissional}|${e.dia_semana}|${e.id_turno}`, e.id);
+    const m = new Map<string, { id: string; tipo: EscalaTipo }>();
+    for (const e of escala.data ?? []) m.set(`${e.id_profissional}|${e.dia_semana}|${e.id_turno}`, { id: e.id, tipo: e.tipo });
     return m;
   }, [escala.data]);
 
@@ -52,15 +53,10 @@ export default function EscalaTab({ idUnidade }: { idUnidade: string }) {
 
   function clique(idProf: string, dia: number) {
     if (!podeEditar || !turnoSel) return;
-    const chave = `${idProf}|${dia}|${turnoSel}`;
-    const existente = marcados.get(chave);
-    toggle.mutate({
-      id_profissional: idProf,
-      id_unidade: idUnidade,
-      dia_semana: dia,
-      id_turno: turnoSel,
-      marcar: !existente,
-      id_existente: existente,
+    const cel = marcados.get(`${idProf}|${dia}|${turnoSel}`);
+    ciclo.mutate({
+      id_profissional: idProf, id_unidade: idUnidade, dia_semana: dia, id_turno: turnoSel,
+      atual: cel?.tipo ?? null, id_existente: cel?.id,
     });
   }
 
@@ -77,7 +73,7 @@ export default function EscalaTab({ idUnidade }: { idUnidade: string }) {
             <option key={t.id} value={t.id}>{t.nome}</option>
           ))}
         </select>
-        {toggle.isPending && <Loader2 className="size-4 animate-spin text-verde-primary" />}
+        {ciclo.isPending && <Loader2 className="size-4 animate-spin text-verde-primary" />}
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200">
@@ -102,22 +98,26 @@ export default function EscalaTab({ idUnidade }: { idUnidade: string }) {
                   {v.categoria?.nome && <div className="text-xs text-gray-400">{v.categoria.nome}</div>}
                 </td>
                 {DIAS_SEMANA.map((d) => {
-                  const on = marcados.has(`${v.id_profissional}|${d.n}|${turnoSel}`);
+                  const cel = marcados.get(`${v.id_profissional}|${d.n}|${turnoSel}`);
+                  const tipo = cel?.tipo ?? null;
+                  const cls =
+                    tipo === "trabalha" ? "border-verde-primary bg-verde-primary text-white"
+                    : tipo === "disponivel" ? "border-blue-500 bg-blue-500 text-white"
+                    : "border-gray-300 bg-white text-transparent hover:border-verde-primary/50 hover:bg-verde-primary/5";
+                  const titulo =
+                    tipo === "trabalha" ? "Atua neste dia — clique para tornar Disponível p/ substituir"
+                    : tipo === "disponivel" ? "Disponível p/ substituir — clique para limpar"
+                    : "Clique para marcar que atua";
                   return (
                     <td key={d.n} className="border-b border-gray-100 px-2 py-1.5 text-center">
                       <button
                         type="button"
                         onClick={() => clique(v.id_profissional, d.n)}
                         disabled={!podeEditar}
-                        aria-pressed={on}
-                        className={`size-6 rounded-md border text-xs transition-colors ${
-                          on
-                            ? "border-verde-primary bg-verde-primary text-white"
-                            : "border-gray-300 bg-white text-transparent hover:border-verde-primary/50 hover:bg-verde-primary/5"
-                        } ${podeEditar ? "cursor-pointer" : "cursor-default"}`}
-                        title={on ? "Atua neste dia — clique para remover" : "Clique para marcar"}
+                        className={`size-6 rounded-md border text-xs font-bold transition-colors ${cls} ${podeEditar ? "cursor-pointer" : "cursor-default"}`}
+                        title={titulo}
                       >
-                        {on ? "✓" : ""}
+                        {tipo === "trabalha" ? "✓" : tipo === "disponivel" ? "D" : ""}
                       </button>
                     </td>
                   );
@@ -127,10 +127,11 @@ export default function EscalaTab({ idUnidade }: { idUnidade: string }) {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-gray-500">
-        Marque em quais dias cada profissional atua neste turno. A escala padrão é o ponto de partida para detectar quem
-        precisa de substituto quando houver ausências.
-      </p>
+      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+        <span className="inline-flex items-center gap-1.5"><span className="inline-flex size-4 items-center justify-center rounded border border-verde-primary bg-verde-primary text-[10px] font-bold text-white">✓</span> Atua</span>
+        <span className="inline-flex items-center gap-1.5"><span className="inline-flex size-4 items-center justify-center rounded border border-blue-500 bg-blue-500 text-[10px] font-bold text-white">D</span> Disponível p/ substituir</span>
+        <span className="text-gray-400">Clique cicla: vazio → Atua → Disponível → vazio.</span>
+      </div>
     </section>
   );
 }
