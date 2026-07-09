@@ -225,7 +225,12 @@ export function useCicloEscala() {
         if (error) throw error;
       }
     },
-    onSuccess: (_d, p) => qc.invalidateQueries({ queryKey: ["gg-escala", p.id_unidade] }),
+    // mudar quem atua/está disponível afeta as sugestões → invalida também substituições e projeção
+    onSuccess: (_d, p) => {
+      qc.invalidateQueries({ queryKey: ["gg-escala", p.id_unidade] });
+      qc.invalidateQueries({ queryKey: ["gg-substituicoes", p.id_unidade] });
+      qc.invalidateQueries({ queryKey: ["gg-projecao", p.id_unidade] });
+    },
     onError: (e: Error) => toast.error(mensagemErro(e)),
   });
 }
@@ -275,6 +280,7 @@ export function useGGAusenciaMut() {
   const inval = (idUnidade: string) => {
     qc.invalidateQueries({ queryKey: ["gg-ausencias", idUnidade] });
     qc.invalidateQueries({ queryKey: ["gg-substituicoes", idUnidade] });
+    qc.invalidateQueries({ queryKey: ["gg-projecao", idUnidade] });
   };
   const criar = useMutation({
     mutationFn: async (p: { id_unidade: string; id_profissional: string; tipo: string; data_inicio: string; data_fim: string; obs?: string }) => {
