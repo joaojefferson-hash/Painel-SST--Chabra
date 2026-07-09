@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Trash2, Loader2, Package, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Loader2, Package, AlertTriangle, PenLine, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
 import BotaoGerarPdf from "@/components/ui/BotaoGerarPdf";
 import { inputCls, labelCls } from "@/components/epi/EpiModal";
+import EpiAssinaturaModal from "@/components/epi/EpiAssinaturaModal";
 import { useEpiColaboradores, useEpiCatalogo, useEpiSaldo, useEpiEntregas, useRegistrarEntrega } from "@/lib/hooks/useEpi";
-import type { EpiEntregaItemInput } from "@/lib/epi/types";
+import type { EpiEntregaItemInput, EpiEntrega } from "@/lib/epi/types";
 
 const hoje = () => {
   const d = new Date(); const off = d.getTimezoneOffset();
@@ -31,6 +32,7 @@ export default function EpiEntregasTab({ empresaId, canEdit }: { empresaId: stri
   const [resp, setResp] = useState("");
   const [obs, setObs] = useState("");
   const [linhas, setLinhas] = useState<Linha[]>([{ id_catalogo: "", quantidade: "" }]);
+  const [assinar, setAssinar] = useState<EpiEntrega | null>(null);
 
   const setLinha = (i: number, patch: Partial<Linha>) => setLinhas((a) => a.map((l, idx) => idx === i ? { ...l, ...patch } : l));
   const addLinha = () => setLinhas((a) => [...a, { id_catalogo: "", quantidade: "" }]);
@@ -121,10 +123,17 @@ export default function EpiEntregasTab({ empresaId, canEdit }: { empresaId: stri
                   <div className="font-medium text-gray-900">{e.colaborador?.nome ?? "—"}</div>
                   <div className="text-xs text-gray-500">{fmtData(e.data_entrega)} · {e.total_itens} {e.total_itens === 1 ? "item" : "itens"}{e.responsavel_entrega ? ` · por ${e.responsavel_entrega}` : ""}</div>
                 </div>
-                {e.status === "assinada" ? (
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Assinada</span>
+                {(e.assinaturas?.length ?? 0) > 0 ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"><CheckCircle2 className="size-3" /> Assinada</span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700"><AlertTriangle className="size-3" /> Sem assinatura</span>
+                  <>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700"><AlertTriangle className="size-3" /> Sem assinatura</span>
+                    {canEdit && (
+                      <button type="button" onClick={() => setAssinar(e)} className="inline-flex items-center gap-1 rounded-md border border-verde-primary/40 px-2 py-1 text-xs font-medium text-verde-primary hover:bg-verde-primary/5">
+                        <PenLine className="size-3.5" /> Assinar
+                      </button>
+                    )}
+                  </>
                 )}
                 <BotaoGerarPdf
                   apiPdfUrl={`/api/pdf/epi-entrega/${e.id}`}
@@ -138,6 +147,15 @@ export default function EpiEntregasTab({ empresaId, canEdit }: { empresaId: stri
           </ul>
         )}
       </div>
+
+      {assinar && (
+        <EpiAssinaturaModal
+          idEntrega={assinar.id}
+          empresaId={empresaId}
+          colaboradorNome={assinar.colaborador?.nome ?? ""}
+          onClose={() => setAssinar(null)}
+        />
+      )}
     </div>
   );
 }

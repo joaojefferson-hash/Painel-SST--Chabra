@@ -99,6 +99,7 @@ export interface EpiEntrega {
   criado_por: string | null;
   criado_em: string;
   colaborador?: { nome: string } | null;
+  assinaturas?: { id: string }[] | null;
 }
 
 export interface EpiEntregaItem {

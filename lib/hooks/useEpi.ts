@@ -230,7 +230,7 @@ export function useEpiEntregas(empresaId: string | null | undefined) {
       const sb = createSupabaseBrowserClient();
       const { data, error } = await sb
         .from("epi_entregas")
-        .select("*, colaborador:epi_colaboradores(nome)")
+        .select("*, colaborador:epi_colaboradores(nome), assinaturas:epi_entrega_assinaturas(id)")
         .eq("empresa_id", empresaId!)
         .order("criado_em", { ascending: false });
       if (error) throw error;
@@ -273,6 +273,31 @@ export function useRegistrarEntrega() {
       qc.invalidateQueries({ queryKey: ["epi-movimentacoes", p.empresa_id] });
       qc.invalidateQueries({ queryKey: ["epi-saldo", p.empresa_id] });
       toast.success("Entrega registrada");
+    },
+    onError: (e: Error) => toast.error(mensagemErro(e)),
+  });
+}
+
+export function useAssinarEntrega() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: {
+      empresa_id: string; id_entrega: string; assinante_nome: string;
+      assinatura_png: string; pdf_sha256: string; consentimento: boolean;
+    }) => {
+      const sb = createSupabaseBrowserClient() as unknown as EpiRpc;
+      const { data, error } = await sb.rpc<string>("epi_assinar_entrega", {
+        p_id_entrega: p.id_entrega, p_assinante_nome: p.assinante_nome || null,
+        p_assinatura_png: p.assinatura_png, p_pdf_sha256: p.pdf_sha256 || null,
+        p_user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        p_consentimento: p.consentimento,
+      });
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: (_d, p) => {
+      qc.invalidateQueries({ queryKey: ["epi-entregas", p.empresa_id] });
+      toast.success("Entrega assinada");
     },
     onError: (e: Error) => toast.error(mensagemErro(e)),
   });
