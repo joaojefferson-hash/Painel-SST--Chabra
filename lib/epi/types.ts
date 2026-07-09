@@ -56,3 +56,32 @@ export interface EpiSaldo {
   id_catalogo: string;
   saldo: number;
 }
+
+export interface EpiImportacaoNfe {
+  id: string;
+  empresa_id: string;
+  chnfe: string;
+  fornecedor_cnpj: string | null;
+  fornecedor_nome: string | null;
+  numero_nf: string | null;
+  data_emissao: string | null;
+  xml_nome: string | null;
+  total_itens: number;
+  itens_lancados: number;
+  status: string;
+  criado_por: string | null;
+  criado_em: string;
+}
+
+/** Item da NF-e já com a decisão de mapeamento (enviado à RPC epi_importar_nfe). */
+export interface EpiNfeItemMap {
+  cprod: string;
+  xprod: string;
+  ncm: string;
+  unidade: string;
+  quantidade: number;
+  valor_unitario: number;
+  status_map: "novo" | "vinculado" | "ignorado";
+  id_catalogo?: string | null;
+  nome_novo?: string;
+}

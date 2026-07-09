@@ -8,10 +8,16 @@ import { gerarId } from "@/lib/utils";
 import { useUserStore } from "@/lib/store";
 import type {
   EpiColaborador, EpiCatalogoItem, EpiMovimentacao, EpiSaldo, EpiMovTipo,
+  EpiImportacaoNfe, EpiNfeItemMap,
 } from "@/lib/epi/types";
 
 /** Email do usuário logado (autor das escritas). */
 const emailAtual = () => useUserStore.getState().user?.email ?? null;
+
+// RPCs do EPI ainda não estão nos tipos gerados → cast tipado.
+type EpiRpc = {
+  rpc<T = unknown>(fn: string, args?: Record<string, unknown>): Promise<{ data: T; error: { message: string } | null }>;
+};
 
 // ── Colaboradores ─────────────────────────────────────────────────────────────
 export function useEpiColaboradores(empresaId: string | null | undefined) {
@@ -168,6 +174,48 @@ export function useRegistrarMovimentacao() {
       qc.invalidateQueries({ queryKey: ["epi-movimentacoes", p.empresa_id] });
       qc.invalidateQueries({ queryKey: ["epi-saldo", p.empresa_id] });
       toast.success("Movimentação registrada");
+    },
+    onError: (e: Error) => toast.error(mensagemErro(e)),
+  });
+}
+
+// ── Importação de NF-e ────────────────────────────────────────────────────────
+export function useEpiImportacoes(empresaId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["epi-importacoes", empresaId],
+    enabled: !!empresaId,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("epi_importacoes_nfe").select("*").eq("empresa_id", empresaId!).order("criado_em", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as EpiImportacaoNfe[];
+    },
+  });
+}
+
+export function useImportarNfe() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: {
+      empresa_id: string; chnfe: string; fornecedor_cnpj: string; fornecedor_nome: string;
+      numero_nf: string; data_emissao: string; xml_nome: string; itens: EpiNfeItemMap[];
+    }) => {
+      const sb = createSupabaseBrowserClient() as unknown as EpiRpc;
+      const { data, error } = await sb.rpc<string>("epi_importar_nfe", {
+        p_empresa_id: p.empresa_id, p_chnfe: p.chnfe,
+        p_fornecedor_cnpj: p.fornecedor_cnpj || null, p_fornecedor_nome: p.fornecedor_nome || null,
+        p_numero_nf: p.numero_nf || null, p_data_emissao: p.data_emissao || null,
+        p_xml_nome: p.xml_nome || null, p_itens: p.itens,
+      });
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: (_d, p) => {
+      qc.invalidateQueries({ queryKey: ["epi-importacoes", p.empresa_id] });
+      qc.invalidateQueries({ queryKey: ["epi-catalogo", p.empresa_id] });
+      qc.invalidateQueries({ queryKey: ["epi-movimentacoes", p.empresa_id] });
+      qc.invalidateQueries({ queryKey: ["epi-saldo", p.empresa_id] });
+      toast.success("NF-e importada");
     },
     onError: (e: Error) => toast.error(mensagemErro(e)),
   });

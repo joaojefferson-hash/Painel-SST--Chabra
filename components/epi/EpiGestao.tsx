@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, Boxes, Users } from "lucide-react";
+import { BookOpen, Boxes, Users, FileInput } from "lucide-react";
 import EpiCatalogoTab from "@/components/epi/EpiCatalogoTab";
 import EpiEstoqueTab from "@/components/epi/EpiEstoqueTab";
 import EpiColaboradoresTab from "@/components/epi/EpiColaboradoresTab";
+import EpiNfeTab from "@/components/epi/EpiNfeTab";
 
-type AbaId = "catalogo" | "estoque" | "colaboradores";
+type AbaId = "catalogo" | "estoque" | "nfe" | "colaboradores";
 
 interface AbaCfg {
   id: AbaId;
@@ -14,12 +15,14 @@ interface AbaCfg {
   icon: typeof BookOpen;
   render: (empresaId: string, canEdit: boolean) => React.ReactNode;
   soInterno?: boolean; // ocultar no Portal do cliente
+  soEdicao?: boolean;  // só quando canEdit
 }
 
-// Abas da Fase 1. NF-e, Entregas e Transferências entram nas próximas fases.
+// Entregas e Transferências entram nas próximas fases.
 const ABAS: AbaCfg[] = [
   { id: "catalogo", label: "Catálogo", icon: BookOpen, render: (e, c) => <EpiCatalogoTab empresaId={e} canEdit={c} /> },
   { id: "estoque", label: "Estoque", icon: Boxes, render: (e, c) => <EpiEstoqueTab empresaId={e} canEdit={c} /> },
+  { id: "nfe", label: "NF-e", icon: FileInput, render: (e, c) => <EpiNfeTab empresaId={e} canEdit={c} />, soEdicao: true },
   { id: "colaboradores", label: "Colaboradores", icon: Users, render: (e, c) => <EpiColaboradoresTab empresaId={e} canEdit={c} /> },
 ];
 
@@ -34,7 +37,7 @@ export default function EpiGestao({
   canEdit: boolean;
   contexto?: "interno" | "cliente";
 }) {
-  const abas = ABAS.filter((a) => !(a.soInterno && contexto === "cliente"));
+  const abas = ABAS.filter((a) => !(a.soInterno && contexto === "cliente") && !(a.soEdicao && !canEdit));
   const [aba, setAba] = useState<AbaId>(abas[0]?.id ?? "catalogo");
   const atual = abas.find((a) => a.id === aba) ?? abas[0];
 
