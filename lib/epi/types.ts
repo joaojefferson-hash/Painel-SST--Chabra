@@ -85,3 +85,37 @@ export interface EpiNfeItemMap {
   id_catalogo?: string | null;
   nome_novo?: string;
 }
+
+export interface EpiEntrega {
+  id: string;
+  empresa_id: string;
+  id_colaborador: string;
+  data_entrega: string;
+  responsavel_entrega: string | null;
+  observacao: string | null;
+  total_itens: number;
+  status: string;
+  assinatura_recebedor: string | null;
+  criado_por: string | null;
+  criado_em: string;
+  colaborador?: { nome: string } | null;
+}
+
+export interface EpiEntregaItem {
+  id: string;
+  id_entrega: string;
+  empresa_id: string;
+  id_catalogo: string | null;
+  nome_epi: string | null;
+  ca_numero: string | null;
+  quantidade: number;
+  criado_em: string;
+}
+
+/** Linha de item ao registrar uma entrega (enviada à RPC epi_registrar_entrega). */
+export interface EpiEntregaItemInput {
+  id_catalogo: string;
+  nome_epi?: string;
+  ca_numero?: string;
+  quantidade: number;
+}

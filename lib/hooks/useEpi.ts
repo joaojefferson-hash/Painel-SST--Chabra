@@ -8,7 +8,7 @@ import { gerarId } from "@/lib/utils";
 import { useUserStore } from "@/lib/store";
 import type {
   EpiColaborador, EpiCatalogoItem, EpiMovimentacao, EpiSaldo, EpiMovTipo,
-  EpiImportacaoNfe, EpiNfeItemMap,
+  EpiImportacaoNfe, EpiNfeItemMap, EpiEntrega, EpiEntregaItem, EpiEntregaItemInput,
 } from "@/lib/epi/types";
 
 /** Email do usuário logado (autor das escritas). */
@@ -216,6 +216,63 @@ export function useImportarNfe() {
       qc.invalidateQueries({ queryKey: ["epi-movimentacoes", p.empresa_id] });
       qc.invalidateQueries({ queryKey: ["epi-saldo", p.empresa_id] });
       toast.success("NF-e importada");
+    },
+    onError: (e: Error) => toast.error(mensagemErro(e)),
+  });
+}
+
+// ── Entregas ──────────────────────────────────────────────────────────────────
+export function useEpiEntregas(empresaId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["epi-entregas", empresaId],
+    enabled: !!empresaId,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb
+        .from("epi_entregas")
+        .select("*, colaborador:epi_colaboradores(nome)")
+        .eq("empresa_id", empresaId!)
+        .order("criado_em", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as EpiEntrega[];
+    },
+  });
+}
+
+export function useEpiEntregaItens(idEntrega: string | null | undefined) {
+  return useQuery({
+    queryKey: ["epi-entrega-itens", idEntrega],
+    enabled: !!idEntrega,
+    queryFn: async () => {
+      const sb = createSupabaseBrowserClient();
+      const { data, error } = await sb.from("epi_entregas_itens").select("*").eq("id_entrega", idEntrega!);
+      if (error) throw error;
+      return (data ?? []) as unknown as EpiEntregaItem[];
+    },
+  });
+}
+
+export function useRegistrarEntrega() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: {
+      empresa_id: string; id_colaborador: string; data_entrega: string;
+      responsavel?: string; observacao?: string; itens: EpiEntregaItemInput[];
+    }) => {
+      const sb = createSupabaseBrowserClient() as unknown as EpiRpc;
+      const { data, error } = await sb.rpc<string>("epi_registrar_entrega", {
+        p_empresa_id: p.empresa_id, p_id_colaborador: p.id_colaborador,
+        p_data_entrega: p.data_entrega || null, p_responsavel: p.responsavel || null,
+        p_observacao: p.observacao || null, p_itens: p.itens,
+      });
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: (_d, p) => {
+      qc.invalidateQueries({ queryKey: ["epi-entregas", p.empresa_id] });
+      qc.invalidateQueries({ queryKey: ["epi-movimentacoes", p.empresa_id] });
+      qc.invalidateQueries({ queryKey: ["epi-saldo", p.empresa_id] });
+      toast.success("Entrega registrada");
     },
     onError: (e: Error) => toast.error(mensagemErro(e)),
   });
