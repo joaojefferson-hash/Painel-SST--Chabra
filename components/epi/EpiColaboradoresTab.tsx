@@ -173,13 +173,21 @@ function BiometriaColaborador({ colaborador }: { colaborador: EpiColaborador }) 
   const jaTem = !!colaborador.biometria_em;
   const dedoLabel = `${dedo} — mão ${mao.toLowerCase()}`;
 
-  async function capturarToque() {
+  // captura os 4 toques em sequência, avançando sozinho (retoma de onde parou)
+  async function iniciarCadastro() {
     if (!consent) { toast.error("É preciso o consentimento do colaborador para a biometria."); return; }
-    setCapturando(true); setErro(null);
+    setErro(null); setCapturando(true);
     try {
-      const r = await capturarDigitalWeb();
-      if (!r.ok || !r.imagem) { setErro(r.erro || "Não foi possível capturar a digital."); return; }
-      setCapturas((c) => [...c, r.imagem as string]);
+      let coletadas = [...capturas];
+      for (let i = coletadas.length; i < TOTAL_CAPTURAS; i++) {
+        const r = await capturarDigitalWeb();
+        if (!r.ok || !r.imagem) { setErro(r.erro || "Não foi possível capturar a digital."); break; }
+        coletadas = [...coletadas, r.imagem];
+        setCapturas(coletadas);
+        if (coletadas.length < TOTAL_CAPTURAS) {
+          await new Promise((res) => setTimeout(res, 900)); // pausa p/ levantar o dedo
+        }
+      }
     } finally {
       setCapturando(false);
     }
@@ -250,12 +258,12 @@ function BiometriaColaborador({ colaborador }: { colaborador: EpiColaborador }) 
           {!completo ? (
             <button
               type="button"
-              onClick={capturarToque}
+              onClick={iniciarCadastro}
               disabled={capturando || !consent}
               className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-verde-accent disabled:opacity-60"
             >
               {capturando ? <Loader2 className="size-3.5 animate-spin" /> : <Fingerprint className="size-3.5" />}
-              {capturando ? `Encoste o dedo… (${capturas.length + 1}/${TOTAL_CAPTURAS})` : capturas.length === 0 ? (jaTem ? "Recadastrar (4 toques)" : "Cadastrar (4 toques)") : `Capturar toque ${capturas.length + 1}/${TOTAL_CAPTURAS}`}
+              {capturando ? `Encoste o dedo… (${capturas.length + 1}/${TOTAL_CAPTURAS})` : capturas.length === 0 ? (jaTem ? "Recadastrar (4 toques)" : "Iniciar cadastro (4 toques)") : `Continuar (${capturas.length}/${TOTAL_CAPTURAS})`}
             </button>
           ) : (
             <button
