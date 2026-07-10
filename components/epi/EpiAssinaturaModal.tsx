@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Eraser, PenLine, FileCheck2, ShieldCheck, Fingerprint, CheckCircle2, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import EpiModal from "@/components/epi/EpiModal";
 import SignatureCanvas, { type SignatureCanvasHandle } from "@/components/epi/SignatureCanvas";
-import { useAssinarEntrega, obterBiometria } from "@/lib/hooks/useEpi";
-import { biometriaSuportada, verifyDigital } from "@/lib/epi/digitalPersona";
+import { useAssinarEntrega } from "@/lib/hooks/useEpi";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { capturarDigitalWeb, sdkWebDisponivel } from "@/lib/epi/digitalPersonaWeb";
 
 async function sha256Hex(buf: ArrayBuffer): Promise<string> {
   const hash = await crypto.subtle.digest("SHA-256", buf);
@@ -16,9 +18,9 @@ async function sha256Hex(buf: ArrayBuffer): Promise<string> {
 type Modo = "digital" | "canvas";
 
 /**
- * Assinatura do recebedor: baixa a ficha PDF exata (SHA-256), captura o consentimento e:
- *  - digital: verifica a digital contra a cadastrada (1:1) e assina como 'digital';
- *  - desenho: canvas (fallback quando não há leitor/biometria ou a verificação falha).
+ * Assinatura do recebedor. Se o colaborador tem digital cadastrada e há leitor, verifica
+ * a digital ao vivo contra a cadastrada (match no servidor) e assina como 'digital'.
+ * Senão / se falhar, cai para o desenho (canvas).
  */
 export default function EpiAssinaturaModal({
   idEntrega, empresaId, idColaborador, colaboradorNome, onClose,
@@ -30,6 +32,7 @@ export default function EpiAssinaturaModal({
   onClose: () => void;
 }) {
   const sigRef = useRef<SignatureCanvasHandle>(null);
+  const qc = useQueryClient();
   const assinar = useAssinarEntrega();
   const [nome, setNome] = useState(colaboradorNome);
   const [consent, setConsent] = useState(false);
@@ -37,12 +40,11 @@ export default function EpiAssinaturaModal({
   const [pdfSha, setPdfSha] = useState("");
   const [erroPdf, setErroPdf] = useState("");
 
-  // biometria
-  const [template, setTemplate] = useState<string | null>(null);
+  const [temDigital, setTemDigital] = useState(false);
+  const [dedo, setDedo] = useState<string | null>(null);
   const [modo, setModo] = useState<Modo>("canvas");
   const [verificando, setVerificando] = useState(false);
-  const [verificado, setVerificado] = useState(false);
-  const [score, setScore] = useState<number | null>(null);
+  const [erroDigital, setErroDigital] = useState<string | null>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -56,50 +58,50 @@ export default function EpiAssinaturaModal({
         if (vivo) { setErroPdf(e instanceof Error ? e.message : "Erro ao carregar a ficha."); setCarregandoPdf(false); }
       }
     })();
-    // biometria cadastrada + leitor disponível → oferece modo digital
     (async () => {
-      if (!biometriaSuportada()) return;
-      try {
-        const t = await obterBiometria(idColaborador);
-        if (vivo && t) { setTemplate(t); setModo("digital"); }
-      } catch { /* segue no desenho */ }
+      if (!(await sdkWebDisponivel())) return; // sem leitor/SDK → só desenho
+      const sb = createSupabaseBrowserClient();
+      const { data } = await sb.from("epi_colaboradores").select("biometria_em, biometria_dedo").eq("id", idColaborador).maybeSingle();
+      const row = data as { biometria_em: string | null; biometria_dedo: string | null } | null;
+      if (vivo && row?.biometria_em) { setTemDigital(true); setDedo(row.biometria_dedo); setModo("digital"); }
     })();
     return () => { vivo = false; };
   }, [idEntrega, idColaborador]);
 
-  async function verificarDigital() {
-    if (!template) return;
-    setVerificando(true);
+  async function verificarEAssinar() {
+    if (!consent) { toast.error("Marque o consentimento do recebedor."); return; }
+    setVerificando(true); setErroDigital(null);
     try {
-      const r = await verifyDigital(template);
-      if (!r.ok) { toast.error(r.erro || "Falha na verificação."); return; }
-      if (!r.match) { toast.error("A digital não confere com a cadastrada."); setVerificado(false); return; }
-      setVerificado(true);
-      setScore(r.score ?? null);
-      toast.success("Digital verificada");
+      const cap = await capturarDigitalWeb();
+      if (!cap.ok || !cap.imagem) { setErroDigital(cap.erro || "Não foi possível capturar a digital."); return; }
+      const resp = await fetch("/api/epi/biometria/verificar", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_entrega: idEntrega, pdf_sha256: pdfSha, sonda: cap.imagem, consentimento: true }),
+      });
+      const j = await resp.json();
+      if (j.fallback) { toast.error("Serviço de biometria indisponível — assine por desenho."); setModo("canvas"); return; }
+      if (!j.ok) { setErroDigital(j.erro || "Falha na verificação."); return; }
+      if (!j.match) { setErroDigital(`A digital não confere com a cadastrada${j.score != null ? ` (score ${Number(j.score).toFixed(1)})` : ""}.`); return; }
+      qc.invalidateQueries({ queryKey: ["epi-entregas", empresaId] });
+      toast.success("Assinado por biometria");
+      onClose();
+    } catch (e) {
+      setErroDigital(e instanceof Error ? e.message : "Erro na verificação.");
     } finally {
       setVerificando(false);
     }
   }
 
-  function salvar() {
+  function assinarDesenho() {
     if (!consent) { toast.error("Marque o consentimento do recebedor."); return; }
-    if (modo === "digital") {
-      if (!verificado) { toast.error("Verifique a digital antes de assinar."); return; }
-      assinar.mutate(
-        { empresa_id: empresaId, id_entrega: idEntrega, assinante_nome: nome, assinatura_png: "", pdf_sha256: pdfSha, consentimento: consent, metodo: "digital", finger_verificado: true, match_score: score },
-        { onSuccess: onClose },
-      );
-    } else {
-      if (sigRef.current?.isEmpty()) { toast.error("Assine no quadro antes de confirmar."); return; }
-      assinar.mutate(
-        { empresa_id: empresaId, id_entrega: idEntrega, assinante_nome: nome, assinatura_png: sigRef.current?.getDataUrl() ?? "", pdf_sha256: pdfSha, consentimento: consent, metodo: "canvas" },
-        { onSuccess: onClose },
-      );
-    }
+    if (sigRef.current?.isEmpty()) { toast.error("Assine no quadro antes de confirmar."); return; }
+    assinar.mutate(
+      { empresa_id: empresaId, id_entrega: idEntrega, assinante_nome: nome, assinatura_png: sigRef.current?.getDataUrl() ?? "", pdf_sha256: pdfSha, consentimento: consent, metodo: "canvas" },
+      { onSuccess: onClose },
+    );
   }
 
-  const temDigital = !!template;
+  const ocupado = assinar.isPending || verificando;
 
   return (
     <EpiModal
@@ -110,9 +112,15 @@ export default function EpiAssinaturaModal({
       footer={
         <>
           <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Cancelar</button>
-          <button type="button" onClick={salvar} disabled={assinar.isPending || carregandoPdf || !!erroPdf} className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-verde-accent disabled:opacity-60">
-            {assinar.isPending ? <Loader2 className="size-4 animate-spin" /> : <PenLine className="size-4" />} Assinar
-          </button>
+          {modo === "digital" ? (
+            <button type="button" onClick={verificarEAssinar} disabled={ocupado || carregandoPdf || !!erroPdf} className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-verde-accent disabled:opacity-60">
+              {verificando ? <Loader2 className="size-4 animate-spin" /> : <Fingerprint className="size-4" />} Verificar e assinar
+            </button>
+          ) : (
+            <button type="button" onClick={assinarDesenho} disabled={ocupado || carregandoPdf || !!erroPdf} className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-verde-accent disabled:opacity-60">
+              {assinar.isPending ? <Loader2 className="size-4 animate-spin" /> : <PenLine className="size-4" />} Assinar
+            </button>
+          )}
         </>
       }
     >
@@ -127,7 +135,6 @@ export default function EpiAssinaturaModal({
           <input value={nome} onChange={(e) => setNome(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-verde-primary focus:outline-none focus:ring-1 focus:ring-verde-primary/30" />
         </div>
 
-        {/* Alternador de método (quando há digital cadastrada) */}
         {temDigital && (
           <div className="inline-flex rounded-md border border-gray-200 bg-white p-0.5 text-xs">
             <button type="button" onClick={() => setModo("digital")} className={`inline-flex items-center gap-1 rounded px-2.5 py-1 font-medium ${modo === "digital" ? "bg-verde-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}><Fingerprint className="size-3.5" /> Digital</button>
@@ -137,17 +144,10 @@ export default function EpiAssinaturaModal({
 
         {modo === "digital" && temDigital ? (
           <div className="rounded-md border border-gray-200 p-3 text-center">
-            {verificado ? (
-              <div className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700"><CheckCircle2 className="size-5" /> Digital verificada{score != null ? ` (score ${score})` : ""}</div>
-            ) : (
-              <>
-                <Fingerprint className="mx-auto size-8 text-gray-400" />
-                <p className="mt-1 text-xs text-gray-500">Posicione o dedo do colaborador no leitor e verifique.</p>
-                <button type="button" onClick={verificarDigital} disabled={verificando} className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-verde-primary/40 px-3 py-1.5 text-xs font-semibold text-verde-primary hover:bg-verde-primary/5 disabled:opacity-60">
-                  {verificando ? <Loader2 className="size-4 animate-spin" /> : <Fingerprint className="size-4" />} Verificar digital
-                </button>
-              </>
-            )}
+            <Fingerprint className="mx-auto size-8 text-gray-400" />
+            <p className="mt-1 text-xs text-gray-500">Posicione o <strong>{dedo ?? "dedo cadastrado"}</strong> do colaborador no leitor e clique em <em>Verificar e assinar</em>.</p>
+            {verificando && <p className="mt-1 text-xs text-verde-primary">Encoste o dedo…</p>}
+            {erroDigital && <p className="mt-1 text-xs text-red-alert">{erroDigital}</p>}
           </div>
         ) : (
           <div>
