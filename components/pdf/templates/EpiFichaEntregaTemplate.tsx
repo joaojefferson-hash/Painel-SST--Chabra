@@ -15,7 +15,7 @@ export interface EpiFichaProps {
 
 const fmtData = (iso: string) => (iso ? iso.split("T")[0].split("-").reverse().join("/") : "—");
 const fmtDataHora = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+  iso ? new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
 
 const VERDE = "#006B54";
 
