@@ -10,7 +10,7 @@ export interface EpiFichaProps {
   itens: { nome_epi: string | null; ca_numero?: string | null; quantidade: number }[];
   logoUrl?: string | null;
   identificador: string;
-  assinatura?: { nome?: string | null; assinatura_png?: string | null; assinado_em?: string | null; metodo?: string | null } | null;
+  assinatura?: { nome?: string | null; assinatura_png?: string | null; assinado_em?: string | null; metodo?: string | null; codigo?: string | null } | null;
 }
 
 const fmtData = (iso: string) => (iso ? iso.split("T")[0].split("-").reverse().join("/") : "—");
@@ -101,19 +101,47 @@ export default function EpiFichaEntregaTemplate({ empresa, colaborador, entrega,
       {/* Assinatura */}
       <div style={{ marginTop: 8 }}>
         {assinatura?.metodo === "digital" ? (
-          <div style={{ textAlign: "center", marginBottom: 2, color: VERDE, fontSize: 11, fontWeight: 700 }}>
-            <span style={{ fontSize: 16 }}>☑</span> Assinado biometricamente (digital verificada)
+          <div style={{ textAlign: "center" }}>
+            {/* Card de assinatura biométrica verificada */}
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 12, textAlign: "left", border: `1px solid ${VERDE}`, background: "#f2faf7", borderRadius: 8, padding: "10px 16px", marginBottom: 8 }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={VERDE} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "none" }}>
+                <path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4" />
+                <path d="M5 19.5C5.5 18 6 15 6 12c0-.7.12-1.37.34-2" />
+                <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
+                <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
+                <path d="M8.65 22c.21-.66.45-1.32.57-2" />
+                <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
+                <path d="M2 16h.01" />
+                <path d="M21.8 16c.2-2 .131-5.354 0-6" />
+                <path d="M9 6.8a6 6 0 0 1 9 5.2c0 .47 0 1.17-.02 2" />
+              </svg>
+              <div style={{ lineHeight: 1.4 }}>
+                <div style={{ color: VERDE, fontWeight: 700, fontSize: 12 }}>Assinado biometricamente</div>
+                <div style={{ fontSize: 10, color: "#374151" }}>{fmtDataHora(assinatura.assinado_em)}</div>
+                <div style={{ fontSize: 10, color: "#059669", fontWeight: 600 }}>Identidade verificada</div>
+                {assinatura.codigo ? <div style={{ fontSize: 9, color: "#9ca3af" }}>Cód. {assinatura.codigo}</div> : null}
+              </div>
+            </div>
+            <div style={{ fontSize: 10 }}>
+              <strong style={{ color: "#111827" }}>{colaborador.nome}</strong><br />
+              <span style={{ color: "#6b7280" }}>Assinatura do colaborador (recebedor)</span><br />
+              <span style={{ color: "#9ca3af", fontSize: 9 }}>Lei 14.063/2020</span>
+            </div>
           </div>
-        ) : assinatura?.assinatura_png ? (
-          <img src={assinatura.assinatura_png} alt="assinatura" style={{ display: "block", height: 60, margin: "0 auto 2px", objectFit: "contain" }} />
         ) : (
-          <div style={{ height: 40 }} />
+          <>
+            {assinatura?.assinatura_png ? (
+              <img src={assinatura.assinatura_png} alt="assinatura" style={{ display: "block", height: 60, margin: "0 auto 2px", objectFit: "contain" }} />
+            ) : (
+              <div style={{ height: 40 }} />
+            )}
+            <div className="assinatura-linha">
+              {colaborador.nome}<br />
+              Assinatura do colaborador (recebedor)
+              {assinatura?.assinado_em ? <><br /><span style={{ color: "#9ca3af" }}>Assinado em {fmtDataHora(assinatura.assinado_em)} · Lei 14.063/2020</span></> : null}
+            </div>
+          </>
         )}
-        <div className="assinatura-linha">
-          {colaborador.nome}<br />
-          Assinatura do colaborador (recebedor)
-          {assinatura?.assinado_em ? <><br /><span style={{ color: "#9ca3af" }}>{assinatura.metodo === "digital" ? "Verificado" : "Assinado"} em {fmtDataHora(assinatura.assinado_em)} · Lei 14.063/2020</span></> : null}
-        </div>
       </div>
 
       {entrega.responsavel_entrega ? (

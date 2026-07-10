@@ -25,7 +25,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       supabase.from("epi_colaboradores").select("*").eq("id", ent.id_colaborador as string).maybeSingle(),
       supabase.from("empresas").select("nome_empresa, cnpj").eq("id_empresa", ent.empresa_id as string).maybeSingle(),
       supabase.from("configuracoes").select("valor").eq("chave", "logo_url").maybeSingle(),
-      supabase.from("epi_entrega_assinaturas").select("assinante_nome, assinatura_png, assinado_em, metodo").eq("id_entrega", id).order("assinado_em", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("epi_entrega_assinaturas").select("id, assinante_nome, assinatura_png, assinado_em, metodo").eq("id_entrega", id).order("assinado_em", { ascending: false }).limit(1).maybeSingle(),
     ]);
 
     const c = (colab ?? {}) as Record<string, unknown>;
@@ -63,6 +63,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
               assinatura_png: (assin as Record<string, unknown>).assinatura_png as string ?? null,
               assinado_em: (assin as Record<string, unknown>).assinado_em as string ?? null,
               metodo: (assin as Record<string, unknown>).metodo as string ?? null,
+              codigo: (assin as Record<string, unknown>).id
+                ? String((assin as Record<string, unknown>).id).replace(/-/g, "").slice(0, 12).toUpperCase()
+                : null,
             }
           : null,
       }),
