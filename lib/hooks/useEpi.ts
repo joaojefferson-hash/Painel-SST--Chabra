@@ -327,13 +327,17 @@ export function useAssinarEntrega() {
     mutationFn: async (p: {
       empresa_id: string; id_entrega: string; assinante_nome: string;
       assinatura_png: string; pdf_sha256: string; consentimento: boolean;
+      metodo?: "canvas" | "digital"; match_score?: number | null; finger_verificado?: boolean;
     }) => {
       const sb = createSupabaseBrowserClient() as unknown as EpiRpc;
       const { data, error } = await sb.rpc<string>("epi_assinar_entrega", {
         p_id_entrega: p.id_entrega, p_assinante_nome: p.assinante_nome || null,
-        p_assinatura_png: p.assinatura_png, p_pdf_sha256: p.pdf_sha256 || null,
+        p_assinatura_png: p.assinatura_png || null, p_pdf_sha256: p.pdf_sha256 || null,
         p_user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
         p_consentimento: p.consentimento,
+        p_metodo: p.metodo ?? "canvas",
+        p_match_score: p.match_score ?? null,
+        p_finger_verificado: p.finger_verificado ?? null,
       });
       if (error) throw new Error(error.message);
       return data;
@@ -344,4 +348,28 @@ export function useAssinarEntrega() {
     },
     onError: (e: Error) => toast.error(mensagemErro(e)),
   });
+}
+
+// ── Biometria digital do colaborador (Fase 4B) ───────────────────────────────
+export function useCadastrarBiometria() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { empresa_id: string; id_colaborador: string; template: string; consentimento: boolean }) => {
+      const sb = createSupabaseBrowserClient() as unknown as EpiRpc;
+      const { error } = await sb.rpc("epi_cadastrar_biometria", {
+        p_id_colaborador: p.id_colaborador, p_template: p.template, p_consentimento: p.consentimento,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: (_d, p) => { qc.invalidateQueries({ queryKey: ["epi-colaboradores", p.empresa_id] }); toast.success("Biometria cadastrada"); },
+    onError: (e: Error) => toast.error(mensagemErro(e)),
+  });
+}
+
+/** Busca o template biométrico (decifrado) do colaborador para comparar no cliente. */
+export async function obterBiometria(idColaborador: string): Promise<string | null> {
+  const sb = createSupabaseBrowserClient() as unknown as EpiRpc;
+  const { data, error } = await sb.rpc<string | null>("epi_obter_biometria", { p_id_colaborador: idColaborador });
+  if (error) throw new Error(error.message);
+  return data ?? null;
 }

@@ -28,6 +28,13 @@ extraResources:
     to: .next/standalone/.next/static
   - from: public
     to: .next/standalone/public
+  # Helper nativo de biometria (EPI). Empacota o EXE + DLLs se existirem na pasta.
+  # Sem o EXE, a biometria degrada para assinatura por desenho (não quebra o build).
+  - from: native/EpiFingerprint
+    to: native/EpiFingerprint
+    filter:
+      - "**/*.exe"
+      - "**/*.dll"
 
 win:
   target:

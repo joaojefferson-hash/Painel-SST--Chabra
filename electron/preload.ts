@@ -71,6 +71,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearCredentials: () =>
     ipcRenderer.invoke('clear-credentials') as Promise<void>,
 
+  // ── Biometria digital (EPI) ──────────────────────────────────
+  /** O leitor de digital está disponível? */
+  epiLeitorDisponivel: () =>
+    ipcRenderer.invoke('epi:leitor-disponivel') as Promise<boolean>,
+  /** Captura a 1ª digital (enroll) e devolve o template (base64) */
+  epiEnrollDigital: () =>
+    ipcRenderer.invoke('epi:enroll-digital') as Promise<{ ok: boolean; template?: string; qualidade?: number; erro?: string }>,
+  /** Captura a digital e compara com o template cadastrado (1:1) */
+  epiVerifyDigital: (template: string) =>
+    ipcRenderer.invoke('epi:verify-digital', template) as Promise<{ ok: boolean; match?: boolean; score?: number; erro?: string }>,
+
   /** Consulta GitHub API e retorna a URL de download do .exe mais recente */
   getInstallerUrl: () =>
     ipcRenderer.invoke('get-installer-url') as Promise<{ success: boolean; url?: string; error?: string }>,

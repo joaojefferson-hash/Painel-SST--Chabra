@@ -152,6 +152,7 @@ export default function EpiEntregasTab({ empresaId, canEdit }: { empresaId: stri
         <EpiAssinaturaModal
           idEntrega={assinar.id}
           empresaId={empresaId}
+          idColaborador={assinar.id_colaborador}
           colaboradorNome={assinar.colaborador?.nome ?? ""}
           onClose={() => setAssinar(null)}
         />

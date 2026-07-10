@@ -100,7 +100,11 @@ export default function EpiFichaEntregaTemplate({ empresa, colaborador, entrega,
 
       {/* Assinatura */}
       <div style={{ marginTop: 8 }}>
-        {assinatura?.assinatura_png ? (
+        {assinatura?.metodo === "digital" ? (
+          <div style={{ textAlign: "center", marginBottom: 2, color: VERDE, fontSize: 11, fontWeight: 700 }}>
+            <span style={{ fontSize: 16 }}>☑</span> Assinado biometricamente (digital verificada)
+          </div>
+        ) : assinatura?.assinatura_png ? (
           <img src={assinatura.assinatura_png} alt="assinatura" style={{ display: "block", height: 60, margin: "0 auto 2px", objectFit: "contain" }} />
         ) : (
           <div style={{ height: 40 }} />
@@ -108,7 +112,7 @@ export default function EpiFichaEntregaTemplate({ empresa, colaborador, entrega,
         <div className="assinatura-linha">
           {colaborador.nome}<br />
           Assinatura do colaborador (recebedor)
-          {assinatura?.assinado_em ? <><br /><span style={{ color: "#9ca3af" }}>Assinado em {fmtDataHora(assinatura.assinado_em)}</span></> : null}
+          {assinatura?.assinado_em ? <><br /><span style={{ color: "#9ca3af" }}>{assinatura.metodo === "digital" ? "Verificado" : "Assinado"} em {fmtDataHora(assinatura.assinado_em)} · Lei 14.063/2020</span></> : null}
         </div>
       </div>
 

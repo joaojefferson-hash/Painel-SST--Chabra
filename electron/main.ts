@@ -7,6 +7,7 @@ import { ChildProcess, spawn } from 'child_process'
 import { gerarPdfElectron } from './services/pdfService'
 import { closeDb } from './services/database/sqlite'
 import { stopSyncLoop } from './services/sync/syncEngine'
+import { epiFingerprint } from './services/epiFingerprint'
 
 const isDev = process.env.NODE_ENV === 'development'
 const SERVER_PORT = 3457
@@ -165,6 +166,14 @@ ipcMain.handle('open-external', (_event, url: string) => {
 ipcMain.handle('install-update', () => {
   autoUpdater.quitAndInstall(false, true)
 })
+
+// ── Biometria digital (EPI) — helper nativo DigitalPersona ───────
+ipcMain.handle('epi:leitor-disponivel', async () => {
+  const r = await epiFingerprint.check()
+  return !!r.disponivel
+})
+ipcMain.handle('epi:enroll-digital', async () => epiFingerprint.enroll())
+ipcMain.handle('epi:verify-digital', async (_event, template: string) => epiFingerprint.verify(template))
 
 const CREDS_FILE = () => path.join(app.getPath('userData'), 'saved-creds.bin')
 
