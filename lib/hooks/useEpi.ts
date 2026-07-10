@@ -354,10 +354,10 @@ export function useAssinarEntrega() {
 export function useCadastrarBiometria() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (p: { empresa_id: string; id_colaborador: string; template: string; consentimento: boolean }) => {
+    mutationFn: async (p: { empresa_id: string; id_colaborador: string; template: string; consentimento: boolean; dedo?: string }) => {
       const sb = createSupabaseBrowserClient() as unknown as EpiRpc;
       const { error } = await sb.rpc("epi_cadastrar_biometria", {
-        p_id_colaborador: p.id_colaborador, p_template: p.template, p_consentimento: p.consentimento,
+        p_id_colaborador: p.id_colaborador, p_template: p.template, p_consentimento: p.consentimento, p_dedo: p.dedo ?? null,
       });
       if (error) throw new Error(error.message);
     },

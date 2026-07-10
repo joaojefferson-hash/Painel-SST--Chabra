@@ -157,27 +157,42 @@ function ColaboradorForm({
   );
 }
 
-/** Cadastro da 1ª digital do colaborador — captura no navegador (agente DpHost). */
+const MAOS = ["Direita", "Esquerda"] as const;
+const DEDOS = ["Polegar", "Indicador", "Médio", "Anelar", "Mínimo"] as const;
+const TOTAL_CAPTURAS = 4;
+
+/** Cadastro da digital do colaborador — escolhe o dedo e captura 4× no navegador. */
 function BiometriaColaborador({ colaborador }: { colaborador: EpiColaborador }) {
   const cadastrar = useCadastrarBiometria();
   const [consent, setConsent] = useState(false);
+  const [mao, setMao] = useState<(typeof MAOS)[number]>("Direita");
+  const [dedo, setDedo] = useState<(typeof DEDOS)[number]>("Indicador");
+  const [capturas, setCapturas] = useState<string[]>([]);
   const [capturando, setCapturando] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const jaTem = !!colaborador.biometria_em;
+  const dedoLabel = `${dedo} — mão ${mao.toLowerCase()}`;
 
-  async function registrar() {
+  async function capturarToque() {
     if (!consent) { toast.error("É preciso o consentimento do colaborador para a biometria."); return; }
-    setCapturando(true); setErro(null); setPreview(null);
+    setCapturando(true); setErro(null);
     try {
       const r = await capturarDigitalWeb();
       if (!r.ok || !r.imagem) { setErro(r.erro || "Não foi possível capturar a digital."); return; }
-      setPreview(`data:image/png;base64,${r.imagem}`);
-      cadastrar.mutate({ empresa_id: colaborador.empresa_id, id_colaborador: colaborador.id, template: r.imagem, consentimento: true });
+      const novas = [...capturas, r.imagem];
+      setCapturas(novas);
+      if (novas.length >= TOTAL_CAPTURAS) {
+        cadastrar.mutate(
+          { empresa_id: colaborador.empresa_id, id_colaborador: colaborador.id, template: JSON.stringify(novas), consentimento: true, dedo: dedoLabel },
+          { onSuccess: () => setCapturas([]) },
+        );
+      }
     } finally {
       setCapturando(false);
     }
   }
+
+  const completo = capturas.length >= TOTAL_CAPTURAS;
 
   return (
     <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -190,28 +205,55 @@ function BiometriaColaborador({ colaborador }: { colaborador: EpiColaborador }) 
 
       {jaTem ? (
         <div className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
-          <CheckCircle2 className="size-3.5" /> Cadastrada em {fmtDia(colaborador.biometria_em!)}
+          <CheckCircle2 className="size-3.5" /> Cadastrada em {fmtDia(colaborador.biometria_em!)}{colaborador.biometria_dedo ? ` · ${colaborador.biometria_dedo}` : ""}
         </div>
       ) : (
         <div className="mt-2 text-xs text-amber-700">Ainda não cadastrada.</div>
       )}
 
       <div className="mt-2 space-y-2">
+        {/* seletor de dedo */}
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1 text-xs text-gray-600">Mão
+            <select value={mao} onChange={(e) => { setMao(e.target.value as typeof mao); setCapturas([]); }} disabled={capturas.length > 0} className={`${inputCls} py-1`}>
+              {MAOS.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-gray-600">Dedo
+            <select value={dedo} onChange={(e) => { setDedo(e.target.value as typeof dedo); setCapturas([]); }} disabled={capturas.length > 0} className={`${inputCls} py-1`}>
+              {DEDOS.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </label>
+        </div>
+
         <label className="flex items-start gap-2 text-xs text-gray-600">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 size-4 rounded border-gray-300 text-verde-primary focus:ring-verde-primary" />
           O colaborador consente com o cadastro da sua digital (dado biométrico) para fins de conferência de assinatura, nos termos da LGPD.
         </label>
-        <div className="flex items-center gap-3">
+
+        {/* progresso das 4 capturas */}
+        <div className="flex items-center gap-2">
+          {Array.from({ length: TOTAL_CAPTURAS }).map((_, i) => (
+            <div key={i} className={`flex size-8 items-center justify-center rounded-md border text-xs ${i < capturas.length ? "border-verde-primary bg-verde-primary text-white" : "border-gray-300 bg-white text-gray-400"}`}>
+              {i < capturas.length ? <CheckCircle2 className="size-4" /> : i + 1}
+            </div>
+          ))}
+          <span className="text-xs text-gray-500">{capturas.length}/{TOTAL_CAPTURAS} capturas do <strong>{dedoLabel}</strong></span>
+        </div>
+
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={registrar}
-            disabled={capturando || cadastrar.isPending || !consent}
+            onClick={capturarToque}
+            disabled={capturando || cadastrar.isPending || !consent || completo}
             className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-verde-accent disabled:opacity-60"
           >
-            {capturando ? <Loader2 className="size-3.5 animate-spin" /> : <Fingerprint className="size-3.5" />}
-            {capturando ? "Encoste o dedo no leitor…" : jaTem ? "Atualizar biometria" : "Cadastrar biometria"}
+            {capturando || cadastrar.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Fingerprint className="size-3.5" />}
+            {capturando ? `Encoste o dedo… (${capturas.length + 1}/${TOTAL_CAPTURAS})` : cadastrar.isPending ? "Salvando…" : capturas.length === 0 ? (jaTem ? "Recadastrar (4 toques)" : "Cadastrar (4 toques)") : `Capturar toque ${capturas.length + 1}/${TOTAL_CAPTURAS}`}
           </button>
-          {preview && <img src={preview} alt="digital" className="h-14 w-14 rounded border border-gray-300 bg-white object-contain" />}
+          {capturas.length > 0 && !completo && (
+            <button type="button" onClick={() => setCapturas([])} className="text-xs text-gray-500 hover:text-red-alert">Recomeçar</button>
+          )}
         </div>
         {erro && <p className="text-xs text-red-alert">{erro}</p>}
       </div>

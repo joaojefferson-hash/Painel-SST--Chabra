@@ -10,6 +10,7 @@ export interface EpiColaborador {
   setor: string | null;
   ativo: boolean;
   biometria_em: string | null;
+  biometria_dedo: string | null;
   criado_por: string | null;
   criado_em: string;
   updated_at: string | null;
