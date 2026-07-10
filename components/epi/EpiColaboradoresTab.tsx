@@ -179,17 +179,18 @@ function BiometriaColaborador({ colaborador }: { colaborador: EpiColaborador }) 
     try {
       const r = await capturarDigitalWeb();
       if (!r.ok || !r.imagem) { setErro(r.erro || "Não foi possível capturar a digital."); return; }
-      const novas = [...capturas, r.imagem];
-      setCapturas(novas);
-      if (novas.length >= TOTAL_CAPTURAS) {
-        cadastrar.mutate(
-          { empresa_id: colaborador.empresa_id, id_colaborador: colaborador.id, template: JSON.stringify(novas), consentimento: true, dedo: dedoLabel },
-          { onSuccess: () => setCapturas([]) },
-        );
-      }
+      setCapturas((c) => [...c, r.imagem as string]);
     } finally {
       setCapturando(false);
     }
+  }
+
+  function salvar() {
+    setErro(null);
+    cadastrar.mutate(
+      { empresa_id: colaborador.empresa_id, id_colaborador: colaborador.id, template: JSON.stringify(capturas), consentimento: true, dedo: dedoLabel },
+      { onSuccess: () => setCapturas([]), onError: (e) => setErro(e.message) },
+    );
   }
 
   const completo = capturas.length >= TOTAL_CAPTURAS;
@@ -231,28 +232,44 @@ function BiometriaColaborador({ colaborador }: { colaborador: EpiColaborador }) 
           O colaborador consente com o cadastro da sua digital (dado biométrico) para fins de conferência de assinatura, nos termos da LGPD.
         </label>
 
-        {/* progresso das 4 capturas */}
-        <div className="flex items-center gap-2">
+        {/* progresso: mostra a IMAGEM de cada captura */}
+        <div className="flex flex-wrap items-center gap-2">
           {Array.from({ length: TOTAL_CAPTURAS }).map((_, i) => (
-            <div key={i} className={`flex size-8 items-center justify-center rounded-md border text-xs ${i < capturas.length ? "border-verde-primary bg-verde-primary text-white" : "border-gray-300 bg-white text-gray-400"}`}>
-              {i < capturas.length ? <CheckCircle2 className="size-4" /> : i + 1}
+            <div key={i} className={`size-12 overflow-hidden rounded-md border ${i < capturas.length ? "border-verde-primary" : "border-dashed border-gray-300 bg-white"}`}>
+              {i < capturas.length ? (
+                <img src={`data:image/png;base64,${capturas[i]}`} alt={`captura ${i + 1}`} className="size-full bg-white object-contain" />
+              ) : (
+                <div className="flex size-full items-center justify-center text-xs text-gray-400">{i + 1}</div>
+              )}
             </div>
           ))}
-          <span className="text-xs text-gray-500">{capturas.length}/{TOTAL_CAPTURAS} capturas do <strong>{dedoLabel}</strong></span>
+          <span className="text-xs text-gray-500">{capturas.length}/{TOTAL_CAPTURAS} · <strong>{dedoLabel}</strong></span>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={capturarToque}
-            disabled={capturando || cadastrar.isPending || !consent || completo}
-            className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-verde-accent disabled:opacity-60"
-          >
-            {capturando || cadastrar.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Fingerprint className="size-3.5" />}
-            {capturando ? `Encoste o dedo… (${capturas.length + 1}/${TOTAL_CAPTURAS})` : cadastrar.isPending ? "Salvando…" : capturas.length === 0 ? (jaTem ? "Recadastrar (4 toques)" : "Cadastrar (4 toques)") : `Capturar toque ${capturas.length + 1}/${TOTAL_CAPTURAS}`}
-          </button>
-          {capturas.length > 0 && !completo && (
-            <button type="button" onClick={() => setCapturas([])} className="text-xs text-gray-500 hover:text-red-alert">Recomeçar</button>
+          {!completo ? (
+            <button
+              type="button"
+              onClick={capturarToque}
+              disabled={capturando || !consent}
+              className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-verde-accent disabled:opacity-60"
+            >
+              {capturando ? <Loader2 className="size-3.5 animate-spin" /> : <Fingerprint className="size-3.5" />}
+              {capturando ? `Encoste o dedo… (${capturas.length + 1}/${TOTAL_CAPTURAS})` : capturas.length === 0 ? (jaTem ? "Recadastrar (4 toques)" : "Cadastrar (4 toques)") : `Capturar toque ${capturas.length + 1}/${TOTAL_CAPTURAS}`}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={salvar}
+              disabled={cadastrar.isPending}
+              className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-verde-accent disabled:opacity-60"
+            >
+              {cadastrar.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+              {cadastrar.isPending ? "Salvando…" : "Salvar biometria"}
+            </button>
+          )}
+          {capturas.length > 0 && (
+            <button type="button" onClick={() => { setCapturas([]); setErro(null); }} className="text-xs text-gray-500 hover:text-red-alert">Recomeçar</button>
           )}
         </div>
         {erro && <p className="text-xs text-red-alert">{erro}</p>}
