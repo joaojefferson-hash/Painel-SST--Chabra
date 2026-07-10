@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EpiModal, { inputCls, labelCls } from "@/components/epi/EpiModal";
 import { useEpiColaboradores, useColaboradorMut, useCadastrarBiometria } from "@/lib/hooks/useEpi";
-import { biometriaSuportada, enrollDigital } from "@/lib/epi/digitalPersona";
+import { capturarDigitalWeb } from "@/lib/epi/digitalPersonaWeb";
 import type { EpiColaborador } from "@/lib/epi/types";
 
 const fmtDia = (iso: string) => iso.split("T")[0].split("-").reverse().join("/");
@@ -157,21 +157,23 @@ function ColaboradorForm({
   );
 }
 
-/** Cadastro da 1ª digital do colaborador (só no app desktop com leitor). */
+/** Cadastro da 1ª digital do colaborador — captura no navegador (agente DpHost). */
 function BiometriaColaborador({ colaborador }: { colaborador: EpiColaborador }) {
   const cadastrar = useCadastrarBiometria();
   const [consent, setConsent] = useState(false);
   const [capturando, setCapturando] = useState(false);
-  const suportada = biometriaSuportada();
+  const [preview, setPreview] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   const jaTem = !!colaborador.biometria_em;
 
   async function registrar() {
     if (!consent) { toast.error("É preciso o consentimento do colaborador para a biometria."); return; }
-    setCapturando(true);
+    setCapturando(true); setErro(null); setPreview(null);
     try {
-      const r = await enrollDigital();
-      if (!r.ok || !r.template) { toast.error(r.erro || "Não foi possível capturar a digital."); return; }
-      cadastrar.mutate({ empresa_id: colaborador.empresa_id, id_colaborador: colaborador.id, template: r.template, consentimento: true });
+      const r = await capturarDigitalWeb();
+      if (!r.ok || !r.imagem) { setErro(r.erro || "Não foi possível capturar a digital."); return; }
+      setPreview(`data:image/png;base64,${r.imagem}`);
+      cadastrar.mutate({ empresa_id: colaborador.empresa_id, id_colaborador: colaborador.id, template: r.imagem, consentimento: true });
     } finally {
       setCapturando(false);
     }
@@ -183,7 +185,7 @@ function BiometriaColaborador({ colaborador }: { colaborador: EpiColaborador }) 
         <Fingerprint className="size-4 text-verde-primary" /> Biometria digital
       </div>
       <p className="mt-1 text-xs text-gray-500">
-        Cadastra a digital do colaborador para <strong>conferência na assinatura da ficha</strong> (evita que outra pessoa assine no lugar dele).
+        Cadastra a digital do colaborador para <strong>conferência na assinatura da ficha</strong> (evita que outra pessoa assine no lugar dele). Requer o leitor + o agente da DigitalPersona (DpHost) na máquina.
       </p>
 
       {jaTem ? (
@@ -194,25 +196,25 @@ function BiometriaColaborador({ colaborador }: { colaborador: EpiColaborador }) 
         <div className="mt-2 text-xs text-amber-700">Ainda não cadastrada.</div>
       )}
 
-      {!suportada ? (
-        <p className="mt-2 text-xs text-gray-400">Disponível apenas no aplicativo desktop com o leitor de digital.</p>
-      ) : (
-        <div className="mt-2 space-y-2">
-          <label className="flex items-start gap-2 text-xs text-gray-600">
-            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 size-4 rounded border-gray-300 text-verde-primary focus:ring-verde-primary" />
-            O colaborador consente com o cadastro da sua digital (dado biométrico) para fins de conferência de assinatura, nos termos da LGPD.
-          </label>
+      <div className="mt-2 space-y-2">
+        <label className="flex items-start gap-2 text-xs text-gray-600">
+          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 size-4 rounded border-gray-300 text-verde-primary focus:ring-verde-primary" />
+          O colaborador consente com o cadastro da sua digital (dado biométrico) para fins de conferência de assinatura, nos termos da LGPD.
+        </label>
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={registrar}
             disabled={capturando || cadastrar.isPending || !consent}
             className="inline-flex items-center gap-1.5 rounded-md bg-verde-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-verde-accent disabled:opacity-60"
           >
-            {capturando || cadastrar.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Fingerprint className="size-3.5" />}
-            {jaTem ? "Atualizar biometria" : "Cadastrar biometria"}
+            {capturando ? <Loader2 className="size-3.5 animate-spin" /> : <Fingerprint className="size-3.5" />}
+            {capturando ? "Encoste o dedo no leitor…" : jaTem ? "Atualizar biometria" : "Cadastrar biometria"}
           </button>
+          {preview && <img src={preview} alt="digital" className="h-14 w-14 rounded border border-gray-300 bg-white object-contain" />}
         </div>
-      )}
+        {erro && <p className="text-xs text-red-alert">{erro}</p>}
+      </div>
     </div>
   );
 }
